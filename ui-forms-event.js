@@ -39,6 +39,25 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
+function _efCamChange(file) {
+  if (!file) return;
+  if (!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)) {
+    showToast('Nur Bilder erlaubt (JPG, PNG, WEBP, GIF)', 'error');
+    return;
+  }
+  resizeImageToBase64(file).then(b64 => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fileName = `foto_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_`
+                   + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`;
+    idbPut('img:' + fileName, b64).then(() => {
+      _efMedia.push({ file: fileName, title: '', form: 'jpeg', _extra: [] });
+      _renderEfMedia();
+      showToast('Foto gespeichert', 'success');
+    });
+  }).catch(() => showToast('Bild konnte nicht geladen werden', 'error'));
+}
+
 function _showEtypeDropdown(inputId, ddId, tag) {
   const input = document.getElementById(inputId);
   const dd    = document.getElementById(ddId);
@@ -86,6 +105,45 @@ function _registerEventType(tag, val) {
   }
 }
 
+// ── RESI-Datums-Schnellhilfe ──────────────────────────────────────────────────
+
+function _updateResiDateHints(personId) {
+  const p = personId && AppState.db?.individuals?.[personId];
+  const birthBtn = document.getElementById('ef-hint-birth');
+  const marrBtn  = document.getElementById('ef-hint-marr');
+  if (!birthBtn || !marrBtn) return;
+
+  // Geburtsdatum: birth oder chr als Fallback
+  const birthDate = p?.birth?.date || p?.chr?.date || '';
+  if (birthDate) {
+    birthBtn.dataset.date = birthDate;
+    birthBtn.textContent  = '🎂 ' + birthDate;
+    birthBtn.hidden = false;
+  } else {
+    birthBtn.hidden = true;
+  }
+
+  // Heiratsdatum: erstes fams mit Heiratsdatum
+  let marrDate = '';
+  for (const famId of (p?.fams || [])) {
+    const f = AppState.db?.families?.[famId];
+    if (f?.marr?.date) { marrDate = f.marr.date; break; }
+  }
+  if (marrDate) {
+    marrBtn.dataset.date = marrDate;
+    marrBtn.textContent  = '⚭ ' + marrDate;
+    marrBtn.hidden = false;
+  } else {
+    marrBtn.hidden = true;
+  }
+}
+
+function efFillDateHint(el) {
+  const date = el.dataset.date;
+  if (!date) return;
+  fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', date);
+}
+
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
@@ -101,7 +159,10 @@ function onEventTypeChange() {
   document.getElementById('ef-addr-group').hidden = !showAddr;
   const addrLabel = document.querySelector('#ef-addr-group .form-label');
   if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
-  document.getElementById('ef-godparents-group').style.display = (t === 'CHR') ? '' : 'none';
+  document.getElementById('ef-godparents-group').hidden = t !== 'CHR';
+  // Datums-Schnellhilfe nur bei RESI anzeigen
+  const hintsEl = document.getElementById('ef-date-hints');
+  if (hintsEl) hintsEl.hidden = (t !== 'RESI');
   // Reset dropdown on type change; content rebuilt on focus/input
   const dd = document.getElementById('ef-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
@@ -163,7 +224,7 @@ function _initGodparentSearch() {
   input.addEventListener('blur',  () => setTimeout(() => { dd.innerHTML = ''; dd.style.display = 'none'; }, 160));
 }
 
-function showEventForm(personId, evIdx, defaultType) {
+function showEventForm(personId, evIdx, defaultType, defaultValue) {
   // data-Attribute liefern immer Strings — numerische Indizes zurückkonvertieren
   if (typeof evIdx === 'string' && evIdx !== '' && !(evIdx in _SPECIAL_OBJ) && !isNaN(evIdx)) evIdx = +evIdx;
   const p = AppState.db.individuals[personId];
@@ -183,13 +244,14 @@ function showEventForm(personId, evIdx, defaultType) {
     document.getElementById('ef-val').value   = '';
     document.getElementById('ef-etype').value = '';
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', obj.date || '');
-    document.getElementById('ef-place').value = obj.place || '';
+    document.getElementById('ef-place').value    = obj.place || '';
+    document.getElementById('ef-place-id').value = obj.placeId || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
     document.getElementById('ef-note').value  = obj.note || '';
     initSrcWidget('ef', obj.citations || []);
     // Taufpaten laden
     _efGodparents = evIdx === 'CHR'
-      ? (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref).map(a => a.xref)
+      ? (p.associations || []).filter(a => a.role === 'Godparent' && a.xref).map(a => a.xref)
       : [];
     _renderEfGodparents();
     const gSearch = document.getElementById('ef-godparent-search');
@@ -200,10 +262,11 @@ function showEventForm(personId, evIdx, defaultType) {
     const ev = isExisting ? p.events[evIdx] : null;
     typeEl.disabled = false;
     typeEl.value = ev?.type || defaultType || 'OCCU';
-    document.getElementById('ef-val').value   = ev?.value || '';
+    document.getElementById('ef-val').value   = ev?.value || defaultValue || '';
     document.getElementById('ef-etype').value = ev?.eventType || '';
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', ev?.date || '');
-    document.getElementById('ef-place').value = ev?.place || '';
+    document.getElementById('ef-place').value    = ev?.place || '';
+    document.getElementById('ef-place-id').value = ev?.placeId || '';
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
     document.getElementById('ef-note').value  = ev?.note  || '';
@@ -214,6 +277,8 @@ function showEventForm(personId, evIdx, defaultType) {
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
   onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
+  // Datums-Schnellhilfe: Buttons mit Geburts-/Heiratsdatum der Person befüllen
+  _updateResiDateHints(personId);
   document.getElementById('deleteEventBtn').hidden = !isExisting;
   const dateErrEl = document.getElementById('ef-date-err');
   if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
@@ -262,6 +327,8 @@ function applyClipboardEventToPerson(pid) {
   p.events.push(ev);
   if (ev.citations.length) _rebuildPersonSourceRefs(p);
   markChanged();
+  // P0-K3: Liste refresh (neue Geb-/Sterbedaten in der Listenzeile)
+  renderTab();
   showToast('Ereignis übernommen');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -292,12 +359,24 @@ function saveEvent() {
   };
 
   pushUndo('Ereignis gespeichert', { personIds: [pid] });
+  const _resolvedPlaceId = (fieldId, place) => {
+    const id = document.getElementById(fieldId)?.value || null;
+    if (!id) return null;
+    const po = AppState.db.placeObjects?.[id];
+    if (!po) return null;
+    // title-Match oder pname-Match (Autocomplete kann historischen pname ins Feld schreiben)
+    if (po.title === place) return id;
+    if ((po.pnames || []).some(pn => pn.value === place)) return id;
+    return null;
+  };
+
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
     const place = getPlaceFromForm('ef-place');
     p[key] = { ...(p[key] || {}),
       date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place,
+      placeId:     _resolvedPlaceId('ef-place-id', place),
       ..._geoFromPlace(place),
       note:      document.getElementById('ef-note').value.trim(),
       citations: [...(srcWidgetState['ef']?.citations || [])],
@@ -306,10 +385,10 @@ function saveEvent() {
     // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
     if (type === 'CHR') {
       if (!p.associations) p.associations = [];
-      const _oldGpXrefs = new Set(p.associations.filter(a => a.rela === 'Godparent').map(a => a.xref));
+      const _oldGpXrefs = new Set(p.associations.filter(a => a.role === 'Godparent').map(a => a.xref));
       const _newGpXrefs = new Set(_efGodparents || []);
       p.associations = [
-        ...p.associations.filter(a => a.rela !== 'Godparent'),
+        ...p.associations.filter(a => a.role !== 'Godparent'),
         ...(_efGodparents || []).map(xref => ({
           xref, _grampsHlink: null, rela: 'Godparent',
           note: '', citations: []
@@ -319,13 +398,13 @@ function saveEvent() {
       for (const gpId of _oldGpXrefs) {
         if (_newGpXrefs.has(gpId)) continue;
         const gp = AppState.db.individuals[gpId];
-        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.rela === 'Godchild' && a.xref === pid));
+        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.role === 'Godchild' && a.xref === pid));
       }
       for (const gpId of _newGpXrefs) {
         const gp = AppState.db.individuals[gpId];
         if (!gp) continue;
         if (!gp.associations) gp.associations = [];
-        if (!gp.associations.some(a => a.rela === 'Godchild' && a.xref === pid)) {
+        if (!gp.associations.some(a => a.role === 'Godchild' && a.xref === pid)) {
           gp.associations.push({ xref: pid, _grampsHlink: null, rela: 'Godchild',
             note: '', citations: [] });
         }
@@ -340,6 +419,7 @@ function saveEvent() {
       value:      document.getElementById('ef-val').value.trim(),
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place,
+      placeId:    _resolvedPlaceId('ef-place-id', place),
       addr:       document.getElementById('ef-addr').value.trim(),
       eventType:  (t => { _registerEventType(type, t); return t; })(document.getElementById('ef-etype').value.trim()),
       note:      document.getElementById('ef-note').value.trim(),
@@ -357,6 +437,8 @@ function saveEvent() {
   _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
+  // P0-K3: Liste refresh
+  renderTab();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -374,6 +456,8 @@ function deleteEvent() {
   if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
+  // P0-K3: Liste refresh
+  renderTab();
   showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -406,10 +490,11 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     // Neues Ereignis — Typ wählbar
     typeEl.value    = 'MARR';
     typeEl.disabled = false;
-    document.getElementById('fev-etype').value = '';
+    document.getElementById('fev-etype').value    = '';
     fillDateFields('fev-date-qual', 'fev-date', null, '');
-    document.getElementById('fev-place').value = '';
-    document.getElementById('fev-note').value  = '';
+    document.getElementById('fev-place').value    = '';
+    document.getElementById('fev-place-id').value = '';
+    document.getElementById('fev-note').value     = '';
     initSrcWidget('fev', []);
     document.getElementById('famEventFormTitle').textContent = 'Ereignis hinzufügen';
     document.getElementById('saveFamEventBtn').textContent   = 'Hinzufügen';
@@ -420,10 +505,11 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     const ev = (f.events || [])[evIdx] || {};
     typeEl.value    = ev.type || 'EVEN';
     typeEl.disabled = false;
-    document.getElementById('fev-etype').value = ev.eventType || '';
+    document.getElementById('fev-etype').value    = ev.eventType || '';
     fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
-    document.getElementById('fev-place').value = ev.place || '';
-    document.getElementById('fev-note').value  = ev.note  || '';
+    document.getElementById('fev-place').value    = ev.place    || '';
+    document.getElementById('fev-place-id').value = ev.placeId  || '';
+    document.getElementById('fev-note').value     = ev.note     || '';
     initSrcWidget('fev', ev.citations || []);
     document.getElementById('famEventFormTitle').textContent = 'Ereignis bearbeiten';
     document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
@@ -433,10 +519,11 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     const ev = f[evKey] || {};
     typeEl.value    = _FAM_TYPE_MAP[evKey] || evKey.toUpperCase();
     typeEl.disabled = true;
-    document.getElementById('fev-etype').value = '';
+    document.getElementById('fev-etype').value    = '';
     fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
-    document.getElementById('fev-place').value = ev.place || '';
-    document.getElementById('fev-note').value  = ev.note  || '';
+    document.getElementById('fev-place').value    = ev.place   || '';
+    document.getElementById('fev-place-id').value = ev.placeId || '';
+    document.getElementById('fev-note').value     = ev.note    || '';
     initSrcWidget('fev', ev.citations || []);
     document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
     document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
@@ -455,6 +542,8 @@ function saveFamEvent() {
   const type  = document.getElementById('fev-type').value;
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
   const place = getPlaceFromForm('fev-place');
+  const _fpid = document.getElementById('fev-place-id')?.value || null;
+  const placeId = (() => { const po = _fpid && AppState.db.placeObjects?.[_fpid]; return po && (po.title === place || (po.pnames||[]).some(pn=>pn.value===place)) ? _fpid : null; })();
   const note  = document.getElementById('fev-note').value.trim();
   const etype = document.getElementById('fev-etype').value.trim();
   _registerEventType(type, etype);
@@ -467,7 +556,7 @@ function saveFamEvent() {
     const ev = {
       ...((evIdx !== null ? (f.events || [])[evIdx] : null) || {}),
       type, eventType: etype, value: '',
-      date, place, note, citations
+      date, place, placeId, note, citations
     };
     if (evIdx !== null && (f.events || [])[evIdx]) {
       f.events[evIdx] = ev;
@@ -481,13 +570,13 @@ function saveFamEvent() {
     if (targetKey) {
       f[targetKey] = {
         ...(f[targetKey] || {}),
-        date, place, note, seen: !!(date || place), citations
+        date, place, placeId, note, seen: !!(date || place), citations
       };
     } else {
       // Generisches Ereignis (EVEN) → f.events[]
       f.events = f.events || [];
       f.events.push({
-        type, eventType: etype, value: '', date, place, note,
+        type, eventType: etype, value: '', date, place, placeId, note,
         citations, lati: null, long: null, _extra: []
       });
     }
@@ -495,12 +584,14 @@ function saveFamEvent() {
     // Bestehendes Sonderereignis
     f[evKey] = {
       ...(f[evKey] || {}),
-      date, place, note, seen: !!(date || place), citations
+      date, place, placeId, note, seen: !!(date || place), citations
     };
   }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged();
+  // P0-K3: Familienliste refresh
+  renderTab();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
@@ -521,6 +612,8 @@ function deleteFamEvent() {
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged();
+  // P0-K3: Familienliste refresh
+  renderTab();
   showToast('Ereignis gelöscht');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
@@ -587,3 +680,8 @@ function initAddrAutocomplete() {
 }
 
 initAddrAutocomplete();
+
+initPlaceAutocomplete('ef-place',  'ef-place-dd',  'ef-place-id',
+  () => _yearFromDateField('ef-date-y'));
+initPlaceAutocomplete('fev-place', 'fev-place-dd', 'fev-place-id',
+  () => _yearFromDateField('fev-date-y'));

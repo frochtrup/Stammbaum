@@ -10,8 +10,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
-<meta name="theme-color" content="#c8a84a">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta name="theme-color" content="#c8a84a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#8a6420" media="(prefers-color-scheme: light)">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com https://nominatim.openstreetmap.org https://gov.genealogy.net; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Stammbaum</title>
@@ -20,19 +21,34 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#v-main">Zum Hauptinhalt springen</a>
+
+<!-- ══════════════════════════════════════
+     BOOT-LOADER (sichtbar bis erste Ansicht steht)
+     CSP-konform: kein Inline-Style; CSS in styles.css, Logik in boot-loader.js
+══════════════════════════════════════ -->
+<div id="bootLoader" role="status" aria-live="polite" aria-label="App wird geladen">
+  <div class="bootLoader-card">
+    <div class="bootLoader-ornament" aria-hidden="true">✦  ✦  ✦</div>
+    <div class="bootLoader-title">Stammbaum</div>
+    <div class="bootLoader-spinner" aria-hidden="true"></div>
+    <div id="bootLoaderLabel" class="bootLoader-label">Stammbaum wird geladen …</div>
+    <div class="bootLoader-bar"><div id="bootLoaderFill" class="bootLoader-fill"></div></div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      LANDING VIEW
 ══════════════════════════════════════ -->
 <div id="v-landing" class="view active">
   <div class="brand">
-    <div class="ornament">✦  ✦  ✦</div>
+    <div class="ornament" aria-hidden="true">✦  ✦  ✦</div>
     <h1>Stammbaum</h1>
     <p>GEDCOM · Viewer &amp; Editor</p>
   </div>
 
   <div class="upload-box" id="uploadBox">
-    <div class="ub-icon">📜</div>
+    <div class="ub-icon" aria-hidden="true">📜</div>
     <h3>Stammbaum-Datei öffnen</h3>
     <p>Tippen oder Datei hierher ziehen</p>
     <p class="ub-formats">.ged (Ancestry, MacFamilyTree, Ahnenblatt) · .gramps</p>
@@ -41,7 +57,7 @@
 
   <p class="landing-tagline">Vollständig im Browser · Keine Installation · Keine Cloud</p>
 
-  <button class="btn-ghost" data-action="loadDemo">Beispiel-Stammbaum laden (12 Personen)</button>
+  <button class="btn-ghost" data-action="loadDemo">Beispiel-Stammbaum laden (21 Personen)</button>
   <button class="btn-link" data-action="openModal" data-modal="modalHelp">Hilfe &amp; Anleitung ›</button>
 </div>
 
@@ -51,22 +67,17 @@
 <main id="v-main" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" hidden class="changed-dot"></span></span>
+      <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" hidden class="changed-dot"></span><span id="offlineIndicator" hidden class="offline-indicator" title="Offline — App läuft aus dem Cache">⊘ offline</span></span>
       <button class="topbar-btn" data-action="bnavSearch" title="Suche" aria-label="Suche">🔍</button>
       <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
     </div>
   </div>
 
+  <div id="tab-tasks">
+    <div id="tasksList"></div>
+  </div>
+
   <div id="tab-persons">
-    <div class="seg-bar">
-      <div class="seg-ctrl">
-        <button type="button" id="toggle-persons-mode" class="seg-btn active"
-          data-action="switchPersonsMode" data-mode="persons">Personen</button>
-        <button type="button" id="toggle-tasks-mode" class="seg-btn"
-          data-action="switchPersonsMode" data-mode="tasks">Aufgaben</button>
-      </div>
-    </div>
-    <div id="tasksList" hidden></div>
     <div id="persons-list-section">
     <div class="list-search-header">
       <div class="search-wrap">
@@ -84,20 +95,28 @@
         <button type="button" id="yearFilterClear" hidden data-action="clearYearFilter" title="Jahresfilter zurücksetzen" aria-label="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" data-action="togglePersonSort" class="filter-btn" title="Sortierung umschalten" aria-label="Sortierung umschalten">⇅ Name</button>
         <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" class="filter-btn" title="Erweiterte Filter" aria-label="Erweiterte Filter" aria-expanded="false">⊞</button>
-        <button type="button" data-action="showPersonMediaBrowser" class="filter-btn filter-btn-md" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
+        <button type="button" data-action="exportPersonsCsv" class="filter-btn" title="Gefilterte Liste als CSV exportieren" aria-label="Als CSV exportieren">↓ CSV</button>
       </div>
       <div id="advFilterPanel" hidden class="search-wrap adv-filter-panel">
         <div class="d-flex gap-6 ai-c flex-wrap">
           <select id="sexFilter" data-input="applyPersonFilter" data-change="applyPersonFilter" class="filter-input flex-none">
-            <option value="">Geschlecht: alle</option>
+            <option value="">Geschlecht</option>
             <option value="M">Männlich</option>
             <option value="F">Weiblich</option>
             <option value="U">Unbekannt</option>
           </select>
           <input type="search" id="birthPlaceFilter" placeholder="Geburtsort…" data-input="applyPersonFilter"
             class="filter-input flex-1 min-w-100">
+          <span class="fs-xs nowrap">∅:</span>
+          <label class="adv-flag-lbl" title="Kein Sterbedatum"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> †</label>
+          <label class="adv-flag-lbl" title="Keine Quellen"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> 📖</label>
+          <label class="adv-flag-lbl" title="Keine Eltern"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> ↑</label>
         </div>
       </div>
+    </div>
+    <div id="qa-session-banner" hidden>
+      <span id="qa-session-label"></span>
+      <button type="button" class="src-add-btn" data-action="clearQaFilter">✕ Alle anzeigen</button>
     </div>
     <div id="personList" role="list"></div>
     </div><!-- /persons-list-section -->
@@ -108,6 +127,7 @@
       <div class="search-wrap d-flex gap-6 ai-c">
         <input class="search-input flex-1" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" data-input="filterFamilies">
         <button type="button" data-action="showFamilyMediaBrowser" class="filter-btn filter-btn-md" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
+        <button type="button" data-action="exportFamiliesCsv" class="filter-btn" title="Gefilterte Liste als CSV exportieren" aria-label="Als CSV exportieren">↓ CSV</button>
       </div>
     </div>
     <div id="familyList" role="list"></div>
@@ -115,35 +135,68 @@
 
   <div id="tab-sources">
     <div class="list-search-header">
-    <div class="search-wrap d-flex gap-8 ai-c">
-      <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
-      <button id="repoJumpBtn" class="btn btn-outline-sm" hidden data-action="scrollToRepo">🏛 Archive</button>
-      <button class="btn btn-outline-sm" data-action="showMediaBrowser" title="Alle Medien anzeigen">📎</button>
-    </div>
+      <div class="tab-bar">
+        <button type="button" id="toggle-sources" class="tab-btn active" data-action="switchSourcesSubTab" data-subtab="sources">Quellen</button>
+        <button type="button" id="toggle-repos"   class="tab-btn"        data-action="switchSourcesSubTab" data-subtab="repos">Archiv</button>
+        <button type="button" id="toggle-media"   class="tab-btn"        data-action="switchSourcesSubTab" data-subtab="media">Medien</button>
+      </div>
+      <div id="source-search-wrap" class="search-wrap d-flex gap-8 ai-c">
+        <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
+      </div>
+      <div id="media-filter-bar-wrap" class="media-filter-bar" hidden>
+        <button class="media-ctx-chip active" data-action="filterMedia" data-ctx="all"    title="Alle Medien">Alle</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="person" title="Personen">👤</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family" title="Familien">⚭</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source" title="Quellen">📖</button>
+        <button class="media-ctx-chip" id="mediaSortBtn" data-action="cycleMediaSort" title="Sortierung">⇅ Kontext</button>
+        <button class="media-view-toggle" id="mediaViewToggle" data-action="toggleMediaView" title="Listenansicht" aria-label="Medien-Ansicht wechseln"><span aria-hidden="true">☰</span></button>
+      </div>
     </div>
     <div id="sourceList" role="list"></div>
-    <div id="repoSection">
-      <div class="repo-section-label">Archive</div>
+    <div id="repoSection" hidden>
       <div id="repoList"></div>
+    </div>
+    <div id="mediaSection" hidden>
+      <div id="mediaGrid" class="media-grid"></div>
     </div>
   </div>
 
   <div id="tab-places">
     <div class="list-search-header">
-      <div class="seg-bar">
-        <div class="seg-ctrl">
-          <button type="button" id="toggle-orte"  class="seg-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
-          <button type="button" id="toggle-hoefe" class="seg-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
-          <button type="button" id="toggle-karte" class="seg-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
-        </div>
+      <div class="tab-bar">
+        <button type="button" id="toggle-orte"  class="tab-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
+        <button type="button" id="toggle-hoefe" class="tab-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
+        <button type="button" id="toggle-karte" class="tab-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
       </div>
-      <div id="place-search-orte" class="search-wrap">
+      <div id="place-search-orte" class="search-wrap search-wrap--place">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
+        <div class="place-toolbar-row">
+          <select class="place-type-filter-sel" id="placeTypeFilter" data-change="setPlaceTypeFilter" title="Nach Typ filtern">
+            <option value="">Alle Typen</option>
+          </select>
+          <div class="place-toolbar-btns">
+            <button type="button" class="icon-btn" id="placeGroupBtn" data-action="togglePlaceGroupMode" title="Nach PlaceObject gruppieren" aria-label="Nach PlaceObject gruppieren">⊙</button>
+            <button type="button" class="icon-btn" id="placeGovFilterBtn" data-action="togglePlaceGovFilter" title="Nur unaufgelöste GOV-Platzhalter anzeigen" aria-label="GOV-Platzhalter">⚙</button>
+            <button type="button" class="icon-btn place-validator-btn" id="placeAdminFilterBtn" hidden data-action="togglePlaceAdminFilter" title="Verwaltungsgebiete einblenden (nur enclosedBy-Eltern, keine Ereignisse)" aria-label="Verwaltungsgebiete">🗂<span class="place-validator-btn-badge" hidden>0</span></button>
+            <button type="button" class="icon-btn place-validator-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉<span id="placeMergeBadge" class="place-validator-btn-badge" hidden>0</span></button>
+            <button type="button" class="icon-btn place-validator-btn" id="placeValidatorBtn" data-action="togglePlaceValidator" title="Geo-Plausibilitäts-Validator" aria-label="Geo-Validator">⚠<span id="placeValidatorBadge" class="place-validator-btn-badge" hidden>0</span></button>
+            <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Koordinaten via Nominatim" aria-label="Batch-Geocoding">🌐</button>
+            <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
+            <button type="button" class="icon-btn" data-action="exportOrtsbuch" title="Ortsbuch exportieren (HTML)" aria-label="Ortsbuch exportieren">📖</button>
+            <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
+          </div>
+        </div>
       </div>
       <div id="place-search-hoefe" class="search-wrap" hidden>
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
+        <button type="button" class="icon-btn place-validator-btn" id="hofReviewBtn" data-action="openHofReviewModal" title="Hof-Zuweisungen prüfen — Events mit Adresse ohne Hof-Verknüpfung" aria-label="Hof-Zuweisungen prüfen">🔗<span id="hofReviewBadge" class="place-validator-btn-badge" hidden>0</span></button>
+        <button type="button" class="icon-btn place-validator-btn" id="hofMergeBtn" data-action="openHofMergeModal" title="Hof-Dubletten zusammenführen" aria-label="Hof-Dubletten zusammenführen">⇉<span id="hofMergeBadge" class="place-validator-btn-badge" hidden>0</span></button>
+        <button type="button" class="icon-btn place-validator-btn" id="hofValidatorBtn" data-action="toggleHofValidator" title="Geo-Plausibilitäts-Validator (Höfe)" aria-label="Hof-Validator">⚠<span id="hofValidatorBadge" class="place-validator-btn-badge" hidden>0</span></button>
+        <button type="button" class="icon-btn" data-action="exportHofchronik" title="Hofchronik exportieren (HTML)" aria-label="Hofchronik exportieren">📖</button>
       </div>
     </div>
+    <div id="placeValidatorPanel" hidden></div>
+    <div id="hofValidatorPanel" hidden></div>
     <div id="placeList"></div>
     <div id="hofList" hidden></div>
   </div>
@@ -171,18 +224,70 @@
 <div id="v-detail" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <button class="topbar-btn back" data-action="goBack">← Zurück</button><button class="topbar-btn back-hist" id="detailHistBtn" data-action="openDetailHistory" hidden title="Verlauf" aria-label="Navigationsverlauf">▾</button><button class="topbar-btn fwd" id="detailFwdBtn" data-action="goForward" hidden title="Vorwärts" aria-label="Vorwärts">→</button>
+      <button class="topbar-btn back" data-action="goBack" title="Zurück" aria-label="Zurück">←</button><button class="topbar-btn back-hist" id="detailHistBtn" data-action="openDetailHistory" hidden title="Verlauf" aria-label="Navigationsverlauf">▾</button><button class="topbar-btn fwd" id="detailFwdBtn" data-action="goForward" hidden title="Vorwärts" aria-label="Vorwärts">→</button>
       <span class="topbar-title" id="detailTopTitle"></span>
-      <button class="topbar-btn" id="probandBtn" data-action="toggleProband" hidden title="Als Proband setzen" aria-label="Als Proband setzen">⌂</button>
+      <button class="topbar-btn" id="probandBtn" data-action="detailShowProband" hidden title="Zum Probanden" aria-label="Zum Probanden">⌂</button>
       <button class="topbar-btn" id="treeBtn" data-action="showTree" hidden title="Sanduhr-Ansicht" aria-label="Sanduhr-Ansicht">⧖</button>
-      <button class="topbar-btn primary" data-action="showEditSheet" id="editBtn">Bearbeiten</button>
+      <button class="topbar-btn" id="timelineBtn" data-action="showTimeline" hidden title="Zeitleiste" aria-label="Zeitleiste">⟷</button>
+      <button class="topbar-btn" id="storyBtn" data-action="showStory" hidden title="Lebensgeschichte" aria-label="Lebensgeschichte">📖</button>
+      <button class="topbar-btn" id="detailMapBtn" data-action="showCurrentPersonOnMap" hidden title="Auf Karte zeigen" aria-label="Auf Karte zeigen">🌐</button>
+      <button class="topbar-btn" id="quickCamBtn" data-action="quickCamCapture" hidden title="Foto aufnehmen" aria-label="Foto aufnehmen">📷</button>
+      <button class="topbar-btn proband-set-btn" id="probandSetBtn" data-action="toggleProband" hidden title="Als Proband setzen" aria-label="Als Proband setzen">⌂</button>
+      <button class="topbar-btn primary" data-action="showEditSheet" id="editBtn" title="Bearbeiten" aria-label="Bearbeiten">✎</button>
     </div>
+  </div>
+  <div id="detailNavBar" class="detail-nav-bar" hidden>
+    <button class="detail-nav-btn" id="detailNavProband" data-action="toggleProband" title="Als Proband setzen" aria-label="Proband">⌂<span>Proband</span></button>
+    <button class="detail-nav-btn" id="detailNavTree" data-action="showTree" title="Sanduhr-Ansicht" aria-label="Baum">⧖<span>Baum</span></button>
+    <button class="detail-nav-btn" id="detailNavTimeline" data-action="showTimeline" title="Zeitleiste" aria-label="Zeitleiste">⟷<span>Zeitleiste</span></button>
+    <button class="detail-nav-btn" id="detailNavStory" data-action="showStory" title="Lebensgeschichte" aria-label="Geschichte">📖<span>Geschichte</span></button>
+    <button class="detail-nav-btn" id="detailNavMap" data-action="showCurrentPersonOnMap" title="Auf Karte zeigen" aria-label="Karte">🌐<span>Karte</span></button>
+    <button class="detail-nav-btn detail-nav-edit" data-action="showEditSheet" title="Bearbeiten" aria-label="Bearbeiten">✎<span>Bearbeiten</span></button>
   </div>
   <div id="desktopPlaceholder">
     <div class="ph-icon">⚘</div>
     <div>Eintrag in der Liste auswählen</div>
   </div>
-  <div id="detailContent"></div>
+  <div id="detailPerson" class="detail-container" data-view-init="false"></div>
+  <div id="detailFamily" class="detail-container" data-view-init="false"></div>
+  <div id="detailPlace"  class="detail-container" data-view-init="false"></div>
+  <div id="detailSource" class="detail-container" data-view-init="false"></div>
+  <div id="detailMedia"  class="detail-container" data-view-init="false"></div>
+</div>
+
+<!-- Zeitleiste -->
+<div id="v-timeline" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="topbar-btn back" id="tlBtnBack" hidden data-action="goBack">←</button><button class="topbar-btn back-hist" id="tlHistBtn" hidden data-action="openTreeHistory" title="Verlauf" aria-label="Verlauf">▾</button><button class="topbar-btn fwd" id="tlBtnFwd" hidden data-action="goForward" title="Vorwärts" aria-label="Vorwärts">→</button>
+      <span class="topbar-title" id="tlTopTitle"></span>
+      <button class="topbar-btn" id="tlProbandBtn" data-action="tlShowProband" title="Proband" aria-label="Proband">⌂</button>
+      <button class="topbar-btn" id="tlFsBtn" data-action="toggleTimelineFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
+      <span class="topbar-sep" aria-hidden="true"></span>
+      <button class="topbar-btn" data-action="tlShowTree" title="Sanduhr" aria-label="Sanduhr">⧖</button>
+      <button class="topbar-btn" data-action="tlShowFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◠</button>
+      <button class="topbar-btn" data-action="tlShowDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
+      <button class="topbar-btn" data-action="showCurrentPersonOnMap" title="Auf Karte zeigen" aria-label="Auf Karte zeigen">🌐</button>
+      <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
+    </div>
+  </div>
+  <div id="tlPersonBar" class="tl-person-bar" hidden></div>
+  <div id="tlFilterBar" class="tl-filter-row"></div>
+  <div id="tlBody"></div>
+</div>
+
+<!-- Lebensgeschichte -->
+<div id="v-story" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="topbar-btn back" id="storyBtnBack" hidden data-action="goBack" aria-label="Zurück">←</button><button class="topbar-btn back-hist" id="storyHistBtn" hidden data-action="openTreeHistory" title="Verlauf" aria-label="Verlauf">▾</button><button class="topbar-btn fwd" id="storyBtnFwd" hidden data-action="goForward" title="Vorwärts" aria-label="Vorwärts">→</button>
+      <span class="topbar-title" id="storyTopTitle"></span>
+      <button class="topbar-btn" id="storyPrintBtn" data-action="printStory" title="Drucken / PDF" aria-label="Drucken">⎙</button>
+      <button class="topbar-btn" id="storyDlBtn" data-action="downloadStory" title="Als HTML speichern" aria-label="Als HTML speichern">↓</button>
+      <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
+    </div>
+  </div>
+  <div id="storyBody"></div>
 </div>
 
 <!-- Stammbaum-Ansicht (Sanduhr) -->
@@ -191,27 +296,15 @@
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" hidden data-action="treeNavBack">←</button><button class="topbar-btn back-hist" id="treeHistBtn" data-action="openTreeHistory" hidden title="Verlauf" aria-label="Baum-Verlauf">▾</button><button class="topbar-btn fwd" id="treeBtnFwd" hidden data-action="goForward" title="Vorwärts" aria-label="Vorwärts">→</button>
       <span class="topbar-title" id="treeTopTitle"></span>
-      <span id="treeGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="4" data-action="setTreeGens">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-tgen="5" data-action="setTreeGens">5</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="6" data-action="setTreeGens">6</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="7" data-action="setTreeGens">7</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="8" data-action="setTreeGens">8</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="9" data-action="setTreeGens">9</button>
-      </span>
-      <span id="fcGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="7" data-action="setFcGens">7</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="8" data-action="setFcGens">8</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="9" data-action="setFcGens">9</button>
-      </span>
-      <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◑</button>
+      <button class="topbar-btn" id="treeProbandBtn" data-action="treeShowProband" title="Proband" aria-label="Proband">⌂</button>
       <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
+      <button class="topbar-btn" id="treeExportBtn" data-action="exportChartPng" title="Als PNG herunterladen" aria-label="Diagramm als PNG exportieren" hidden>↓</button>
+      <button class="topbar-btn" id="treeExportSvgBtn" data-action="exportChartSvg" title="Als Vektor-SVG für Großposter (A1/A0) herunterladen" aria-label="Diagramm als Vektor-SVG exportieren" hidden>⬡</button>
+      <span class="topbar-sep" aria-hidden="true"></span>
+      <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◠</button>
+      <button class="topbar-btn" id="treeDescToggle" data-action="toggleDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
+      <button class="topbar-btn" id="treeTimelineBtn" data-action="showTimeline" title="Zeitleiste" aria-label="Zeitleiste">⟷</button>
+      <button class="topbar-btn" id="treeMapBtn" data-action="showCurrentPersonOnMap" title="Auf Karte zeigen" aria-label="Auf Karte zeigen">🌐</button>
       <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
     </div>
   </div>
@@ -232,6 +325,35 @@
     <div class="tkl-row"><span class="tkl-key">→</span><span class="tkl-lbl">Partner</span></div>
     <div class="tkl-row"><span class="tkl-key">←</span><span class="tkl-lbl">Zurück</span></div>
   </div>
+  <div id="treeGenOverlay">
+    <span id="treeGenBtns">
+      <button class="fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
+      <button class="fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>
+      <button class="fc-gen-btn" data-tgen="4" data-action="setTreeGens">4</button>
+      <button class="fc-gen-btn active" data-tgen="5" data-action="setTreeGens">5</button>
+      <button class="fc-gen-btn" data-tgen="6" data-action="setTreeGens">6</button>
+      <button class="fc-gen-btn" data-tgen="7" data-action="setTreeGens">7</button>
+      <button class="fc-gen-btn" data-tgen="8" data-action="setTreeGens">8</button>
+      <button class="fc-gen-btn" data-tgen="9" data-action="setTreeGens">9</button>
+    </span>
+    <span id="descGenBtns">
+      <button class="fc-gen-btn" data-dgen="2" data-action="setDescTreeGens">2</button>
+      <button class="fc-gen-btn" data-dgen="3" data-action="setDescTreeGens">3</button>
+      <button class="fc-gen-btn active" data-dgen="4" data-action="setDescTreeGens">4</button>
+      <button class="fc-gen-btn" data-dgen="5" data-action="setDescTreeGens">5</button>
+      <button class="fc-gen-btn" data-dgen="6" data-action="setDescTreeGens">6</button>
+      <button class="fc-gen-btn" data-dgen="7" data-action="setDescTreeGens">7</button>
+    </span>
+    <span id="fcGenBtns">
+      <button class="fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
+      <button class="fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
+      <button class="fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
+      <button class="fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
+      <button class="fc-gen-btn" data-gen="7" data-action="setFcGens">7</button>
+      <button class="fc-gen-btn" data-gen="8" data-action="setFcGens">8</button>
+      <button class="fc-gen-btn" data-gen="9" data-action="setFcGens">9</button>
+    </span>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -243,7 +365,7 @@
     <span class="bnav-lbl">Baum</span>
   </button>
   <button class="bnav-btn" id="bnav-persons" data-action="bnavTab" data-tab="persons">
-    <span class="bnav-icon">👤<span id="tasks-badge" hidden></span></span>
+    <span class="bnav-icon">👤</span>
     <span class="bnav-lbl">Personen</span>
   </button>
   <button class="bnav-btn" id="bnav-families" data-action="bnavTab" data-tab="families">
@@ -258,11 +380,30 @@
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
   </button>
-  <button class="bnav-btn" id="bnav-home" data-action="bnavHome">
-    <span class="bnav-icon">⌂</span>
-    <span class="bnav-lbl">Proband</span>
+  <button class="bnav-btn" id="bnav-tasks" data-action="bnavTasks">
+    <span class="bnav-icon">☑<span id="tasks-badge" hidden></span></span>
+    <span class="bnav-lbl">Aufgaben</span>
   </button>
 </nav>
+
+<!-- ══════════════════════════════════════
+     ONBOARDING OVERLAY
+══════════════════════════════════════ -->
+<div id="ob-overlay" hidden aria-hidden="true">
+  <div id="ob-top"></div>
+  <div id="ob-left"></div>
+  <div id="ob-right"></div>
+  <div id="ob-bottom"></div>
+  <div id="ob-card" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <p id="ob-step-counter" class="ob-counter"></p>
+    <h2 id="ob-title"></h2>
+    <p id="ob-text"></p>
+    <div class="ob-actions">
+      <button id="ob-skip" data-action="obSkip">Überspringen</button>
+      <button id="ob-next" data-action="obNext" class="btn">Weiter →</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      MODALS
@@ -276,10 +417,233 @@
     <div class="sheet-body">
       <div class="btn-row btn-row-col">
         <button class="btn btn-save" data-action="addPerson">👤 Neue Person</button>
+        <button class="btn btn-save btn-dim" data-action="showQtManager">⚭ Aus Quelle erfassen (Templates)</button>
         <button class="btn btn-save btn-dim" data-action="addFamily">👨‍👩‍👧 Neue Familie</button>
         <button class="btn btn-save btn-dim" data-action="addSource">📖 Neue Quelle</button>
         <button class="btn btn-save btn-dim" data-action="addPlace">📍 Neuer Ort</button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAdd">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schnellerfassung neue Person -->
+<div class="modal-overlay" id="modalQuickAdd" role="dialog" aria-modal="true" aria-labelledby="lbl-modalQuickAdd">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalQuickAdd">Neue Person — Schnellerfassung</div>
+    <div class="sheet-body">
+      <div class="form-row">
+        <label class="form-label">Vorname
+          <input class="form-input" id="qa-given" type="text" placeholder="Vorname" autocomplete="off">
+        </label>
+        <label class="form-label">Nachname
+          <input class="form-input" id="qa-surname" type="text" placeholder="Nachname" autocomplete="off">
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Ereignisse
+          <div id="qa-ev-chips">
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="BIRT">Geburt</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="CHR">Taufe</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="DEAT">Tod</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="BURI">Beerdigung</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="OCCU">Beruf</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="RESI">Wohnort</button>
+          </div>
+        </label>
+      </div>
+      <div id="qa-ev-fields" hidden>
+        <div class="form-row">
+          <label class="form-label">Datum
+            <input class="form-input" id="qa-date" type="text" placeholder="TT.MM.JJJJ">
+          </label>
+          <label class="form-label">Ort
+            <input class="form-input" id="qa-place" type="text" placeholder="Ort" autocomplete="off">
+            <div class="place-dropdown" id="qa-place-dd"></div>
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Quelle (optional)
+          <div>
+            <input class="form-input" id="qa-src-input" type="text" placeholder="Quelle suchen…" autocomplete="off">
+            <div class="place-dropdown" id="qa-src-dd"></div>
+          </div>
+        </label>
+        <label class="form-label">Seite
+          <input class="form-input" id="qa-page" type="text" placeholder="z.B. 12">
+        </label>
+        <div>
+          <button type="button" class="btn btn-dim" id="qa-src-copy-btn" data-action="qaCopySrc" title="Quelle in Zwischenablage kopieren">⧉</button>
+          <button type="button" class="btn btn-dim" id="qa-src-paste-btn" data-action="qaPasteSrc" title="Quelle aus Zwischenablage einfügen" hidden>📋</button>
+        </div>
+      </div>
+      <p id="qa-hint" class="form-hint" hidden></p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cancel" data-action="closeModal" data-modal="modalQuickAdd">Abbrechen</button>
+      <button class="btn btn-dim" id="qa-done-btn" data-action="quickAddDone" hidden>Fertig</button>
+      <button class="btn btn-save" data-action="saveQuickAdd">Speichern ＋</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK-TPL: Template-Verwaltung -->
+<div class="modal-overlay" id="modalQtManager" role="dialog" aria-modal="true" aria-labelledby="lbl-modalQtManager">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalQtManager">Eingabe-Templates</div>
+    <div class="sheet-body">
+      <!-- Listen-Ansicht -->
+      <div id="qt-list-view">
+        <div id="qt-list"></div>
+        <div class="btn-row btn-row-col">
+          <button class="btn btn-save" data-action="qtNewTemplate">＋ Neues Template</button>
+          <div class="form-row">
+            <button class="btn btn-dim" data-action="qtExport">⤓ Export (.json)</button>
+            <button class="btn btn-dim" data-action="qtImportClick">⤒ Import</button>
+            <input type="file" id="qt-import-file" accept="application/json,.json" hidden data-change="qtImportFile">
+          </div>
+        </div>
+      </div>
+      <!-- Bearbeiten-Ansicht -->
+      <div id="qt-edit-view" hidden>
+        <label class="form-label">Name
+          <input class="form-input" id="qt-f-name" type="text" placeholder="z.B. Heiratsbuch Ochtrup 1780–1820" autocomplete="off">
+        </label>
+        <label class="form-label">Typ
+          <select class="form-input" id="qt-f-base" data-change="qtBaseChange">
+            <option value="marriage">⚭ Heirat (Heiratsbuch)</option>
+            <option value="baptism">✝ Taufe (Taufbuch)</option>
+            <option value="burial">✞ Sterbefall (Sterberegister)</option>
+            <option value="custom">🛠 Frei konfigurierbar</option>
+          </select>
+        </label>
+        <label class="form-label">Quelle (impliziter Beleg)
+          <input class="form-input" id="qt-f-src" type="text" placeholder="Quelle suchen…" autocomplete="off">
+          <input type="hidden" id="qt-f-src-sid">
+          <div class="place-dropdown" id="qt-f-src-dd"></div>
+        </label>
+        <div class="form-row">
+          <label class="form-label">Ort (implizit) <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="qt-f-place" title="Ort aus Liste wählen">📍</button>
+            <input class="form-input" id="qt-f-place" type="text" placeholder="z.B. Ochtrup" autocomplete="off">
+            <input type="hidden" id="qt-f-place-id">
+            <div class="place-dropdown" id="qt-f-place-dd"></div>
+          </label>
+          <label class="form-label">Qualität (QUAY)
+            <select class="form-input" id="qt-f-quay">
+              <option value="">—</option>
+              <option value="0">0 unbelegt</option>
+              <option value="1">1 fragwürdig</option>
+              <option value="2">2 plausibel</option>
+              <option value="3" selected>3 direkt</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Seiten-Muster
+            <input class="form-input" id="qt-f-pagepat" type="text" placeholder="fol. {v}" autocomplete="off">
+          </label>
+          <label class="form-label">Zeitraum
+            <input class="form-input" id="qt-f-from" type="number" placeholder="1780">
+          </label>
+          <label class="form-label">bis
+            <input class="form-input" id="qt-f-to" type="number" placeholder="1820">
+          </label>
+        </div>
+        <label class="form-label">URL-Muster (Scan-Deeplink, {v} = Seite)
+          <input class="form-input" id="qt-f-urlpat" type="text" placeholder="https://data.matricula-online.eu/…/?pg={v}" autocomplete="off">
+        </label>
+        <p class="form-hint">{v} wird beim Erfassen durch deine Seiten-/Eintragseingabe ersetzt.</p>
+        <!-- Phase E: Felder-Builder (nur bei base=custom sichtbar) -->
+        <div id="qt-fields-section" hidden>
+          <div class="form-label">Felder <span class="form-hint">(Reihenfolge = Formular · Wert ausgefüllt = implizit gesetzt)</span></div>
+          <div id="qt-fields-list"></div>
+          <button type="button" class="btn btn-dim" data-action="qtFieldAdd">＋ Feld</button>
+          <label class="form-label mt-8">Implizite Felder im Erfassungs-Formular
+            <select class="form-input" id="qt-f-implicit-mode">
+              <option value="hidden">verstecken (nur Chip im Kopf)</option>
+              <option value="prefill">vorbelegt + editierbar (🔒)</option>
+            </select>
+          </label>
+          <p class="form-hint">Rollen: Person (Hauptperson) · Vater/Mutter → Elternfamilie · Ehepartner → Ehe. Nachname des Vaters wird mit dem der Person vorbelegt (überschreibbar).</p>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cancel" id="qt-mgr-close" data-action="closeModal" data-modal="modalQtManager">Schließen</button>
+      <button class="btn btn-dim" id="qt-edit-cancel" data-action="qtCancelEdit" hidden>Zurück</button>
+      <button class="btn btn-save" id="qt-edit-save" data-action="qtSaveTemplate" hidden>Template speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK-TPL: Erfassung -->
+<div class="modal-overlay" id="modalQtEntry" role="dialog" aria-modal="true" aria-labelledby="lbl-modalQtEntry">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalQtEntry">Erfassung</div>
+    <div class="sheet-body">
+      <div id="qt-entry-body"></div>
+      <p id="qt-entry-hint" class="form-hint" hidden></p>
+      <div id="qt-plausi-box" hidden></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cancel" data-action="qtEntryDone">Fertig</button>
+      <button class="btn btn-save" data-action="qtSaveEntry">Speichern ＋</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prüfregeln konfigurieren -->
+<div class="modal-overlay" id="modalValConfig" role="dialog" aria-modal="true" aria-labelledby="lbl-modalValConfig">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalValConfig">Prüfregeln konfigurieren</div>
+    <div class="sheet-body">
+      <div class="valcfg-rules-header mb-8">
+        <span class="fs-075 fw-600 c-muted text-upper">Regeln aktivieren</span>
+        <span class="valcfg-toggle-links">
+          <button class="btn-link fs-085" data-action="valcfgAll">Alle</button>
+          <span class="c-muted"> / </span>
+          <button class="btn-link fs-085" data-action="valcfgNone">Keine</button>
+        </span>
+      </div>
+      <div class="valcfg-rules-grid mb-16" id="valcfg-rules-grid">
+        <!-- dynamisch befüllt von openValConfig() aus VAL_RULES -->
+      </div>
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Schwellenwerte</div>
+      <div class="d-flex flex-col gap-8 mb-16">
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxAge">Max. Lebensalter (Jahre)</label>
+          <input type="number" id="valcfg-thr-maxAge" min="80" max="200" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-staStAera">Standesamt ab Jahr</label>
+          <input type="number" id="valcfg-thr-staStAera" min="1800" max="1920" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-minMotherAge">Min. Mutteralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-minMotherAge" min="10" max="20" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxMotherAge">Max. Mutteralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-maxMotherAge" min="40" max="80" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxFatherAge">Max. Vateralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-maxFatherAge" min="40" max="120" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxChildren">Max. Kinderzahl pro Familie</label>
+          <input type="number" id="valcfg-thr-maxChildren" min="5" max="30" class="valcfg-thr-inp">
+        </div>
+      </div>
+      <div class="btn-row gap-8">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalValConfig">Abbrechen</button>
+        <button class="btn btn-outline" data-action="resetValConfig">Zurücksetzen</button>
+        <button class="btn btn-save" data-action="saveValConfig">Speichern</button>
       </div>
     </div>
   </div>
@@ -296,9 +660,85 @@
           class="form-input w-full">
         <select id="addTaskCategory" class="form-select w-full">
         </select>
+        <select id="addTaskSrcSid" class="form-select w-full">
+        </select>
         <div class="btn-row gap-8">
           <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddTask">Abbrechen</button>
           <button class="btn btn-save" data-action="saveAddTask">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RES-HYPO: Hypothese hinzufügen/bearbeiten -->
+<div class="modal-overlay" id="modalAddHypo" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddHypo">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAddHypo">Hypothese hinzufügen</div>
+    <div class="sheet-body">
+      <div class="d-flex flex-col gap-12">
+        <textarea id="hypoText" rows="2" placeholder="Behauptung, z. B. „Johann *1650 ist Sohn des Peter Decker"…"
+          class="form-input w-full"></textarea>
+        <div class="btn-row gap-8">
+          <select id="hypoStatus" class="form-select w-full" aria-label="Status"></select>
+          <select id="hypoWeight" class="form-select w-full" aria-label="Konfidenz"></select>
+        </div>
+        <textarea id="hypoRationale" rows="3" placeholder="Begründung / Beweisführung (optional)…"
+          class="form-input w-full"></textarea>
+        <textarea id="hypoConclusion" rows="2" placeholder="Schlussfolgerung / Auflösung (optional)…"
+          class="form-input w-full"></textarea>
+        <div class="hypo-ev-head">
+          <span class="hypo-lbl">Evidenz (Quellen)</span>
+          <button type="button" class="section-add" data-action="addHypoEvidence">+ Quelle</button>
+        </div>
+        <div id="hypoEvidenceList" class="d-flex flex-col gap-8"></div>
+        <div class="btn-row gap-8">
+          <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddHypo">Abbrechen</button>
+          <button class="btn btn-save" data-action="saveAddHypo">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Forschungsprotokoll: Log-Eintrag hinzufügen/bearbeiten -->
+<div class="modal-overlay" id="modalAddRlog" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddRlog">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAddRlog">Log-Eintrag</div>
+    <div class="sheet-body">
+      <div class="d-flex flex-col gap-12">
+        <label class="form-label">Datum
+          <input type="date" id="rlogDate" class="form-input w-full">
+        </label>
+        <label class="form-label">Archiv
+          <select id="rlogRepo" class="form-select w-full">
+            <option value="">(kein Archiv)</option>
+          </select>
+        </label>
+        <label class="form-label">Quelle
+          <select id="rlogSour" class="form-select w-full">
+            <option value="">(keine Quelle)</option>
+          </select>
+        </label>
+        <label class="form-label">Suchbegriff / Fragestellung
+          <input type="text" id="rlogQuery" placeholder="Was wurde gesucht?" class="form-input w-full">
+        </label>
+        <label class="form-label">Ergebnis
+          <select id="rlogResult" class="form-select w-full">
+            <option value="found">Gefunden</option>
+            <option value="partial">Teilweise gefunden</option>
+            <option value="not-found">Nicht gefunden</option>
+            <option value="pending">Ausstehend</option>
+          </select>
+        </label>
+        <label class="form-label">Notiz / Fundstätte
+          <textarea id="rlogNote" rows="3" placeholder="Was wurde gefunden? Signatur, Seite, …" class="form-input w-full"></textarea>
+        </label>
+        <div class="btn-row gap-8">
+          <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddRlog">Abbrechen</button>
+          <button class="btn btn-save" data-action="saveRlog">Speichern</button>
         </div>
       </div>
     </div>
@@ -315,15 +755,15 @@
       <!-- KERN: immer sichtbar -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Vorname</label>
-          <input class="form-input" id="pf-given" placeholder="Anna">
+          <label class="form-label" for="pf-given">Vorname</label>
+          <input class="form-input" id="pf-given" placeholder="Anna" aria-describedby="pf-name-err">
         </div>
         <div class="form-group">
-          <label class="form-label">Nachname</label>
-          <input class="form-input" id="pf-surname" placeholder="Müller">
+          <label class="form-label" for="pf-surname">Nachname</label>
+          <input class="form-input" id="pf-surname" placeholder="Müller" aria-describedby="pf-name-err">
         </div>
       </div>
-      <p class="form-error" id="pf-name-err" hidden></p>
+      <p class="form-error" id="pf-name-err" hidden aria-live="assertive"></p>
       <div class="form-group">
         <label class="form-label">Geschlecht</label>
         <select class="form-select" id="pf-sex">
@@ -479,6 +919,23 @@
           <input class="form-input" id="pf-www" type="url" placeholder="https://…">
         </div>
       </div>
+      <!-- GRAMPS: nur sichtbar wenn grampId oder _grampsAttrs vorhanden -->
+      <div id="pf-gramps-section" hidden>
+        <div class="gramps-section-hd">GRAMPS-Daten</div>
+        <div class="form-group">
+          <label class="form-label">GRAMPS-ID</label>
+          <input type="text" class="form-input gramps-id-input" id="pf-gramps-id" readonly>
+        </div>
+        <div class="form-group" id="pf-gramps-tags-row" hidden>
+          <label class="form-label">Tags</label>
+          <div id="pf-gramps-tags"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attribute</label>
+          <div id="pf-gramps-attrs-list"></div>
+          <button type="button" class="btn btn-sec mt-6 p-btn-sm" data-action="addPfGrampsAttr">+ Attribut</button>
+        </div>
+      </div>
       <!-- QUELLEN: immer sichtbar — wird auto allen befüllten Feldern zugeordnet -->
       <div class="src-widget" id="pf-src-widget">
         <label class="form-label">Quelle <span class="pf-src-hint" id="pf-src-hint"></span></label>
@@ -564,13 +1021,16 @@
     <div class="sheet-title" id="familyFormTitle">Familie bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="ff-id">
+      <input type="hidden" id="ff-mplace-id">
       <div class="form-group">
         <label class="form-label">Ehemann / Vater</label>
-        <select class="form-select" id="ff-husb"><option value="">– keiner –</option></select>
+        <input type="hidden" id="ff-husb">
+        <button type="button" class="form-select ff-parent-pick is-empty" id="ff-husb-pick" data-action="ffPickParent" data-slot="husb">– keiner –</button>
       </div>
       <div class="form-group">
         <label class="form-label">Ehefrau / Mutter</label>
-        <select class="form-select" id="ff-wife"><option value="">– keine –</option></select>
+        <input type="hidden" id="ff-wife">
+        <button type="button" class="form-select ff-parent-pick is-empty" id="ff-wife-pick" data-action="ffPickParent" data-slot="wife">– keine –</button>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -605,6 +1065,23 @@
       <div class="form-group">
         <label class="form-label">Notiz</label>
         <textarea class="form-input resize-v" id="ff-note" rows="3" placeholder="Weitere Informationen…"></textarea>
+      </div>
+      <!-- GRAMPS: nur sichtbar wenn grampId oder _grampsAttrs vorhanden -->
+      <div id="ff-gramps-section" hidden>
+        <div class="gramps-section-hd">GRAMPS-Daten</div>
+        <div class="form-group">
+          <label class="form-label">GRAMPS-ID</label>
+          <input type="text" class="form-input gramps-id-input" id="ff-gramps-id" readonly>
+        </div>
+        <div class="form-group" id="ff-gramps-tags-row" hidden>
+          <label class="form-label">Tags</label>
+          <div id="ff-gramps-tags"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attribute</label>
+          <div id="ff-gramps-attrs-list"></div>
+          <button type="button" class="btn btn-sec mt-6 p-btn-sm" data-action="addFfGrampsAttr">+ Attribut</button>
+        </div>
       </div>
       <div class="src-widget" id="ff-src-widget">
         <label class="form-label">Quellen (Heirat)</label>
@@ -642,6 +1119,7 @@
       <input type="hidden" id="fev-fid">
       <input type="hidden" id="fev-key">
       <input type="hidden" id="fev-evidx">
+      <input type="hidden" id="fev-place-id">
       <div class="form-group">
         <label class="form-label">Ereignistyp</label>
         <select class="form-select" id="fev-type" data-change="onFamEventTypeChange">
@@ -677,7 +1155,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Ort <button type="button" id="fev-place-toggle" data-action="togglePlaceMode" data-placeid="fev-place" class="place-toggle-btn">⊞</button></label>
+        <label class="form-label">Ort <button type="button" id="fev-place-toggle" data-action="togglePlaceMode" data-placeid="fev-place" class="place-toggle-btn">⊞</button> <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="fev-place" title="Ort aus Liste wählen">📍</button></label>
         <div id="fev-place-free">
           <div class="place-input-wrap">
             <input class="form-input" id="fev-place" placeholder="München" autocomplete="off">
@@ -717,14 +1195,27 @@
     <div class="sheet-body">
       <input type="hidden" id="sf-id">
       <div id="sf-template-row" class="mb-14" hidden>
-        <div class="form-label mb-6">Vorlage wählen</div>
-        <div class="d-flex flex-wrap gap-6">
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="kirchenbuch">Kirchenbuch</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="standesamt">Standesamt</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="volkszaehlung">Volkszählung</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="familienbuch">Familienstammbuch</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="zeitung">Zeitungsartikel</button>
-        </div>
+        <label class="form-label">Vorlage
+          <select id="sf-template-select" class="form-select w-full mt-4" data-change="applySourceTemplate">
+            <option value="">(Vorlage wählen …)</option>
+            <optgroup label="Kirchenbuch">
+              <option value="kb-tauf">Kirchenbuch Taufen</option>
+              <option value="kb-heir">Kirchenbuch Heiraten</option>
+              <option value="kb-beer">Kirchenbuch Beerdigungen</option>
+            </optgroup>
+            <optgroup label="Standesamt">
+              <option value="sta-geb">Standesamt Geburten</option>
+              <option value="sta-heir">Standesamt Heiraten</option>
+              <option value="sta-sterb">Standesamt Sterbefälle</option>
+            </optgroup>
+            <optgroup label="Sonstige">
+              <option value="volkszaehl">Volkszählung</option>
+              <option value="grabstein">Grabstein</option>
+              <option value="totenzettel">Totenzettel</option>
+              <option value="militaer">Militärakte</option>
+            </optgroup>
+          </select>
+        </label>
       </div>
       <div class="form-group">
         <label class="form-label">Kurzname (ABBR)</label>
@@ -759,6 +1250,23 @@
       <div class="form-group" id="sf-caln-group" hidden>
         <label class="form-label">Signatur / Bestellnummer (CALN)</label>
         <input class="form-input" id="sf-caln" placeholder="IV/342">
+        <label class="form-label">Medientyp (MEDI)</label>
+        <select class="form-input" id="sf-medi">
+          <option value="">– kein Medientyp –</option>
+          <option value="audio">audio</option>
+          <option value="book">book</option>
+          <option value="card">card</option>
+          <option value="electronic">electronic</option>
+          <option value="fiche">fiche</option>
+          <option value="film">film</option>
+          <option value="magazine">magazine</option>
+          <option value="manuscript">manuscript</option>
+          <option value="map">map</option>
+          <option value="newspaper">newspaper</option>
+          <option value="photo">photo</option>
+          <option value="tombstone">tombstone</option>
+          <option value="video">video</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Notiz / Beschreibung</label>
@@ -773,6 +1281,11 @@
         </div>
       </div>
       </div><!-- /sf-optional-fields -->
+      <div class="form-group">
+        <label class="form-label">Deckungsbereich (DATA.EVEN)</label>
+        <div id="sf-data-evens-list"></div>
+        <button type="button" class="btn btn-dim mt-6" data-action="addDataEven">+ Deckungsbereich</button>
+      </div>
       <button type="button" id="sf-more-btn" class="btn w-full mb-12 fs-md btn-sec"
               data-action="sfToggleMore">Weitere Felder ▼</button>
       <div class="btn-row">
@@ -794,6 +1307,7 @@
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
+      <input type="hidden" id="ef-place-id">
       <div class="form-group">
         <label class="form-label">Ereignistyp</label>
         <select class="form-select" id="ef-type" data-change="onEventTypeChange">
@@ -842,7 +1356,7 @@
         <input class="form-input" id="ef-cause" placeholder="z.B. Typhus">
       </div>
       <div class="form-group" id="ef-addr-group" hidden>
-        <label class="form-label">Adresse</label>
+        <label class="form-label">Adresse <button type="button" class="place-toggle-btn" data-action="openHofPicker" title="Hof aus Liste wählen">🏡</button></label>
         <div class="place-input-wrap">
           <textarea class="form-input resize-v" id="ef-addr" rows="2" placeholder="Hauptstraße 5&#10;80331 München" autocomplete="off"></textarea>
           <div class="place-dropdown" id="ef-addr-dd"></div>
@@ -876,9 +1390,13 @@
             </div>
           </div>
           <p class="form-error" id="ef-date-err"></p>
+          <div id="ef-date-hints" hidden class="d-flex gap-4 mt-6 flex-wrap">
+            <button type="button" class="quick-chip" id="ef-hint-birth" data-action="efFillDateHint" data-hint="birth" title="Geburtsdatum übernehmen">🎂 Geburt</button>
+            <button type="button" class="quick-chip" id="ef-hint-marr"  data-action="efFillDateHint" data-hint="marr"  title="Heiratsdatum übernehmen">⚭ Heirat</button>
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" class="place-toggle-btn">⊞</button></label>
+          <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" class="place-toggle-btn">⊞</button> <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="ef-place" title="Ort aus Liste wählen">📍</button></label>
           <div id="ef-place-free">
             <div class="place-input-wrap">
               <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
@@ -910,6 +1428,8 @@
       </div>
       <div class="form-group">
         <label class="form-label">Medien</label>
+        <input type="file" id="ef-cam-input" accept="image/*" capture="environment" data-action="efCamChange" hidden>
+        <button type="button" class="src-add-btn" data-action="efCamCapture">📷 Foto aufnehmen</button>
         <div id="ef-media-list"></div>
         <button type="button" class="src-add-btn mt-6" data-action="addEfMedia">＋ Medium hinzufügen</button>
       </div>
@@ -930,9 +1450,39 @@
     <div class="sheet-title" id="lbl-modalPlace">Ort bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="pl-old">
+      <input type="hidden" id="pl-placeId">
       <div class="form-group">
         <label class="form-label">Ortsname</label>
         <input class="form-input" id="pl-name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Typ</label>
+        <select class="form-input" id="pl-type">
+          <option value="Unknown">—</option>
+          <option value="Village">Dorf</option>
+          <option value="Town">Kleinstadt</option>
+          <option value="City">Stadt</option>
+          <option value="Municipality">Gemeinde</option>
+          <option value="County">Kreis</option>
+          <option value="District">Bezirk</option>
+          <option value="Region">Region</option>
+          <option value="Province">Provinz</option>
+          <option value="State">Bundesland</option>
+          <option value="Country">Land</option>
+          <option value="Parish">Pfarrei</option>
+          <option value="Building">Gebäude</option>
+          <option value="Cemetery">Friedhof</option>
+          <option value="Farm">Hof</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Existenz</label>
+        <div class="place-date-row">
+          <span class="pl-date-lbl">ab</span>
+          <input class="form-input pl-field-sm" id="pl-exists-from" placeholder="JJJJ">
+          <span class="pl-date-lbl">bis</span>
+          <input class="form-input pl-field-sm" id="pl-exists-to" placeholder="JJJJ">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Breite (Lat) — oder Apple Maps-Koordinaten hier einfügen</label>
@@ -941,9 +1491,45 @@
         <input class="form-input w-full" id="pl-long" placeholder="11.5755">
         <div class="form-hint-sm">Apple Maps-Format ins erste Feld einfügen, oder Dezimalgrad / GEDCOM-Format (N48.1374)</div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Notiz</label>
+        <textarea class="form-input" id="pl-note" rows="3" placeholder="Freie Notiz zu diesem Ort …"></textarea>
+      </div>
       <div class="btn-row">
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalPlace">Abbrechen</button>
         <button class="btn btn-save" data-action="savePlace">Speichern</button>
+      </div>
+
+      <!-- P2-UI: Historische Dimension — nur sichtbar wenn placeObject vorhanden -->
+      <div class="place-edit-section" id="pl-pnames-section">
+        <div class="place-edit-section-title">Alternative / frühere Namen</div>
+        <div id="pl-pnames-list"></div>
+        <div class="place-edit-add-row">
+          <input class="form-input" id="pl-pname-val" placeholder="Name">
+          <input class="form-input pl-field-sm" id="pl-pname-lang" placeholder="Sprache">
+          <input class="form-input pl-field-sm" id="pl-pname-from" placeholder="von">
+          <input class="form-input pl-field-sm" id="pl-pname-to" placeholder="bis">
+          <button class="btn btn-save pl-add-btn" id="pl-pname-add-btn" data-action="addPlaceName">+</button>
+        </div>
+        <div class="form-hint-sm">Sprache z.B. "de" · Jahr z.B. "1850"</div>
+      </div>
+
+      <div class="place-edit-section" id="pl-enclosed-section">
+        <div class="place-edit-section-title">Teil von (übergeordneter Ort)</div>
+        <div id="pl-enclosed-list"></div>
+        <div class="place-edit-add-row">
+          <select class="form-input" id="pl-enclosed-sel"></select>
+          <input class="form-input pl-field-sm" id="pl-enclosed-from" placeholder="von">
+          <input class="form-input pl-field-sm" id="pl-enclosed-to" placeholder="bis">
+          <button class="btn btn-save pl-add-btn" id="pl-enclosed-add-btn" data-action="addEnclosedBy">+</button>
+        </div>
+      </div>
+
+      <div class="place-edit-section" id="pl-gov-section">
+        <div class="place-edit-section-title">GOV-Daten importieren</div>
+        <div class="form-hint-sm mb-6">GOV-Textzusammenfassung von gov.genealogy.net einfügen — Typ-Historie, Namen und Verwaltungszugehörigkeiten werden automatisch übernommen.</div>
+        <textarea class="form-input gov-text-area" id="pl-gov-text" rows="5" placeholder="OCHRUPJO32OF&#10;&#9;heißt  (auf deu) Ochtrup,&#10;&#9;ist ab 1890-10-01 bis 1935-03-31 (auf deu) Landgemeinde …&#10;&#9;gehört ab 1890-10-01 zu object_1138173 …;"></textarea>
+        <button class="btn btn-save w-full mt-8" data-action="applyGovText">GOV-Daten übernehmen</button>
       </div>
     </div>
   </div>
@@ -977,6 +1563,64 @@
   </div>
 </div>
 
+<!-- PLACE-HIST P0b-2b: Orts-Dubletten zusammenführen -->
+<div class="modal-overlay" id="modalPlaceMerge" role="dialog" aria-modal="true" aria-labelledby="lbl-modalPlaceMerge">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalPlaceMerge">Orts-Dubletten</div>
+    <div class="sheet-body flex-1 ov-y-auto">
+      <p class="modal-hint" id="placeMergeHint">Gleiche Orte in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Hauptort behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.</p>
+      <div id="placeMergeList"></div>
+    </div>
+    <div class="sheet-footer-safe">
+      <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlaceMerge">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- String→PlaceObject Link-Modal -->
+<div class="modal-overlay" id="modalPlaceStringLink" role="dialog" aria-modal="true" aria-labelledby="lbl-modalPlaceStringLink">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalPlaceStringLink">Ortsstrings verknüpfen</div>
+    <div class="sheet-body flex-1 ov-y-auto">
+      <p class="modal-hint">Wähle das Ziel-PlaceObject. Jedes Event erhält periodengerecht den korrekten Hierarchie-String.</p>
+
+      <!-- Pre-select-Modus: aus Orts-Detail geöffnet -->
+      <div class="slink-preselect-bar" hidden>
+        <span class="slink-preselect-label">Ort:</span>
+        <span id="slinkPreselectedName" class="slink-preselect-name"></span>
+      </div>
+
+      <!-- Allgemeiner Modus: Quell-Checkliste -->
+      <div class="slink-section" id="slinkSourceSection">
+        <div class="slink-section-title">1 · Quell-Ortsstrings <button class="slink-refresh-btn" data-action="refreshSlinkGroups" title="Vorschau aktualisieren">↺</button></div>
+        <div id="slinkSourceList"></div>
+      </div>
+
+      <div class="slink-section">
+        <div class="slink-section-title">Ziel-PlaceObject</div>
+        <input class="form-input" id="slinkTargetSearch"
+               placeholder="PlaceObject suchen…" autocomplete="off"
+               data-input="renderSlinkTargetList">
+        <div id="slinkTargetList" class="list-scroll-inner slink-target-list"></div>
+        <div id="slinkTargetSelected" class="slink-target-selected" hidden></div>
+      </div>
+
+      <div class="slink-section" id="slinkGroupsSection" hidden>
+        <div class="slink-section-title">Ergebnis-Gruppen <span class="slink-hint">(☑ = übernehmen)</span></div>
+        <div id="slinkGroupsList"></div>
+      </div>
+    </div>
+    <div class="sheet-footer-safe">
+      <div class="btn-row">
+        <button class="btn btn-save flex-1" id="slinkConfirmBtn" data-action="confirmStringPlaceLink" disabled>Verknüpfen</button>
+        <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlaceStringLink">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Beziehungs-Picker: Ehepartner / Kind / Elternteil verknüpfen -->
 <div class="modal-overlay" id="modalRelPicker" role="dialog" aria-modal="true" aria-labelledby="relPickerTitle">
   <div class="sheet">
@@ -999,6 +1643,81 @@
   </div>
 </div>
 
+<!-- P3: Ort-Suchpicker -->
+<div class="modal-overlay" id="modalPlacePicker" role="dialog" aria-modal="true" aria-labelledby="placePickerTitle">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="placePickerTitle">Ort wählen</div>
+    <div class="sheet-body">
+      <input class="form-input" id="placePickerSearch"
+             placeholder="Ortsname suchen…" autocomplete="off"
+             data-input="renderPlacePickerList">
+      <div id="placePickerList" class="list-scroll-inner"></div>
+      <div class="btn-row mt-12">
+        <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlacePicker">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- P4: Batch-Geocoding-Fortschritt -->
+<div class="modal-overlay" id="modalBatchGeocode" role="dialog" aria-modal="true" aria-labelledby="lbl-modalBatchGeocode">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalBatchGeocode">Batch-Geocoding</div>
+    <div class="sheet-body">
+      <div class="c-muted fs-sm mb-8">Orte ohne Koordinaten werden via Nominatim (OpenStreetMap) geocodiert — inklusive Typ und Verwaltungshierarchie.</div>
+      <div class="batch-geo-bar-wrap">
+        <div class="batch-geo-bar" id="batchGeocodeBar"></div>
+      </div>
+      <div class="c-muted fs-sm mt-8" id="batchGeocodeProgress">Bereit</div>
+      <div class="btn-row btn-row-col mt-12">
+        <div id="batchGeocodeDone" hidden>
+          <button class="btn btn-save w-full" data-action="closeModal" data-modal="modalBatchGeocode">Schließen</button>
+        </div>
+        <button class="btn btn-cancel w-full" id="batchGeocodeAbortBtn" data-action="abortBatchGeocode">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assoziation bearbeiten -->
+<div class="modal-overlay" id="modalAsso" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAsso">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAsso">Assoziation</div>
+    <div class="sheet-body">
+      <input type="hidden" id="asso-anchor-pid">
+      <input type="hidden" id="asso-target-pid">
+      <input type="hidden" id="asso-edit-idx">
+      <div class="form-group">
+        <label class="form-label">Person</label>
+        <div id="asso-target-name" class="form-hint"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rolle</label>
+        <select class="form-input" id="asso-role-select" data-change="assoRoleChange">
+          <option value="Godparent">Taufpate/-mutter</option>
+          <option value="Witness">Zeuge / Zeugin</option>
+          <option value="Informant">Informant</option>
+          <option value="Friend">Freund / Freundin</option>
+          <option value="Associate">Bekannte(r)</option>
+          <option value="_custom">Eigene Rolle …</option>
+        </select>
+        <input class="form-input mt-4" id="asso-role-custom" placeholder="Rolle eingeben">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz (optional)</label>
+        <textarea class="form-input" id="asso-note" rows="2" placeholder="z.B. Trauzeuge bei Heirat 1887"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAsso">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveAsso">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Archiv-Formular -->
 <div class="modal-overlay" id="modalRepo" role="dialog" aria-modal="true" aria-labelledby="repoFormTitle">
   <div class="sheet">
@@ -1009,6 +1728,10 @@
       <div class="form-group">
         <label class="form-label">Name</label>
         <input class="form-input" id="rf-name" placeholder="Stadtarchiv München">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Archivtyp</label>
+        <select class="form-input" id="rf-rtype"></select>
       </div>
       <div class="form-group">
         <label class="form-label">Adresse</label>
@@ -1022,6 +1745,10 @@
       <div class="form-group">
         <label class="form-label">Website</label>
         <input class="form-input" id="rf-www" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Findbuch / Online-Katalog</label>
+        <input class="form-input" id="rf-findingaid" placeholder="https://… (Archivportal/Findbuch)">
       </div>
       <div class="form-group">
         <label class="form-label">E-Mail</label>
@@ -1058,6 +1785,20 @@
   </div>
 </div>
 
+<!-- Forschungsprojekte-Verwaltung (RES-PROJ 3b) -->
+<div class="modal-overlay" id="modalProjects" role="dialog" aria-modal="true" aria-labelledby="lbl-modalProjects">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalProjects">Forschungsprojekte</div>
+    <div class="sheet-body">
+      <div id="projectsBody"></div>
+      <div class="btn-row mt-12">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalProjects">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Menu drawer -->
 <div class="modal-overlay" id="modalMenu" role="dialog" aria-modal="true" aria-labelledby="lbl-modalMenu">
   <div class="sheet">
@@ -1079,17 +1820,23 @@
         <button id="odSaveBtn" class="btn menu-btn" hidden data-action="odSaveFile">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odSettingsBtn" class="btn menu-btn" data-action="menuSettings">
-          ⚙ &nbsp; Einstellungen
-        </button>
         <button class="btn menu-btn" data-save-btn data-action="menuExport">
           💾 &nbsp; Speichern (lokal)
         </button>
-        <button id="grampsExportBtn" class="btn menu-btn" hidden data-action="menuGrampsExport">
+        <button id="formatConvertBtn" class="btn menu-btn" hidden data-action="menuFormatConvert">
+          💾 &nbsp; <span>Als GRAMPS exportieren</span>
+        </button>
+        <button id="ged7ExportBtn" class="btn menu-btn" hidden data-action="menuExportGed7">
+          💾 &nbsp; Als GEDCOM 7.0 exportieren
+        </button>
+        <button id="strictExportBtn" class="btn menu-btn" hidden data-action="menuExportStrict">
+          💾 &nbsp; Als Strict GEDCOM 5.5.1 exportieren
+        </button>
+        <button id="grampsExportBtn" class="btn menu-btn" hidden data-action="menuExportGramps">
           💾 &nbsp; Als GRAMPS exportieren
         </button>
-        <button id="backupMenuBtn" class="btn menu-btn" data-action="menuBackup">
-          🗄 &nbsp; <span>Sichern (Original)</span>
+        <button class="btn menu-btn" data-action="menuNewFile">
+          ✕ &nbsp; Datei schließen
         </button>
         <!-- Bearbeiten -->
         <div class="menu-section-label">Bearbeiten</div>
@@ -1101,21 +1848,71 @@
         </button>
         <!-- Werkzeuge -->
         <div class="menu-section-label">Werkzeuge</div>
+        <button class="btn menu-btn" data-action="menuImportCompare">
+          🔀 &nbsp; Datei vergleichen …
+        </button>
         <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
+        </button>
+        <button class="btn menu-btn" data-action="menuRepairDb">
+          🔧 &nbsp; Datenbank reparieren
+        </button>
+        <button class="btn menu-btn" data-action="menuValidate">
+          ✓ &nbsp; Daten prüfen
         </button>
         <button class="btn menu-btn" data-action="menuStats">
           📊 &nbsp; Statistik
         </button>
-        <button hidden class="btn btn-sec btn-choice" data-action="menuRoundtrip" data-debug-only>
+        <button class="btn menu-btn" data-action="menuMediaBrowser">
+          📎 &nbsp; Medienübersicht
+        </button>
+        <button hidden class="btn btn-gold btn-choice" data-action="menuRoundtrip" data-debug-only>
           🔁 &nbsp; Roundtrip-Test
         </button>
+        <button hidden class="btn btn-gold btn-choice" data-action="menuGrampsRoundtrip" data-debug-only>
+          🔁 &nbsp; GRAMPS Roundtrip-Test
+        </button>
+        <!-- Ausgaben -->
+        <div class="menu-section-label">Ausgaben</div>
+        <button class="btn menu-btn" data-action="menuBook">
+          &#128214; &nbsp; Familienbuch erstellen
+        </button>
+        <button class="btn menu-btn" data-action="menuPrintAhnenliste">
+          &#9113; &nbsp; Ahnenliste (PDF)
+        </button>
+        <button class="btn menu-btn" data-action="menuPrintFamilienbogen">
+          &#9113; &nbsp; Familienbogen (PDF)
+        </button>
+        <button class="btn menu-btn" data-action="menuNachkommentafel">
+          &#9112; &nbsp; Nachkommentafel (PDF)
+        </button>
+        <button class="btn menu-btn" data-action="menuBibliographie">
+          &#167; &nbsp; Quellenverzeichnis
+        </button>
+        <button class="btn menu-btn" data-action="menuForschungsprotokoll">
+          &#128221; &nbsp; Forschungsprotokoll
+        </button>
+        <button class="btn menu-btn" data-action="menuStatistikReport">
+          &#128202; &nbsp; Statistik-Report (PDF)
+        </button>
+        <button class="btn menu-btn" data-action="menuWallChart">
+          &#127795; &nbsp; Stammtafel (Vorfahren + Nachkommen)
+        </button>
+        <button class="btn menu-btn" data-action="menuOrtssippenbuch">
+          &#127968; &nbsp; Ortssippenbuch
+        </button>
+        <button class="btn menu-btn" data-action="menuZeitstrahl">
+          &#9202; &nbsp; Zeitstrahl (PDF)
+        </button>
+        <button class="btn menu-btn" data-action="menuHofchronik">
+          &#127969; &nbsp; Hofchronik (Höfe &amp; Familien)
+        </button>
         <div class="divider"></div>
+        <button id="odSettingsBtn" class="btn menu-btn" data-action="menuSettings">
+          ⚙ &nbsp; Einstellungen
+        </button>
         <button class="btn menu-btn" data-action="menuHelp">
           ❓ &nbsp; Hilfe &amp; Anleitung
-        </button>
-        <button class="btn menu-btn" data-action="menuNewFile">
-          ✕ &nbsp; Datei schließen
         </button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalMenu">Abbrechen</button>
       </div>
@@ -1128,12 +1925,49 @@
     </div>
   </div>
 </div>
+<!-- Familienbuch -->
+<div class="modal-overlay" id="modalBook" role="dialog" aria-modal="true" aria-labelledby="lbl-modalBook">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalBook">Familienbuch erstellen</div>
+    <div class="sheet-body">
+
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Titel</div>
+      <input id="book-title" type="text" placeholder="z.B. Familie Müller — Familienbuch" class="mb-16">
+
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Inhalt</div>
+      <div class="theme-seg mb-16" id="book-mode-seg">
+        <button data-book-mode="ancestors" class="active">Ahnen des Probanden</button>
+        <button data-book-mode="all">Alle Personen</button>
+      </div>
+
+      <div class="d-flex ai-c gap-8 mb-16">
+        <input type="checkbox" id="book-photos" checked>
+        <label for="book-photos" class="fs-090">Hauptfoto pro Person einbetten</label>
+      </div>
+
+      <button id="bookGenerateBtn" class="btn btn-primary w-full mb-8" data-action="generateBook">
+        Erstellen &amp; Herunterladen
+      </button>
+      <button class="btn btn-cancel w-full" data-action="closeModal" data-modal="modalBook">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Einstellungen -->
 <div class="modal-overlay" id="modalSettings" role="dialog" aria-modal="true" aria-labelledby="lbl-modalSettings">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="lbl-modalSettings">Einstellungen</div>
     <div class="sheet-body">
+      <!-- Erscheinungsbild -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Erscheinungsbild</div>
+      <div class="theme-seg mb-16">
+        <button data-action="themeAuto"  data-theme="auto"  class="active">Automatisch</button>
+        <button data-action="themeLight" data-theme="light">Hell</button>
+        <button data-action="themeDark"  data-theme="dark">Dunkel</button>
+      </div>
+
       <div id="set-od-section">
       <div class="fs-075 fw-600 c-muted mb-8 text-upper">OneDrive-Ordner</div>
 
@@ -1144,6 +1978,7 @@
           <div class="d-flex ai-c gap-8">
             <input id="set-base-path" type="text" placeholder="z.B. Privat/Ahnen/Stammbaum"
               data-input="odSetBasePath">
+            <button class="btn btn-gold-sm" data-action="odBrowseBasePath" title="Ordner durchsuchen">📂</button>
           </div>
           <div class="form-hint-top">Relativer OneDrive-Pfad des GED-Ordners</div>
         </div>
@@ -1158,7 +1993,7 @@
           <div id="set-photo-count"></div>
         </div>
         <!-- Dokumente-Ordner -->
-        <div class="settings-section-bot">
+        <div class="settings-section-mid">
           <div class="form-note-hint mb-4">Dokumente-Ordner</div>
           <div class="d-flex ai-c gap-8">
             <div id="set-doc-name">—</div>
@@ -1167,9 +2002,47 @@
           </div>
           <div id="set-doc-count"></div>
         </div>
+        <!-- Konfig-Ordner -->
+        <div class="settings-section-bot">
+          <div class="form-note-hint mb-4">Konfig-Ordner</div>
+          <div class="d-flex ai-c gap-8">
+            <div id="set-config-name">—</div>
+            <button class="btn btn-gold-sm" data-action="settingsChangeConfig">Ändern</button>
+            <button id="set-config-clear" class="btn btn-outline-sm" hidden data-action="odClearConfigFolder" title="Zurücksetzen">×</button>
+          </div>
+          <div class="form-hint-top">stammbaum-orte.json · stammbaum-templates.json</div>
+        </div>
       </div>
 
       </div><!-- /set-od-section -->
+
+      <!-- Datenschutz -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper mt-16">Datenschutz</div>
+      <div class="settings-card">
+        <label class="d-flex ai-c gap-8 settings-section-top">
+          <input type="checkbox" id="set-privacy-anon" data-change="privacyAnonChange">
+          <span>Lebende beim GEDCOM-Export anonymisieren</span>
+        </label>
+        <div class="form-hint-top">Personen ohne Sterbedatum, geboren nach <span id="set-privacy-year"></span>, werden als „Lebende Person" exportiert. Dateiname erhält Suffix <code>_anon</code>.</div>
+      </div>
+
+
+      <!-- Diagnose -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper mt-16">Diagnose &amp; Wartung</div>
+      <div class="settings-card">
+        <div class="settings-section-top">
+          <div class="d-flex ai-c gap-8">
+            <button class="btn btn-outline-sm" data-action="resetPlaceDataIDB">Ortsdaten zurücksetzen</button>
+          </div>
+          <div class="form-hint-top">Löscht stammbaum-orte.json aus dem lokalen Speicher. Das GEDCOM bleibt erhalten; Orts-Verknüpfungen werden neu aufgebaut. Hilft bei inkonsistenten Ortsdaten.</div>
+        </div>
+        <div class="settings-section-bot">
+          <div class="d-flex ai-c gap-8">
+            <button class="btn btn-outline-sm btn--danger-text" data-action="resetAllLocalData">Alle lokalen Daten löschen</button>
+          </div>
+          <div class="form-hint-top">Löscht GEDCOM-Text, Ortsdaten und Datei-Zugriffsrechte. App startet danach wie beim ersten Öffnen. OneDrive-Login und Theme bleiben erhalten.</div>
+        </div>
+      </div>
 
 <button class="btn btn-cancel w-full" data-action="closeModal" data-modal="modalSettings">Schließen</button>
     </div>
@@ -1180,7 +2053,7 @@
 <div class="modal-overlay" id="modalOneDrive" role="dialog" aria-modal="true" aria-labelledby="lbl-modalOneDrive">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="lbl-modalOneDrive">OneDrive — .ged Dateien</div>
+    <div class="sheet-title" id="lbl-modalOneDrive">OneDrive — Dateien öffnen</div>
     <div class="sheet-body">
       <div id="odFileList" class="d-flex flex-col gap-8 ov-y-auto"></div>
       <div class="btn-row mt-12">
@@ -1208,9 +2081,9 @@
       </div>
       <input type="file" accept="image/*" capture="environment" id="am-cam-input" hidden
         data-change="amCamChange">
-      <div class="d-flex gap-8 mb-12">
-        <button class="btn btn-sec flex-1" data-action="camCapture">Foto aufnehmen</button>
-        <button class="btn btn-sec flex-1" data-action="camGallery">Aus Galerie</button>
+      <div class="d-flex gap-8 mb-8">
+        <button class="btn btn-sec flex-1" data-action="camCapture">📷 Foto</button>
+        <button class="btn btn-sec flex-1" data-action="camGallery">🖼 Galerie</button>
       </div>
       <div id="am-od-row" hidden class="mb-12">
         <button class="btn btn-gold w-full" data-action="odPickFileForMedia">Aus OneDrive auswählen</button>
@@ -1244,6 +2117,7 @@
       <span>Medium bearbeiten</span>
     </div>
     <div class="sheet-body">
+      <div id="em-ref-info" class="em-ref-info-bar"></div>
       <div id="em-preview"></div>
       <div class="form-group">
         <label class="form-label">Titel</label>
@@ -1252,6 +2126,14 @@
       <div class="form-group">
         <label class="form-label">Dateiname</label>
         <input class="form-input" id="em-file" placeholder="z.B. foto.jpg">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz</label>
+        <textarea class="form-input" id="em-note" rows="2" placeholder="Notiz zum Foto"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Aufnahmedatum</label>
+        <input class="form-input" id="em-date" placeholder="z.B. 1929 oder 15 JUN 1929">
       </div>
       <div id="em-od-row" hidden class="mb-12">
         <button class="btn btn-gold w-full" data-action="odPickFileForEditMedia">Aus OneDrive auswählen</button>
@@ -1291,12 +2173,16 @@
         Das ☁-Symbol lädt die aktualisierte Datei herunter. Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive/Genealogie setzen.</p>
         <p class="mb-12"><strong class="c-gold-lt">Speichern — iPhone / iPad</strong><br>
         Das ☁-Symbol öffnet das Share Sheet mit der aktualisierten Datei. Wählen Sie „In Dateien sichern" → iCloud Drive → Genealogie.</p>
-        <p class="mb-12"><strong class="c-gold-lt">Sichern (Original)</strong><br>
-        Im Menü ☰ → Datei → „Sichern (Original)" lädt die zuletzt geladene Originalversion herunter — unabhängig von aktuellen Änderungen. Nützlich als Sicherheitskopie vor größeren Bearbeitungen.</p>
-        <p class="mb-12"><strong class="c-gold-lt">Navigation</strong><br>
+<p class="mb-12"><strong class="c-gold-lt">Navigation</strong><br>
         6 Tabs in der unteren Leiste: ⧖ Baum · Personen · Familien · Quellen · Orte · Proband. Die Suche in der Topbar durchsucht gleichzeitig alle Entitätstypen. Mit dem ≈-Toggle aktivieren Sie die Soundex-Suche für Schreibvarianten (z. B. Decker / Deker / Döker). Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
         <p class="mb-12"><strong class="c-gold-lt">Baum (Sanduhr)</strong><br>
-        Der Baum-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.</p>
+        Der Baum-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.<br><br>
+        <strong>Vollständigkeits-Heatmap:</strong> Personenkarten erhalten einen farbigen Ring, wenn Daten fehlen —
+        <span></span> goldgelb: 1 Feld fehlt ·
+        <span></span> orange: 2 Felder fehlen ·
+        <span></span> rot: alle 3 fehlen.
+        Geprüft werden: Geburtsdatum · Quellenangabe · mind. 1 Zitat mit Qualitätsstufe QUAY ≥ 2.
+        Auf dem Desktop zeigt ein Hover-Tooltip, welche Felder konkret fehlen.</p>
         <p class="mb-12"><strong class="c-gold-lt">Beziehungsrechner</strong><br>
         In der Personendetailansicht finden Sie den Abschnitt „Verwandtschaft". Wählen Sie eine zweite Person — die App berechnet den genauen Verwandtschaftsgrad (bidirektionale Suche bis Tiefe 12) und zeigt den Pfad im Detail-Modal an.</p>
         <p class="mb-12"><strong class="c-gold-lt">Forschungsaufgaben</strong><br>
@@ -1373,6 +2259,8 @@
   </div>
 </div>
 
+<div id="grampsBadge" hidden class="gramps-badge">GRAMPS</div>
+
 <div id="syncBanner">
   <span>● Nicht gespeichert</span>
   <button class="sync-save-btn" id="syncBannerBtn" data-action="syncBannerSave">Speichern</button>
@@ -1427,7 +2315,11 @@
       <div class="d-flex ai-c gap-10 mb-10">
         <label class="fs-08 c-muted nowrap">Schwellenwert: <strong id="dedup-threshold-val">65</strong></label>
         <input type="range" id="dedup-threshold" min="50" max="90" value="65" class="flex-1"
-          oninput="dedupThresholdChange(this.value)">
+          data-input="dedupThreshold">
+      </div>
+      <div class="d-flex ai-c gap-8 mb-8">
+        <input type="search" id="dedup-search" class="form-input flex-1" placeholder="Name suchen…"
+          data-input="dedupSearch">
       </div>
       <div id="dedup-status"></div>
       <div id="dedup-list"></div>
@@ -1449,6 +2341,7 @@
       <div class="btn-row btn-row-col mt-14">
         <button class="btn btn-danger" data-action="dedupConfirmMerge">Zusammenführen</button>
         <button class="btn btn-dim" data-action="dedupIgnorePair">Ignorieren (kein Duplikat)</button>
+        <button class="btn btn-sec" data-action="dedupCreateRlog">&#128221; &nbsp; Forschungseintrag erstellen</button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalMerge">Abbrechen</button>
       </div>
     </div>
@@ -1472,6 +2365,21 @@
   </div>
 </div>
 
+<!-- ADR-027 P5: Hof-Zuweisungen prüfen -->
+<div class="modal-overlay" id="modalHofReview" role="dialog" aria-modal="true" aria-labelledby="lbl-modalHofReview">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalHofReview">Hof-Zuweisungen prüfen</div>
+    <div class="sheet-body">
+      <p class="mb-12 hof-review-hint">Events mit Adresse, deren Hof nicht eindeutig auflösbar ist. Klassen-Badge zeigt die Art der Lücke: A = Event-Typ ohne Hof-Semantik (BIRT/EDUC/…), C = mehrdeutig (mehrere Höfe), D = Adress-Variante eines bestehenden Hofs.</p>
+      <div id="hofReviewBody"></div>
+      <div class="btn-row btn-row-col mt-12">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalHofReview">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Bestätigungs-Dialog -->
 <div class="modal-overlay modal-center" id="modalConfirm" role="alertdialog" aria-modal="true" aria-labelledby="modalConfirmMsg">
   <div class="confirm-box">
@@ -1490,9 +2398,29 @@
     <div class="map-mode-bar">
       <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>
       <button type="button" id="map-mode-person" class="map-mode-btn"        data-action="switchMapMode" data-mode="person">Person</button>
+      <button type="button" id="map-mode-migr"   class="map-mode-btn"        data-action="switchMapMode" data-mode="migr">Migrationen</button>
     </div>
     <div id="map-person-picker">
       <button id="map-person-btn" class="btn" data-action="openMapPersonPicker">Person wählen…</button>
+    </div>
+    <div id="map-migr-legend" class="map-migr-legend">
+      <span class="map-migr-dot map-migr-e0"></span><span>vor 1700</span>
+      <span class="map-migr-dot map-migr-e1"></span><span>1700–99</span>
+      <span class="map-migr-dot map-migr-e2"></span><span>1800–49</span>
+      <span class="map-migr-dot map-migr-e3"></span><span>1850–99</span>
+      <span class="map-migr-dot map-migr-e4"></span><span>1900–49</span>
+      <span class="map-migr-dot map-migr-e5"></span><span>1950+</span>
+    </div>
+    <div id="map-anim-bar" class="map-anim-bar">
+      <button type="button" id="map-anim-play" class="map-anim-btn" data-action="toggleMigrAnim" title="Abspielen / Pause">▶</button>
+      <button type="button" class="map-anim-btn" data-action="stopMigrAnim" title="Stopp">⏹</button>
+      <select id="map-anim-speed" class="map-anim-speed" title="Geschwindigkeit">
+        <option value="1500">Langsam</option>
+        <option value="600" selected>Normal</option>
+        <option value="200">Schnell</option>
+        <option value="60">Sehr schnell</option>
+      </select>
+      <label class="map-anim-loop-label"><input type="checkbox" id="map-anim-loop"> Loop</label>
     </div>
   </div>
   <div id="map-offline-banner" class="map-offline-banner" hidden>Kartenhintergrund nicht verfügbar (offline) — Pins sichtbar</div>
@@ -1506,7 +2434,45 @@
     <div class="sheet-title" id="relPathTitle">Verwandtschaft</div>
     <div class="sheet-body">
       <div id="relPathBody"></div>
+      <button class="btn mt-8" data-action="downloadRelCert">📜 &nbsp; Verwandtschaftsnachweis (PDF)</button>
       <button class="btn btn-cancel mt-8" data-action="closeModal" data-modal="modalRelPath">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import-Vergleich Haupt-Modal -->
+<div class="modal-overlay" id="modalImportCompare" role="dialog" aria-modal="true" aria-labelledby="lbl-modalImportCompare">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalImportCompare">Datei vergleichen</div>
+    <div class="sheet-body flex-1 ov-y-auto" id="cmp-body"></div>
+    <div class="sheet-footer-safe" id="cmp-footer"></div>
+  </div>
+</div>
+
+<!-- Import-Quelle konfigurieren -->
+<div class="modal-overlay" id="modalImportSource" role="dialog" aria-modal="true" aria-labelledby="lbl-modalImportSource">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalImportSource">Import-Quelle</div>
+    <div class="sheet-body">
+      <p class="fs-08 c-muted mb-10">Für Daten ohne eigene Quellenangabe wird ein Quellen-Eintrag angelegt.</p>
+      <label class="form-label">Titel
+        <input type="text" id="cmpSrcTitle" class="form-input" placeholder="Import: Dateiname.ged">
+      </label>
+      <label class="form-label">Datum
+        <input type="text" id="cmpSrcDate" class="form-input" placeholder="1 JAN 2026">
+      </label>
+      <label class="form-label">Notiz
+        <input type="text" id="cmpSrcNote" class="form-input" placeholder="Abgeglichen am …">
+      </label>
+      <label class="cmp-no-src-lbl fs-08">
+        <input type="checkbox" id="cmpSrcCreate" checked> Quelle anlegen
+      </label>
+    </div>
+    <div class="sheet-footer-safe">
+      <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalImportSource">Zurück</button>
+      <button class="btn btn-primary flex-1" data-action="cmpDoApply">Übernehmen</button>
     </div>
   </div>
 </div>
@@ -1515,43 +2481,68 @@
 <div id="loadingOverlay" role="status" aria-live="polite" aria-label="Datei wird geladen">
   <div class="loading-spinner"></div>
   <p id="loadingMsg">Wird geladen …</p>
+  <div id="loadingBar"><div id="loadingBarFill"></div></div>
 </div>
 
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
+<script src="boot-loader.js"></script>
 <script src="leaflet.js"></script>
 <script src="gedcom.js"></script>
 <script src="gedcom-parser.js"></script>
 <script src="gedcom-writer.js"></script>
-<script src="gramps-parser.js"></script>
-<script src="gramps-writer.js"></script>
-<script>if (location.search.includes('debug=1')) { const s = document.createElement('script'); s.src = 'debug-gramps.js'; document.head.appendChild(s); }</script>
+<!-- Validator-Cluster: ES-Modul (T0-MODULE Phase 2, ADR-020). Brücke legt runValidation/VAL_* auf window. -->
+<script type="module" src="validator.bridge.js"></script>
+<!-- GRAMPS-Cluster: ES-Module (T0-MODULE Pilot, ADR-020). Brücke legt parseGRAMPS/writeGRAMPS auf window. -->
+<script type="module" src="gramps.bridge.js"></script>
 <script src="storage-file.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>
+<script src="ui-lifecycle.js"></script>
+<script src="ui-views-nav.js"></script>
+<script src="ui-views-undo.js"></script>
 <script src="ui-views-note.js"></script>
 <script src="ui-views-search.js"></script>
 <script src="ui-views-tree.js"></script>
 <script src="ui-views-tasks.js"></script>
+<script src="ui-views-rlog.js"></script>
+<script src="ui-views-hypo.js"></script>
+<script src="ui-views-val.js"></script>
+<script src="ui-views-dashboard.js"></script>
+<script src="ui-views-projects.js"></script>
 <script src="ui-views-person.js"></script>
 <script src="ui-views-family.js"></script>
 <script src="ui-views-source.js"></script>
 <script src="ui-views-place.js"></script>
+<script src="geocoding.js"></script>
 <script src="ui-views-hof.js"></script>
 <script src="ui-views-map.js"></script>
 <script src="ui-views-stats.js"></script>
-<script src="ui-dedup.js"></script>
+<script src="ui-chart-export.js"></script>
 <script src="ui-fanchart.js"></script>
+<script src="ui-desc-tree.js"></script>
+<script src="timeline-hist-events.js"></script>
+<script src="ui-timeline.js"></script>
+<script src="story-epochs.js"></script>
+<script src="ui-story.js"></script>
+<script src="ui-story-person.js"></script>
+<script src="ui-story-fam.js"></script>
 <script src="ui-forms.js"></script>
 <script src="ui-forms-person.js"></script>
 <script src="ui-forms-family.js"></script>
 <script src="ui-forms-repo.js"></script>
 <script src="ui-forms-event.js"></script>
+<script src="ui-debug.js"></script>
 <script src="debug-activate.js"></script>
 <script src="ui-media.js"></script>
 <script src="onedrive-auth.js"></script>
 <script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
+<script src="lazy-loader.js"></script>
+<script src="ui-onboarding.js"></script>
+<script src="ui-quicktpl.js"></script>
+<script src="ui-event-delegation.js"></script>
+<input type="file" id="cit-cam-input" accept="image/*" capture="environment" data-action="citCamChange" hidden>
 </body>
 </html>

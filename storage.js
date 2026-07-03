@@ -27,30 +27,123 @@ function applyAllExtraPlaceCoords() {
 // ─────────────────────────────────────
 //  REVERT / NEW FILE
 // ─────────────────────────────────────
+
+// Leitet hofObjects aus den geladenen Events ab (+ gespeicherte Koords/Notizen)
+// und migriert Höfe → Farm-placeObjects (ADR-026). Für ALLE GEDCOM-Lade-Pfade
+// (Datei, Demo, IDB-/localStorage-Restore) — sonst fehlten Hof-Koords/Notizen
+// nach Reload und die Migration liefe nur bei explizitem Datei-Öffnen.
+async function _deriveHofAndMigrate() {
+  // placeObjects aus IDB (+OneDrive) laden, BEVOR die Hof-Migration läuft — sonst
+  // gingen lokal eingegebene Hof-Koords/-Notizen (im Farm-PO) beim Reload verloren,
+  // weil sie nicht in den GEDCOM-Events stehen. Merge ist additiv-per-id (überschreibt
+  // nichts); die Migration findet geladene Farm-POs via _findFarmPO wieder (keine Dubletten).
+  if (typeof loadPlaceObjectsFromIDB === 'function') { try { await loadPlaceObjectsFromIDB(); } catch(_) {} }
+  // V2-hofObjects (id-keyed, Schema 1) VOR _mergeHofObjects sichern.
+  // _mergeHofObjects erzeugt addr-keyed Altformat + würde V2-Einträge verwerfen.
+  // Nach dem Merge werden die V2-Höfe aus IDB wieder eingesetzt.
+  const _savedV2Hofs = Object.fromEntries(
+    Object.entries(AppState.db.hofObjects || {}).filter(([, h]) => h && h.schemaVersion === 1)
+  );
+  AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+  Object.assign(AppState.db.hofObjects, _savedV2Hofs);
+  if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
+  // ADR-027 P3: Farm/Building-POs → V2-hofObjects + Events repointen + Farm-POs löschen.
+  // Idempotent — bei wiederholtem Lauf erkennt der Norm-Key-Match bestehende V2-Höfe
+  // und erzeugt keine Dubletten. Backup VOR der ersten Mutation (s. _backupPrePhase3).
+  if (typeof _migrateFarmPOsToHofObjects === 'function') {
+    try { await _backupPrePhase3(AppState.db); } catch(_) {}
+    const stats = _migrateFarmPOsToHofObjects(AppState.db);
+    if (stats.hofsCreated || stats.eventsRepointed || stats.posDeleted) {
+      if (typeof showToast === 'function') {
+        showToast('✓ ADR-027-Migration: ' + stats.hofsCreated + ' Höfe + '
+          + stats.eventsRepointed + ' Events umgehängt', 'success');
+      }
+      if (typeof savePlaceObjects === 'function') savePlaceObjects();
+    }
+  }
+  // ADR-027 v1025: Link-Pass nach hofObjects-Aufbau + Migration. ev.placeId/hofId
+  // werden nicht ins GEDCOM serialisiert (runtime-only), müssen also auf jedem Load
+  // re-derived werden — vorher nur im File-Load-Pfad (_finishLoad), jetzt zentral
+  // damit Auto-Load/Revert/Demo dieselbe Pfad-A/B/C-Coverage bekommen.
+  // _finishLoad ruft danach nochmal link-pass auf (no-op, idempotent), um den
+  // recollapsed-Toast-Pfad sauber zu trennen.
+  if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
+    try { _linkGedcomEventsToPlaceObjects(AppState.db); } catch(e) { console.warn('_deriveHofAndMigrate link-pass:', e); }
+  }
+}
+
+// ADR-027 P3: Snapshot von placeObjects + Event-place/addr-Mapping VOR der ersten
+// Migration. Im IDB unter Key stammbaum_orte_backup_pre_adr027_YYYYMMDD. Nur einmal
+// pro Datum geschrieben (Datums-Schlüssel + Existenz-Check). Plus Marker
+// AppState._adr027BackupKey für UI-Rollback-Button (Phase 5).
+async function _backupPrePhase3(db) {
+  if (!db) return;
+  if (db._migration_pre_adr027) return;          // bereits gelaufen, kein Backup nötig
+  // Hat die Datei überhaupt Farm/Building-POs zum Migrieren?
+  const hasFarm = Object.values(db.placeObjects || {})
+    .some(pl => pl.type === 'Farm' || pl.type === 'Building');
+  if (!hasFarm) return;
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const key = 'stammbaum_orte_backup_pre_adr027_' + today;
+  if (typeof idbGet === 'function') {
+    try { if (await idbGet(key)) return; } catch(_) {}     // schon gesichert heute
+  }
+  const placeObjectsSnap = JSON.parse(JSON.stringify(db.placeObjects || {}));
+  const eventsSnap = [];
+  const _snapEv = (pid, kind, evIdx, ev) => {
+    if (!ev || !ev.placeId) return;
+    const pl = placeObjectsSnap[ev.placeId];
+    if (!pl || (pl.type !== 'Farm' && pl.type !== 'Building')) return;
+    eventsSnap.push({ pid, kind, evIdx, placeId: ev.placeId, addr: ev.addr || null,
+      type: ev.type || null, date: ev.date || null, place: ev.place || null });
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    ['birth','chr','death','buri'].forEach(k => _snapEv(p.id, k, -1, p[k]));
+    (p.events || []).forEach((ev, i) => _snapEv(p.id, 'events', i, ev));
+  }
+  for (const f of Object.values(db.families || {})) {
+    ['marr','engag','div','divf'].forEach(k => _snapEv(f.id, k, -1, f[k]));
+    (f.events || []).forEach((ev, i) => _snapEv(f.id, 'events', i, ev));
+  }
+  const payload = { schemaVersion: 1, _ts: new Date().toISOString(),
+    placeObjects: placeObjectsSnap, events: eventsSnap };
+  if (typeof idbPut === 'function') {
+    try { await idbPut(key, JSON.stringify(payload)); AppState._adr027BackupKey = key; } catch(_) {}
+  }
+}
+
 async function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?', 'Verwerfen')) return;
   showLoadingOverlay('Stand wird wiederhergestellt …');
-  setDb(parseGEDCOM(orig));
-  AppState.db.extraPlaces = loadExtraPlaces();
-  applyAllExtraPlaceCoords();
-  { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
-  if (AppState.db.parseErrors?.length) {
-    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+  try {
+    setDb(parseGEDCOM(orig));
+    AppState.db.extraPlaces = loadExtraPlaces();
+    applyAllExtraPlaceCoords();
+    await _deriveHofAndMigrate();
+    if (AppState.db.parseErrors?.length) {
+      console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+      showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+    }
+    AppState.changed = false;
+    AppState._undoStack = [];
+    AppState._redoStack = [];
+    UIState._placesCache = null;
+    UIState._hofCache = null;
+    UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neu geparste Daten → Such-Index neu aufbauen
+    if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    if (typeof _clearNavState === 'function') _clearNavState();
+    updateChangedIndicator();
+    renderTab();
+    showToast('✓ Zurückgesetzt');
+  } catch(e) {
+    console.error('revertToSaved:', e);
+    showToast('⚠ Fehler beim Zurücksetzen: ' + e.message, 'error');
+  } finally {
+    hideLoadingOverlay();
   }
-  AppState.changed = false;
-  AppState._undoStack = [];
-  AppState._redoStack = [];
-  UIState._placesCache = null;
-  UIState._hofCache = null;
-  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-  if (typeof _clearNavState === 'function') _clearNavState();
-  updateChangedIndicator();
-  renderTab();
-  hideLoadingOverlay();
-  showToast('✓ Zurückgesetzt');
 }
 
 async function confirmNewFile() {
@@ -58,7 +151,8 @@ async function confirmNewFile() {
     ? 'Aktuelle Datei schließen? Ungespeicherte Änderungen gehen verloren.'
     : 'Aktuelle Datei schließen?';
   if (!await confirmModal(msg, 'Schließen')) return;
-  setDb({ individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' });
+  AppState._currentFilename = '';
+  setDb({ individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '' });
   AppState.changed = false;
   updateChangedIndicator();
   AppState._originalGedText = null;
@@ -71,7 +165,6 @@ async function confirmNewFile() {
     localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename');
     localStorage.removeItem('stammbaum_ged_backup'); localStorage.removeItem('stammbaum_backup_filename'); localStorage.removeItem('stammbaum_backup_date');
   } catch(e) {}
-  updateBackupBtn();
   updateSaveIndicator();
   // Suchfelder, Jahresfilter und Baum-History zurücksetzen
   const si = document.getElementById('searchInput');     if (si) si.value = '';
@@ -96,12 +189,16 @@ async function loadDemo() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     setDb(parseGEDCOM(text));
+    AppState._currentFilename = 'demo.ged';
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
+    await _deriveHofAndMigrate();
     AppState._originalGedText = text;
+    if (typeof clearValidationResults === 'function') clearValidationResults();
+    await _loadDemoPhotos();  // Foto in IDB bevor Detail gerendert wird
     showStartView();
     showToast('✓ Demo geladen');
-    _loadDemoPhotos();
+    if (typeof maybeStartOnboarding === 'function') maybeStartOnboarding();
   } catch(e) {
     showToast('Demo konnte nicht geladen werden: ' + e.message);
   } finally {
@@ -110,43 +207,17 @@ async function loadDemo() {
 }
 
 function _loadDemoPhotos() {
-  function _mkPhoto(text, bg, fg = '#fff') {
-    try {
-      const c = document.createElement('canvas');
-      c.width = 320; c.height = 400;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, 320, 400);
-      // leichtes Verlauf-Overlay
-      const g = ctx.createLinearGradient(0, 0, 0, 400);
-      g.addColorStop(0, 'rgba(255,255,255,0.15)');
-      g.addColorStop(1, 'rgba(0,0,0,0.25)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 320, 400);
-      // Initiale/Symbol
-      ctx.fillStyle = fg;
-      ctx.font = 'bold 140px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 160, 185);
-      // kleiner Untertitel-Balken
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0, 330, 320, 70);
-      return c.toDataURL('image/jpeg', 0.82);
-    } catch(e) { return null; }
-  }
-  const photos = [
-    ['photo_@I001@',     'J',  '#5b3a20'],  // Johann — braun
-    ['photo_@I004@',     'H',  '#1e3a5f'],  // Heinrich — dunkelblau
-    ['photo_@I007@',     'S',  '#5b2a4a'],  // Sophie — violett
-    ['photo_@I009@',     'L',  '#2e4a2e'],  // Ludwig — dunkelgrün (Uniform)
-    ['photo_fam_@F001@', '♥',  '#7a3020'],  // Familie F001 — Hochzeitsrot
-    ['photo_fam_@F005@', '♥',  '#3a5070'],  // Familie F005 — Stahlblau
-  ];
-  for (const [key, letter, color] of photos) {
-    const b64 = _mkPhoto(letter, color);
-    if (b64) idbPut(key, b64).catch(() => {});
-  }
+  // Demo-Foto Anna.png laden und unter dem GEDCOM-Pfad im IDB ablegen
+  return fetch('./Anna.png')
+    .then(r => r.ok ? r.blob() : Promise.reject())
+    .then(blob => new Promise((res, rej) => {
+      const rd = new FileReader();
+      rd.onload  = e => res(e.target.result);
+      rd.onerror = rej;
+      rd.readAsDataURL(blob);
+    }))
+    .then(dataUrl => idbPut('img:Anna.png', dataUrl).catch(() => {}))
+    .catch(() => {});
 }
 
 // ─────────────────────────────────────
@@ -157,22 +228,31 @@ function _loadDemoPhotos() {
 async function tryAutoLoad() {
   // IDB zuerst (kein Größenlimit)
   try {
+    if (typeof bootStage === 'function') bootStage('read');
     const saved = await idbGet('stammbaum_ged');
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
+      if (typeof bootStage === 'function') {
+        bootStage('parse');
+        // Yield, damit der Browser das Stage-Update zeichnet, bevor parseGEDCOM blockiert
+        await new Promise(r => setTimeout(r, 0));
+      }
       setDb(parseGEDCOM(saved));
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
+      AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
+      await _deriveHofAndMigrate();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
+      if (typeof bootStage === 'function') bootStage('render');
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
-      updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
+      if (typeof bootHide === 'function') bootHide();
       return true;
     }
   } catch(e) { /* IDB nicht verfügbar */ }
@@ -187,18 +267,21 @@ async function tryAutoLoad() {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
+      AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
+      await _deriveHofAndMigrate();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
+      if (typeof bootStage === 'function') bootStage('render');
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
-      updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       // Nach IDB migrieren
       idbPut('stammbaum_ged', saved).catch(() => {});
       idbPut('stammbaum_ged_backup', AppState._originalGedText).catch(() => {});
       idbPut('stammbaum_filename', fname).catch(() => {});
+      if (typeof bootHide === 'function') bootHide();
       return true;
     }
   } catch(e) { /* kein Storage */ }
@@ -207,7 +290,7 @@ async function tryAutoLoad() {
 
 // Startup-Dialog: Auswahl lokale Version vs. OneDrive
 function _showStartupChoice() {
-  const fname = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fname = (typeof _odCurFileName !== 'undefined' && _odCurFileName) || 'stammbaum.ged';
   document.getElementById('_startupChoiceName').textContent = fname;
   openModal('modalStartupChoice');
 }
@@ -223,13 +306,21 @@ async function _startupChoiceOneDrive() {
 }
 
 window.addEventListener('load', async () => {
+  if (typeof bootStage === 'function') bootStage('init');
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
+
+  // Theme-Präferenz anwenden
+  const themePref = await idbGet('theme_pref').catch(() => null);
+  if (themePref) applyTheme(themePref);
+
+  // Datenschutz: Anonymisierungs-Flag laden
+  AppState.privacyAnon = !!(await idbGet('privacy_anon').catch(() => null));
 
   // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
   if (window._odCallbackPromise) await window._odCallbackPromise;
 
-  const hasOdFile  = localStorage.getItem('od_file_id');
+  const hasOdFile  = await idbGet('od_file_id').catch(() => null);
   const hasSession = sessionStorage.getItem('od_refresh_token');
   const pendingLoad = sessionStorage.getItem('od_autoload_pending');
 
@@ -256,12 +347,45 @@ window.addEventListener('load', async () => {
 
   restoreFileHandle(); updateSaveIndicator();
 
-  // Service Worker registrieren
+  _initOfflineDiag();
+
+  // Service Worker registrieren + Auto-Reload bei SW-Update (v1019).
+  // controllerchange feuert, wenn eine neu installierte SW per skipWaiting+claim
+  // die Kontrolle übernimmt. Wir laden die Seite dann automatisch neu, damit User
+  // nicht unbestimmt lange auf altem Code arbeiten. Dirty-Schutz: wenn ungespeicherte
+  // Änderungen vorliegen, wird der Reload zurückgestellt, bis der Stand sauber ist.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+    let _pendingReload = false;
+    const _tryReload = () => {
+      if (!_pendingReload) return;
+      if (typeof AppState !== 'undefined' && AppState.changed) return; // ungespeicherte Änderungen → warten
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_pendingReload) return; // Mehrfach-Trigger / Reload-Schleifen vermeiden
+      _pendingReload = true;
+      if (typeof AppState !== 'undefined' && AppState.changed) {
+        if (typeof showToast === 'function') {
+          showToast('Neue App-Version installiert — wird nach dem nächsten Speichern aktiv', 'info');
+        }
+        // Polling alle 3s, bis sauberer Zustand erreicht
+        const _iv = setInterval(() => {
+          if (typeof AppState === 'undefined' || !AppState.changed) {
+            clearInterval(_iv);
+            window.location.reload();
+          }
+        }, 3000);
+      } else {
+        // Sauberer Zustand → kurz puffern (SW-Settle), dann reload
+        setTimeout(_tryReload, 500);
+      }
+    });
   }
 
-
+  // Loader ausblenden, falls keiner der Auto-Load-Pfade ihn bereits geschlossen hat
+  // (z. B. kein gespeicherter Stammbaum → Landing-Ansicht)
+  if (typeof bootHide === 'function') bootHide();
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
@@ -278,43 +402,6 @@ window.addEventListener('resize', debounce(() => {
   // Layout bei Fenster-Resize neu berechnen (Breakpoint 900px)
   showView(activeView.id);
 }, 150));
-
-// ─────────────────────────────────────
-//  BACKUP
-// ─────────────────────────────────────
-function updateBackupBtn() {
-  const btn = document.getElementById('backupMenuBtn');
-  if (!btn) return;
-  const fname = localStorage.getItem('stammbaum_backup_filename') || '';
-  const date  = localStorage.getItem('stammbaum_backup_date') || '';
-  const hasBackup = !!_getOriginalText();
-  btn.style.opacity = hasBackup ? '1' : '0.4';
-  btn.querySelector('span').textContent = hasBackup
-    ? `Sichern (Original)${date ? ' (' + date + ')' : ''}`
-    : 'Sichern (Original — keines vorhanden)';
-}
-
-function downloadBackup() {
-  const backup = _getOriginalText();
-  if (!backup) { showToast('⚠ Kein Original-Backup vorhanden', 'warn'); return; }
-  const fname = localStorage.getItem('stammbaum_backup_filename') || 'stammbaum.ged';
-  const backupName = fname.replace(/\.ged$/i, '') + '_original.ged';
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS && navigator.canShare) {
-    const file = new File([backup], backupName, { type: 'text/plain' });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: backupName }).catch(() => {});
-      return;
-    }
-  }
-  const blob = new Blob([backup], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = backupName; a.style.display = 'none';
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  showToast('✓ Original-Backup heruntergeladen');
-}
 
 // ─────────────────────────────────────
 //  FOTO EXPORT / IMPORT (Sprint P3-2)

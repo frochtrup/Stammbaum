@@ -93,6 +93,21 @@ function _decToGrampsCoord(lat, long) {
   };
 }
 
+// PLACE-HIST (ADR-024): baut das GRAMPS-Date-Element für pname/placeref. HYBRID — _dateRaw
+// (verbatim aus dem Parser) hat Vorrang → EXAKTER Roundtrip inkl. Zusatz-Attribute (type="from"
+// etc.). Nur bei App-erzeugten/-editierten Daten ohne _dateRaw wird aus {dateFrom,dateTo,dateType}
+// neu gebaut: 'val'→<dateval>, 'span'→<datespan>, sonst <daterange>. '' = kein Datum.
+function _grampsPlaceDateXML(d) {
+  if (!d) return '';
+  if (d._dateRaw) return d._dateRaw;
+  if (!d.dateFrom && !d.dateTo) return '';
+  if (d.dateType === 'val' || (d.dateFrom && !d.dateTo)) {
+    return `<dateval val="${_esc(d.dateFrom || d.dateTo)}"/>`;
+  }
+  const tag = d.dateType === 'span' ? 'datespan' : 'daterange';
+  return `<${tag} start="${_esc(d.dateFrom || '')}" stop="${_esc(d.dateTo || '')}"/>`;
+}
+
 // Media path: reverse of _grampsMediaPath in parser
 function _toGrampsSrc(file) {
   if (!file) return '';
@@ -106,7 +121,9 @@ function _toGrampsSrc(file) {
 // ─────────────────────────────────────
 //  MAIN WRITER
 // ─────────────────────────────────────
-async function writeGRAMPS(db) {
+// Baut den vollständigen GRAMPS-XML-String (synchron, ohne gzip/Blob).
+// Test-Seam: erlaubt headless Roundtrip-Tests ohne CompressionStream/Blob (test-roundtrip.js).
+export function _grampsBuildXMLText(db) {
   if (!db || !db.individuals) throw new Error('Kein db vorhanden');
 
   // ── Counter + handle generation ──────────────────────────────────────────
@@ -164,17 +181,19 @@ async function writeGRAMPS(db) {
     hofAddrToHandle[trimmed] = handle;
   }
 
-  const _citHandle = (srcId, page, quay) => {
+  const _citHandle = (srcId, page, quay, grampsHandle, extra, evalObj) => {
     const srcH = idToHandle[srcId];
     if (!srcH) return null;
-    const key = `${srcH}|${page||''}|${quay||0}`;
+    const key = grampsHandle || `${srcH}|${page||''}|${quay||0}`;
     if (!citRecs[key]) {
       citRecs[key] = {
-        handle: _h('ci'),
+        handle: grampsHandle || _h('ci'),
         id: `C${String(citCtr++).padStart(4,'0')}`,
         sourceHandle: srcH,
         confidence: _QUAY_TO_CONF[Math.min(3, Math.max(0, +quay || 0))],
-        page: page || ''
+        page: page || '',
+        eval: evalObj || null,        // RES-EVAL 2d (ADR-022)
+        _extra: extra || [],
       };
     }
     return citRecs[key].handle;
@@ -198,15 +217,22 @@ async function writeGRAMPS(db) {
     if (!text) return null;
     const key = noteObj._grampsHandle ? noteObj._grampsHandle : ('t:' + text);
     if (!noteRecs[key]) {
-      noteRecs[key] = { handle: noteObj._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
+      noteRecs[key] = {
+        handle: noteObj._grampsHandle || _h('no'),
+        id:     noteObj.grampId || `N${String(noteCtr++).padStart(4,'0')}`,
+        text,
+        type:   noteObj.type  || 'General',
+        _extra: noteObj._extra || [],
+      };
     }
     return noteRecs[key].handle;
   };
 
-  const _objHandle = (file, titl, mime) => {
+  const _objHandle = (file, titl, mime, grampsHandle) => {
     if (!file) return null;
     if (!objRecs[file]) {
-      objRecs[file] = { handle: _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'' };
+      const meta = grampsHandle && db._grampsObjMeta ? db._grampsObjMeta[grampsHandle] : null;
+      objRecs[file] = { handle: grampsHandle || _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'', priv: meta?.priv || null, _extra: meta?._extra || [] };
     }
     return objRecs[file].handle;
   };
@@ -220,7 +246,7 @@ async function writeGRAMPS(db) {
     }
     L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}">`);
     for (const c of a.citations || []) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval);
       if (ch) L.push(`${indent}  <citationref hlink="${_esc(ch)}"/>`);
     }
     if (a.note) {
@@ -233,23 +259,29 @@ async function writeGRAMPS(db) {
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
     if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !evObj?.addr && !(evObj?.citations?.length)) return null;
-    const handle   = _h('ev');
+    const handle   = evObj._grampsEvHlink || _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
     // Guard: placeId nur verwenden wenn das placeObject auch existiert (defekte Dateien)
+    // ADR-027 P3: hofId hat Vorrang vor placeId — bei einem Hof-Event soll der placeref im
+    // XML auf das Building-placeobj (V2-Hof) zeigen, nicht aufs Dorf. Building-placeobj
+    // referenziert seinerseits das Dorf via <placeref>, GRAMPS-Hierarchie bleibt korrekt.
     // Fallback: hofObjects via addr (RESI/PROP ohne place aber mit Koordinaten)
-    const plHandle = (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
-      ? _entityHandle(evObj.placeId, 'pl')
-      : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
-        ? hofAddrToHandle[evObj.addr.trim()]
-        : _plHandle(evObj.place || null, evObj.lati, evObj.long);
+    const plHandle = (evObj.hofId && db.hofObjects && db.hofObjects[evObj.hofId]
+        && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(db.hofObjects[evObj.hofId]))
+      ? _entityHandle(evObj.hofId, 'pl')
+      : (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
+        ? _entityHandle(evObj.placeId, 'pl')
+        : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
+          ? hofAddrToHandle[evObj.addr.trim()]
+          : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.citations || [])
-      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
+      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
     const addrAttr = evObj.addr ? [{ type: 'Address', value: evObj.addr }] : [];
-    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle });
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', datePhrase: evObj.datePhrase||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle, _priv: evObj._grampsEvPriv||null, _extra: evObj._grampsEvExtra||[] });
     return { handle, role: role||'Primary' };
   };
 
@@ -308,6 +340,9 @@ async function writeGRAMPS(db) {
           lati: wr.lati ?? null, long: wr.long ?? null,
           cause: wr.cause || '', note: wr.note, value: wr.desc,
           citations: wr.citations || [],
+          _grampsEvHlink: wr._origHlink,
+          _grampsEvExtra: wr._grampsEvExtra || [],
+          _grampsEvPriv:  wr._grampsEvPriv  || null,
         }, wr.role);
         if (r) witnessEvMap[wr._origHlink] = r.handle;
       }
@@ -316,7 +351,7 @@ async function writeGRAMPS(db) {
     }
 
     personEvRefs[pId]   = refs;
-    personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime)).filter(Boolean);
+    personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime, m._grampsHandle)).filter(Boolean);
     personCitRefs[pId]  = (p.topSources||[]).map(s => _citHandle(s, p.topSourcePages?.[s], p.topSourceQUAY?.[s]??0)).filter(Boolean);
 
     // Person notes (Handle-first key → keine Verschmelzung gleicher Texte)
@@ -365,7 +400,7 @@ async function writeGRAMPS(db) {
 
   // ── Collect source media objects ──────────────────────────────────────────
   for (const s of Object.values(db.sources)) {
-    for (const m of s.media || []) _objHandle(m.file, m.titl, m.mime);
+    for (const m of s.media || []) _objHandle(m.file, m.titl, m.mime, m._grampsHandle);
   }
 
   // ── Build XML ──────────────────────────────────────────────────────────────
@@ -390,9 +425,9 @@ async function writeGRAMPS(db) {
   if (evRecs.length) {
     L.push('  <events>');
     for (const ev of evRecs) {
-      L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}">`);
+      L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}"${ev._priv ? ` priv="${_esc(ev._priv)}"` : ''}>`);
       L.push(`      <type>${_esc(ev.type)}</type>`);
-      const dateXML = _gedToGrampsDateXML(ev.date);
+      const dateXML = _gedToGrampsDateXML(ev.date) || (ev.datePhrase ? `<datestr val="${_esc(ev.datePhrase)}"/>` : '');
       if (dateXML) L.push(`      ${dateXML}`);
       if (ev.plHandle) L.push(`      <place hlink="${_esc(ev.plHandle)}"/>`);
       if (ev.desc)    L.push(`      <description>${_esc(ev.desc)}</description>`);
@@ -400,6 +435,7 @@ async function writeGRAMPS(db) {
       for (const a of ev.attrs||[]) _attrXML('      ', a);
       if (ev.noteHandle) L.push(`      <noteref hlink="${_esc(ev.noteHandle)}"/>`);
       for (const ch of ev.citHandles) L.push(`      <citationref hlink="${_esc(ch)}"/>`);
+      for (const x of ev._extra||[]) L.push(`      ${x}`);
       L.push('    </event>');
     }
     L.push('  </events>');
@@ -410,7 +446,7 @@ async function writeGRAMPS(db) {
   for (const [pId, p] of Object.entries(db.individuals)) {
     const handle = _entityHandle(pId, 'pe');
     const gid    = pId.replace(/^@|@$/g, '');
-    L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}"${p.priv ? ` priv="${_esc(p.priv)}"` : ''}>`);
 
     // Original-Reihenfolge: gender, name*, eventref*, objref*, attribute*, childof*, parentin*, noteref*, citationref*
 
@@ -434,7 +470,7 @@ async function writeGRAMPS(db) {
     if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
     // Name citations
     for (const c of p.nameCitations||[]) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval);
       if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
     }
     L.push('      </name>');
@@ -448,7 +484,7 @@ async function writeGRAMPS(db) {
       if (en.surname) L.push(`        <surname>${_esc(en.surname)}</surname>`);
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
       for (const c of en.citations||[]) {
-        const ch = _citHandle(c.sid, c.page||'', c.quay??0);
+        const ch = _citHandle(c.sid, c.page||'', c.quay??0, c._grampsCitHandle, c._citExtra, c.eval);
         if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
       }
       L.push('      </name>');
@@ -470,8 +506,20 @@ async function writeGRAMPS(db) {
     if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
     if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
     for (const a of p._grampsAttrs||[]) _attrXML('      ', a);
+    // GED7-Adapter: NO-Events als Attribute, EXID als URLs
+    for (const ev of p.noEvents || [])
+      L.push(`      <attribute type="No ${_esc(ev)}" value="Y"/>`);
+    for (const ex of p.exids || []) {
+      if (ex.value) L.push(`      <url href="${_esc(ex.value)}" type="${_esc(ex.type || 'Unknown')}"/>`);
+    }
     for (const t of (p._tasks||[])) {
       L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
+    }
+    for (const rl of (p._rlog||[])) {
+      L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
+    }
+    for (const h of (p._hypotheses||[])) {   // RES-HYPO (ADR-023): ganzes JSON → neue Felder gratis
+      L.push(`      <attribute type="_HYPO" value="${_esc(JSON.stringify(h))}"/>`);
     }
 
     // Person associations (GEDCOM ASSO ↔ GRAMPS <personref>)
@@ -479,16 +527,16 @@ async function writeGRAMPS(db) {
       const aH = a._grampsHlink || (a.xref ? _entityHandle(a.xref, 'pe') : null);
       if (!aH) continue;
       const aCitHandles = (a.citations || [])
-        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
+        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval))
         .filter(Boolean);
       const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
       if (aCitHandles.length || aNoteHandle) {
-        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}">`);
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.role || '')}">`);
         for (const ch of aCitHandles) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
         if (aNoteHandle) L.push(`        <noteref hlink="${_esc(aNoteHandle)}"/>`);
         L.push(`      </personref>`);
       } else {
-        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}"/>`);
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.role || '')}"/>`);
       }
     }
 
@@ -513,6 +561,7 @@ async function writeGRAMPS(db) {
       L.push(`      <citationref hlink="${_esc(ch)}"/>`);
     }
 
+    for (const x of p._extra||[]) L.push(`      ${x}`);
     L.push('    </person>');
   }
   L.push('  </people>');
@@ -522,7 +571,7 @@ async function writeGRAMPS(db) {
   for (const [fId, f] of Object.entries(db.families)) {
     const handle = _entityHandle(fId, 'fa');
     const gid    = fId.replace(/^@|@$/g, '');
-    L.push(`    <family handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <family handle="${_esc(handle)}" id="${_esc(gid)}"${f.priv ? ` priv="${_esc(f.priv)}"` : ''}>`);
 
     // Relationship type
     const rel = f.marr?.seen ? 'Married' : 'Unknown';
@@ -545,11 +594,21 @@ async function writeGRAMPS(db) {
     }
 
     for (const a of f._grampsAttrs||[]) _attrXML('      ', a);
+    for (const t of (f._tasks||[])) {
+      L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
+    }
+    for (const rl of (f._rlog||[])) {
+      L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
+    }
+    for (const h of (f._hypotheses||[])) {   // RES-HYPO (ADR-023)
+      L.push(`      <attribute type="_HYPO" value="${_esc(JSON.stringify(h))}"/>`);
+    }
 
     for (const nh of famNoteRefs[fId]||[]) {
       L.push(`      <noteref hlink="${_esc(nh)}"/>`);
     }
 
+    for (const x of f._extra||[]) L.push(`      ${x}`);
     L.push('    </family>');
   }
   L.push('  </families>');
@@ -563,6 +622,15 @@ async function writeGRAMPS(db) {
       if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
       L.push(`      <confidence>${cit.confidence}</confidence>`);
       L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      // RES-EVAL 2d (ADR-022): Evidenzmodell als <attribute> (analog _STYP/_INFO/_EVID/_INFM in GEDCOM)
+      const _ev = cit.eval;
+      if (_ev && (_ev.srcType || _ev.infoQual || _ev.evidence || _ev.informant)) {
+        if (_ev.srcType)   L.push(`      <attribute type="_STYP" value="${_esc(_ev.srcType)}"/>`);
+        if (_ev.infoQual)  L.push(`      <attribute type="_INFO" value="${_esc(_ev.infoQual)}"/>`);
+        if (_ev.evidence)  L.push(`      <attribute type="_EVID" value="${_esc(_ev.evidence)}"/>`);
+        if (_ev.informant) L.push(`      <attribute type="_INFM" value="${_esc(_ev.informant)}"/>`);
+      }
+      for (const x of cit._extra||[]) L.push(`      ${x}`);
       L.push('    </citation>');
     }
     L.push('  </citations>');
@@ -573,7 +641,7 @@ async function writeGRAMPS(db) {
   for (const [sId, s] of Object.entries(db.sources)) {
     const handle = _entityHandle(sId, 'so');
     const gid    = sId.replace(/^@|@$/g, '');
-    L.push(`    <source handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <source handle="${_esc(handle)}" id="${_esc(gid)}"${s.priv ? ` priv="${_esc(s.priv)}"` : ''}>`);
     if (s.title)  L.push(`      <stitle>${_esc(s.title)}</stitle>`);
     if (s.author) L.push(`      <sauthor>${_esc(s.author)}</sauthor>`);
     if (s.publ)   L.push(`      <spubinfo>${_esc(s.publ)}</spubinfo>`);
@@ -588,9 +656,10 @@ async function writeGRAMPS(db) {
     }
     // Source media
     for (const m of s.media||[]) {
-      const oh = _objHandle(m.file, m.titl, m.mime);
+      const oh = _objHandle(m.file, m.titl, m.mime, m._grampsHandle);
       if (oh) L.push(`      <objref hlink="${_esc(oh)}"/>`);
     }
+    for (const x of s._extra||[]) L.push(`      ${x}`);
     L.push('    </source>');
   }
   L.push('  </sources>');
@@ -607,20 +676,36 @@ async function writeGRAMPS(db) {
       for (const pn of pl.pnames || []) {
         let attrs = ` value="${_esc(pn.value)}"`;
         if (pn.lang) attrs += ` lang="${_esc(pn.lang)}"`;
-        L.push(`      <pname${attrs}/>`);
+        const dxml = _grampsPlaceDateXML(pn);
+        if (dxml) { L.push(`      <pname${attrs}>`); L.push(`        ${dxml}`); L.push('      </pname>'); }
+        else L.push(`      <pname${attrs}/>`);
       }
       if (pl.lat != null && pl.long != null) {
         const coord = _decToGrampsCoord(pl.lat, pl.long);
         if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
       }
-      if (pl.parentId) {
+      if (pl.enclosedBy && pl.enclosedBy.length) {
+        // PLACE-HIST: ALLE (evtl. datierten) Zugehörigkeiten schreiben
+        for (const enc of pl.enclosedBy) {
+          if (!enc.placeId) continue;
+          const parentH = _entityHandle(enc.placeId, 'pl');
+          const dxml = _grampsPlaceDateXML(enc);
+          if (dxml) { L.push(`      <placeref hlink="${_esc(parentH)}">`); L.push(`        ${dxml}`); L.push('      </placeref>'); }
+          else L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
+        }
+      } else if (pl.parentId) {
         const parentH = _entityHandle(pl.parentId, 'pl');
         L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
       }
+      for (const x of pl._extra||[]) L.push(`      ${x}`);
       L.push('    </placeobj>');
     }
     // Neue Hof-Einträge aus hofObjects die noch kein placeObject haben
     for (const [addr, hm] of Object.entries(db.hofObjects || {})) {
+      // ADR-027 P3: V2-Einträge (id-keyed, mit villageId/addrs) skippen — sie werden
+      // im V2-Block unten separat geschrieben. Legacy-addr-keyed-Einträge laufen wie
+      // bisher durch.
+      if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hm)) continue;
       if (hm.lat == null || hm.long == null) continue;
       const trimmed = addr.trim();
       const alreadyInPl = Object.values(db.placeObjects).some(pl => pl.title === trimmed);
@@ -634,6 +719,55 @@ async function writeGRAMPS(db) {
       const coord = _decToGrampsCoord(hm.lat, hm.long);
       if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
       if (hm.note) { const nh = _noteHandle(hm.note, 'Hof Note'); if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`); }
+      L.push('    </placeobj>');
+    }
+    // ADR-027 P3: V2-hofObjects als <placeobj type="Building"> mit allen Feldern.
+    // Erste addrs-Bezeichnung als ptitle (Haupttitel), alle als pname (mit daterange
+    // falls vorhanden). placeref hlink auf villageId; coord aus hof.lat/long; noteref
+    // wenn note vorhanden. predecessor/successor als placeref type="..." (GRAMPS-konform).
+    // Skip wenn ein Farm/Building-placeObject mit gleichem Titel existiert — das ist
+    // der Phase-2-Mirror-Fall (V2-Eintrag wurde aus Farm-PO derived, beide existieren
+    // parallel bis Phase-3-Migration läuft). Post-Migration sind die Farm-POs weg →
+    // V2-Loop schreibt die Hof-placeobj-Zeilen.
+    const _placeObjsList = Object.values(db.placeObjects || {});
+    for (const [hofId, h] of Object.entries(db.hofObjects || {})) {
+      if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+      const mainTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
+      const mirroredInPos = _placeObjsList.some(pl =>
+        (pl.type === 'Farm' || pl.type === 'Building') && pl.title === mainTitle);
+      if (mirroredInPos) continue;
+      const handle = _entityHandle(hofId, 'pl');
+      const gid = hofId.replace(/^_hof_/, 'HOF_');
+      L.push(`    <placeobj handle="${_esc(handle)}" id="${_esc(gid)}" type="Building">`);
+      L.push(`      <ptitle>${_esc(mainTitle)}</ptitle>`);
+      for (const a of h.addrs || []) {
+        if (!a.value) continue;
+        let attrs = ` value="${_esc(a.value)}"`;
+        if (a.lang) attrs += ` lang="${_esc(a.lang)}"`;
+        const dxml = _grampsPlaceDateXML(a);
+        if (dxml) { L.push(`      <pname${attrs}>`); L.push(`        ${dxml}`); L.push('      </pname>'); }
+        else      L.push(`      <pname${attrs}/>`);
+      }
+      if (h.lat != null && h.long != null) {
+        const coord = _decToGrampsCoord(h.lat, h.long);
+        if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
+      }
+      if (h.villageId) {
+        const parentH = _entityHandle(h.villageId, 'pl');
+        L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
+      }
+      if (h.predecessor) {
+        const predH = _entityHandle(h.predecessor, 'pl');
+        L.push(`      <placeref hlink="${_esc(predH)}" type="predecessor"/>`);
+      }
+      if (h.successor) {
+        const succH = _entityHandle(h.successor, 'pl');
+        L.push(`      <placeref hlink="${_esc(succH)}" type="successor"/>`);
+      }
+      if (h.note) {
+        const nh = _noteHandle(h.note, 'Hof Note');
+        if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`);
+      }
       L.push('    </placeobj>');
     }
     L.push('  </places>');
@@ -720,12 +854,20 @@ async function writeGRAMPS(db) {
   }
 
   // ── Objects (media) ───────────────────────────────────────────────────────
+  // Nicht-referenzierte Objekte aus _grampsObjMeta ergänzen (würden sonst verloren gehen)
+  const usedHandles = new Set(Object.values(objRecs).map(r => r.handle));
+  for (const [h, meta] of Object.entries(db._grampsObjMeta || {})) {
+    if (!usedHandles.has(h) && meta.src) {
+      objRecs[`__orphan__${h}`] = { handle: h, id: meta.id || h, src: meta.src, mime: meta.mime || '', desc: meta.desc || '', priv: meta.priv, _extra: meta._extra || [] };
+    }
+  }
   const objArr = Object.values(objRecs);
   if (objArr.length) {
     L.push('  <objects>');
     for (const obj of objArr) {
-      L.push(`    <object handle="${_esc(obj.handle)}" id="${_esc(obj.id)}">`);
+      L.push(`    <object handle="${_esc(obj.handle)}" id="${_esc(obj.id)}"${obj.priv ? ` priv="${_esc(obj.priv)}"` : ''}>`);
       L.push(`      <file src="${_esc(obj.src)}" mime="${_esc(obj.mime)}" description="${_esc(obj.desc)}"/>`);
+      for (const x of obj._extra||[]) L.push(`      ${x}`);
       L.push('    </object>');
     }
     L.push('  </objects>');
@@ -738,15 +880,17 @@ async function writeGRAMPS(db) {
     for (const [rId, r] of repoEntries) {
       const handle = _entityHandle(rId, 're');
       const gid    = rId.replace(/^@|@$/g, '');
-      L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}">`);
+      L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}"${r.priv ? ` priv="${_esc(r.priv)}"` : ''}>`);
       L.push(`      <rname>${_esc(r.name)}</rname>`);
-      L.push('      <type>Library</type>');
+      L.push(`      <type>${_esc(r.rtype || 'Library')}</type>`);
       if (r.addr) {
         L.push('      <address>');
         L.push(`        <street>${_esc(r.addr)}</street>`);
         L.push('      </address>');
       }
       if (r.www) L.push(`      <url href="${_esc(r.www)}" type="Web Home"/>`);
+      if (r.findingAid) L.push(`      <url href="${_esc(r.findingAid)}" type="Web Search"/>`);   // RES-EVAL 2e
+      for (const x of r._extra||[]) L.push(`      ${x}`);
       L.push('    </repository>');
     }
     L.push('  </repositories>');
@@ -759,15 +903,33 @@ async function writeGRAMPS(db) {
     for (const note of noteArr) {
       L.push(`    <note handle="${_esc(note.handle)}" id="${_esc(note.id)}" type="${_esc(note.type)}">`);
       L.push(`      <text>${_esc(note.text)}</text>`);
+      for (const x of note._extra||[]) L.push(`      ${x}`);
       L.push('    </note>');
     }
     L.push('  </notes>');
   }
 
+  // ── Tags ──────────────────────────────────────────────────────────────────
+  const tagEntries = Object.entries(db.tags || {});
+  if (tagEntries.length) {
+    L.push('  <tags>');
+    for (const [handle, t] of tagEntries) {
+      L.push(`    <tag handle="${_esc(handle)}" name="${_esc(t.name)}" color="${_esc(t.color)}" priority="${t.priority ?? 0}"/>`);
+    }
+    L.push('  </tags>');
+  }
+
   L.push('</database>');
 
+  return L.join('\n');
+}
+
+// ─────────────────────────────────────
+//  MAIN WRITER — gzip-Wrapper um _grampsBuildXMLText
+// ─────────────────────────────────────
+export async function writeGRAMPS(db) {
   // ── Compress to gzip ──────────────────────────────────────────────────────
-  const xmlText = L.join('\n');
+  const xmlText = _grampsBuildXMLText(db);
   const encoded = new TextEncoder().encode(xmlText);
 
   const cs     = new CompressionStream('gzip');

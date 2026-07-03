@@ -1,7 +1,14 @@
+# macOS
+.DS_Store
+
 # Persönliche Daten
 MeineDaten_ancestris.ged
 *.ged
 !demo.ged
+*.gramps
+*.pdf
+!GEDCOM551.pdf
+Decker_story.html
 
 # Lokale Entwicklungsumgebung
 .claude/

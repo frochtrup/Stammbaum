@@ -117,6 +117,9 @@ function _confToQuay(conf) {
   return ([0, 0, 1, 2, 3])[Math.min(4, Math.max(0, +conf || 0))];
 }
 
+// RES-EVAL 2d (ADR-022): GRAMPS-Citation-<attribute>-Typ → Evidenzmodell-Achse
+const _GR_EVAL_ATTR = { _STYP: 'srcType', _INFO: 'infoQual', _EVID: 'evidence', _INFM: 'informant' };
+
 // Strip common OneDrive prefix from GRAMPS media src paths
 // '../OneDrive/Privat/Ahnen/...' → 'Privat/Ahnen/...'
 function _grampsMediaPath(src) {
@@ -151,8 +154,15 @@ function _applyCit(target, citHandle, citMap, srcHandleToId) {
   if (!cit || !cit.sourceHandle) return;
   const srcId = srcHandleToId[cit.sourceHandle];
   if (!srcId) return;
-  if (!target.citations.some(c => c.sid === srcId)) {
-    target.citations.push(citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence))));
+  const alreadyExists = cit._grampsHandle
+    ? target.citations.some(c => c._grampsCitHandle === cit._grampsHandle)
+    : target.citations.some(c => c.sid === srcId);
+  if (!alreadyExists) {
+    const obj = citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence)));
+    obj._grampsCitHandle = cit._grampsHandle || null;
+    obj._citExtra        = cit._extra        || [];
+    obj.eval             = cit.eval ? { ...cit.eval } : null;   // RES-EVAL 2d
+    target.citations.push(obj);
   }
 }
 
@@ -168,7 +178,12 @@ function _child(el, tag) {
 // ─────────────────────────────────────
 //  MAIN PARSER
 // ─────────────────────────────────────
-async function parseGRAMPS(file) {
+/**
+ * Parst eine .gramps-Datei (gzip + XML) und gibt die Datenbankstruktur zurück.
+ * @param {File} file
+ * @returns {Promise<AppDb>}
+ */
+export async function parseGRAMPS(file) {
   // 1. Read and decompress .gramps file (gzip)
   const buf = await file.arrayBuffer();
   let xmlText;
@@ -194,6 +209,12 @@ async function parseGRAMPS(file) {
     xmlText = new TextDecoder().decode(new Uint8Array(buf));
   }
 
+  return _grampsParseXMLText(xmlText);
+}
+
+// Parst GRAMPS-XML aus einem fertigen String (synchron, ohne gzip/File).
+// Test-Seam: erlaubt headless Roundtrip-Tests ohne DecompressionStream (test-roundtrip.js).
+export function _grampsParseXMLText(xmlText) {
   // 2. Parse XML
   const domParser = new DOMParser();
   const doc       = domParser.parseFromString(xmlText, 'application/xml');
@@ -210,6 +231,16 @@ async function parseGRAMPS(file) {
     const byNS = root.getElementsByTagNameNS(_NS, tag);
     if (byNS.length > 0) return [...byNS];
     return [...root.getElementsByTagName(tag)];
+  };
+
+  // ─── Minimal XML serializer for _extra passthrough ───────────────────────
+  const _xmlEl = el => {
+    const tag   = el.localName;
+    const attrs = [...el.attributes].map(a => ` ${a.name}="${a.value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"`).join('');
+    const kids  = [...el.childNodes];
+    if (!kids.length) return `<${tag}${attrs}/>`;
+    const inner = kids.map(c => c.nodeType === 3 ? c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : _xmlEl(c)).join('');
+    return `<${tag}${attrs}>${inner}</${tag}>`;
   };
 
   // ─── Build handle lookup maps ────────────────────────────────────────────
@@ -236,10 +267,15 @@ async function parseGRAMPS(file) {
       .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
     const noteRefs    = _byTag(ev, 'noteref').map(n => n.getAttribute('hlink'));
     const citRefs     = _byTag(ev, 'citationref').map(c => c.getAttribute('hlink'));
-    evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs };
+    const priv        = ev.getAttribute('priv') || null;
+    const evExtra     = [];
+    for (const obj of _byTag(ev, 'objref')) evExtra.push(_xmlEl(obj));
+    const changeEl = _byTag(ev, 'change')[0];
+    if (changeEl) evExtra.push(_xmlEl(changeEl));
+    evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs, _priv: priv, _extra: evExtra, _grampsHandle: h };
   }
 
-  // Citations: handle → {sourceHandle, confidence, page}
+  // Citations: handle → {sourceHandle, confidence, page, _grampsHandle, _extra[]}
   const citMap = {};
   for (const cit of _byTag(doc, 'citation')) {
     const h    = cit.getAttribute('handle');
@@ -247,31 +283,68 @@ async function parseGRAMPS(file) {
     const page = _child(cit, 'page');
     const conf = _child(cit, 'confidence');
     const sr   = _byTag(cit, 'sourceref')[0] || null;
-    citMap[h]  = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page };
+    const citExtra = [];
+    let citEval = null;
+    for (const nr  of _byTag(cit, 'noteref'))   citExtra.push(_xmlEl(nr));
+    for (const obj of _byTag(cit, 'objref'))     citExtra.push(_xmlEl(obj));
+    for (const a   of _byTag(cit, 'attribute')) {
+      // RES-EVAL 2d: Evidenz-Achsen modelliert herauslösen (nicht verbatim → kein Doppel-Schreiben)
+      const axis = _GR_EVAL_ATTR[a.getAttribute('type')];
+      if (axis) {
+        if (!citEval) citEval = { srcType: '', infoQual: '', evidence: '', informant: '' };
+        citEval[axis] = a.getAttribute('value') || '';
+      } else citExtra.push(_xmlEl(a));
+    }
+    const citChange = _byTag(cit, 'change')[0];
+    if (citChange) citExtra.push(_xmlEl(citChange));
+    citMap[h] = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page, eval: citEval, _grampsHandle: h, _extra: citExtra };
   }
 
-  // Objects: handle → {src, mime, desc}
+  // Objects: handle → {src, mime, desc, priv, _extra[]}
   const objMap = {};
   for (const obj of _byTag(doc, 'object')) {
     const h   = obj.getAttribute('handle');
     if (!h) continue;
-    const id  = obj.getAttribute('id') || '';
-    const fEl = _byTag(obj, 'file')[0] || null;
+    const id   = obj.getAttribute('id') || '';
+    const priv = obj.getAttribute('priv') || null;
+    const fEl  = _byTag(obj, 'file')[0] || null;
+    const objExtra = [];
+    for (const ch of obj.children) {
+      if ((ch.localName || ch.tagName) !== 'file') objExtra.push(_xmlEl(ch));
+    }
     if (fEl) objMap[h] = {
       src:  fEl.getAttribute('src')         || '',
       mime: fEl.getAttribute('mime')        || '',
       desc: fEl.getAttribute('description') || '',
-      id
+      id, priv, _extra: objExtra
     };
   }
 
-  // Notes: handle → text
+  // Tags: handle → {name, color, priority}
+  const tagMap = {};
+  for (const tag of _byTag(doc, 'tag')) {
+    const h = tag.getAttribute('handle');
+    if (!h) continue;
+    tagMap[h] = { name: tag.getAttribute('name') || '', color: tag.getAttribute('color') || '', priority: +(tag.getAttribute('priority') || 0) };
+  }
+
+  // Notes: handle → {text, type, grampId, _extra[]}
   const noteMap = {};
   for (const note of _byTag(doc, 'note')) {
     const h      = note.getAttribute('handle');
     if (!h) continue;
     const textEl = _byTag(note, 'text')[0] || null;
-    noteMap[h]   = textEl ? textEl.textContent.trim() : '';
+    const nExtra = [];
+    for (const ch of note.children) {
+      const ln = ch.localName || ch.tagName || '';
+      if (ln !== 'text') nExtra.push(_xmlEl(ch));
+    }
+    noteMap[h] = {
+      text: textEl ? textEl.textContent.trim() : '',
+      type: note.getAttribute('type') || 'General',
+      grampId: note.getAttribute('id') || '',
+      _extra: nExtra,
+    };
   }
 
   // Places: handle → {title, lat, long}  (for event resolution)
@@ -285,6 +358,27 @@ async function parseGRAMPS(file) {
     const val = parseFloat(s.slice(1));
     if (isNaN(val)) return null;
     return (dir === 'S' || dir === 'W') ? -val : val;
+  };
+
+  const _PLACE_MODELLED = new Set(['ptitle', 'pname', 'coord', 'placeref']);
+
+  // PLACE-HIST (ADR-024): liest das GRAMPS-Date-Kind (<daterange>/<datespan>/<dateval>) eines
+  // pname/placeref-Elements. HYBRID: strukturierte Felder {dateFrom,dateTo,dateType} für App-Logik
+  // (resolveAsOf etc.) + _dateRaw = verbatim-Serialisierung des Date-Elements für EXAKTEN Roundtrip
+  // (erhält Zusatz-Attribute wie type="from"/quality/cformat, die das strukturierte Modell nicht kennt).
+  // dateType erhält die GRAMPS-Form: 'range' (daterange) | 'span' (datespan) | 'val' (dateval).
+  const _grampsPlaceDateOf = (el) => {
+    const dr = _byTag(el, 'daterange')[0] || _byTag(el, 'datespan')[0] || _byTag(el, 'dateval')[0] || null;
+    if (!dr) return { dateFrom: null, dateTo: null, dateType: null, _dateRaw: null };
+    const dtag = dr.localName || dr.tagName || '';
+    const _dateRaw = _xmlEl(dr);
+    if (dtag === 'dateval') return { dateFrom: dr.getAttribute('val') || null, dateTo: null, dateType: 'val', _dateRaw };
+    return {
+      dateFrom: dr.getAttribute('start') || null,
+      dateTo:   dr.getAttribute('stop')  || null,
+      dateType: dtag === 'datespan' ? 'span' : 'range',
+      _dateRaw,
+    };
   };
 
   for (const pl of _byTag(doc, 'placeobj')) {
@@ -302,7 +396,7 @@ async function parseGRAMPS(file) {
     const pnames = [];
     for (const pn of _byTag(pl, 'pname')) {
       const val = pn.getAttribute('value') || '';
-      if (val) pnames.push({ value: val, lang: pn.getAttribute('lang') || '' });
+      if (val) pnames.push({ value: val, lang: pn.getAttribute('lang') || '', ..._grampsPlaceDateOf(pn) });
     }
 
     // Coordinates
@@ -313,9 +407,19 @@ async function parseGRAMPS(file) {
       long = _parseDeg(coord.getAttribute('long') || '');
     }
 
-    // Parent place ref (hierarchy)
-    const placerefEl    = _byTag(pl, 'placeref')[0] || null;
-    const _parentHandle = placerefEl ? placerefEl.getAttribute('hlink') : null;
+    // Parent place refs (hierarchy) — PLACE-HIST: ALLE placerefs mit Datum sammeln (nicht nur [0])
+    const _enclosedRaw = [];
+    for (const ref of _byTag(pl, 'placeref')) {
+      const hl = ref.getAttribute('hlink');
+      if (hl) _enclosedRaw.push({ handle: hl, ..._grampsPlaceDateOf(ref) });
+    }
+    const _parentHandle = _enclosedRaw[0] ? _enclosedRaw[0].handle : null;
+
+    // Sub-elements not explicitly modelled → passthrough
+    const plExtra = [];
+    for (const ch of pl.children) {
+      if (!_PLACE_MODELLED.has(ch.localName || ch.tagName || '')) plExtra.push(_xmlEl(ch));
+    }
 
     const primaryTitle = ptitle || (pnames[0]?.value || '');
     placeMap[h] = { title: primaryTitle, lat, long };  // backward compat for event resolution
@@ -323,22 +427,29 @@ async function parseGRAMPS(file) {
     _placeObjsTemp[pId] = {
       id: pId, _grampsHandle: h,
       title: primaryTitle, type, pnames, lat, long,
-      _parentHandle
+      _parentHandle, _enclosedRaw, _extra: plExtra,
     };
   }
 
   // Resolve parent handles → IDs (second pass after all places are known)
   const placeObjects = {};
   for (const [pId, pl] of Object.entries(_placeObjsTemp)) {
+    const enclosedBy = (pl._enclosedRaw || [])
+      .map(e => ({ placeId: placeHandleToId[e.handle] || null, dateFrom: e.dateFrom, dateTo: e.dateTo, dateType: e.dateType, _dateRaw: e._dateRaw }))
+      .filter(e => e.placeId);
     placeObjects[pId] = {
-      id: pl.id, _grampsHandle: pl._grampsHandle,
+      id: pl.id, grampId: pl.id.replace(/^@|@$/g, ''), _grampsHandle: pl._grampsHandle,
       title: pl.title, type: pl.type, pnames: pl.pnames,
       lat: pl.lat, long: pl.long,
       parentId: pl._parentHandle ? (placeHandleToId[pl._parentHandle] || null) : null,
+      enclosedBy,
+      _extra: pl._extra || [],
     };
   }
 
   // hofObjects aus placeObjects ableiten (type=Building/Farm → Hof-Ansicht)
+  // Legacy ADR-026 addr-keyed Sidecar: title→{addr,lat,long} für Read-Pfade die
+  // auf addr-Key zugreifen (z.B. Writer-geoLines, hofMeta).
   const _HOF_PLACE_TYPES = new Set(['Building', 'Farm', 'Neighborhood']);
   const hofObjects = {};
   for (const pl of Object.values(placeObjects)) {
@@ -346,15 +457,52 @@ async function parseGRAMPS(file) {
       hofObjects[pl.title] = { addr: pl.title, lat: pl.lat, long: pl.long };
     }
   }
+  // ADR-027 P2: parallel V2-hofObjects (id-keyed) für getHofRegistry.
+  // Lebt im selben Slot db.hofObjects neben den Legacy-addr-keyed-Einträgen — der
+  // V2-Shape-Filter (_isHofObjectV2) trennt sie sauber. Phase 3 wird die Legacy-
+  // Einträge entfernen und Events von Farm-PO auf Village-PO+hofId umhängen; in
+  // Phase 2 koexistieren beide, um GRAMPS-Roundtrip xml1===xml2 stabil zu halten.
+  const _farmPidToHofId = {};
+  for (const pl of Object.values(placeObjects)) {
+    if (pl.type !== 'Building' && pl.type !== 'Farm') continue;
+    const villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
+      || pl.parentId || null;
+    if (!villageId) continue;
+    const norm = (typeof _normHofAddr === 'function' ? _normHofAddr(pl.title) : (pl.title||'').toLowerCase())
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const vNorm = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+    const hofId = '_hof_' + (norm || 'x') + '_' + (vNorm || 'v');
+    if (hofObjects[hofId]) continue;       // Idempotent: schon erzeugt
+    const addrs = [{ value: pl.title, lang: 'deu',
+      dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
+    for (const pn of (pl.pnames || [])) {
+      if (pn.value && pn.value !== pl.title) {
+        addrs.push({ value: pn.value, lang: pn.lang || 'deu',
+          dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+          dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null });
+      }
+    }
+    hofObjects[hofId] = {
+      id: hofId, villageId, addrs,
+      lat: pl.lat, long: pl.long, note: '',
+      existsFrom: null, existsTo: null,
+      predecessor: null, successor: null,
+      _govId: null, _govTypes: null,
+      schemaVersion: 1,
+    };
+    _farmPidToHofId[pl.id] = hofId;
+  }
 
   // ─── Build db ────────────────────────────────────────────────────────────
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
 
   // ─── Repositories ────────────────────────────────────────────────────────
   const repoHandleToId = {};
+  const _REPO_MODELLED = new Set(['rname', 'type', 'address', 'url']);
   for (const repo of _byTag(doc, 'repository')) {
     const h   = repo.getAttribute('handle');
     if (!h) continue;
+    const priv = repo.getAttribute('priv') || null;
     const gid = repo.getAttribute('id') || '';
     const rId = '@' + gid + '@';
     repoHandleToId[h] = rId;
@@ -365,21 +513,34 @@ async function parseGRAMPS(file) {
       addr = ['street','city','state','country']
         .map(t => _child(addrEl, t)).filter(Boolean).join(', ');
     }
-    const urlEl = _byTag(repo, 'url')[0] || null;
+    // RES-EVAL 2e: mehrere <url> — "Web Search" → Findbuch, sonst → Website
+    let www = '', findingAid = '';
+    for (const u of _byTag(repo, 'url')) {
+      const href = u.getAttribute('href') || '';
+      if ((u.getAttribute('type') || '') === 'Web Search') { if (!findingAid) findingAid = href; }
+      else if (!www) www = href;
+    }
+    const repoExtra = [];
+    for (const ch of repo.children) {
+      if (!_REPO_MODELLED.has(ch.localName)) repoExtra.push(_xmlEl(ch));
+    }
     repositories[rId] = {
       id: rId,
       name: _child(repo, 'rname'),
-      addr, phon: '', www: urlEl ? (urlEl.getAttribute('href') || '') : '', email: '',
+      rtype: _child(repo, 'type') || 'Library',
+      addr, phon: '', www, findingAid, email: '',
       lastChanged: '', lastChangedTime: '',
-      grampId: gid, _grampsHandle: h
+      grampId: gid, _grampsHandle: h, priv, _extra: repoExtra
     };
   }
 
   // ─── Sources ─────────────────────────────────────────────────────────────
   const srcHandleToId = {};
+  const _SRC_MODELLED = new Set(['stitle', 'sauthor', 'sabbrev', 'spubinfo', 'noteref', 'objref', 'reporef']);
   for (const src of _byTag(doc, 'source')) {
     const h   = src.getAttribute('handle');
     if (!h) continue;
+    const priv = src.getAttribute('priv') || null;
     const gid = src.getAttribute('id') || '';
     const sId = '@' + gid + '@';
     srcHandleToId[h] = sId;
@@ -387,7 +548,7 @@ async function parseGRAMPS(file) {
     const repoRefEl = _byTag(src, 'reporef')[0] || null;
     const repoId    = repoRefEl ? (repoHandleToId[repoRefEl.getAttribute('hlink')] || null) : null;
     const noteTexts = _byTag(src, 'noteref')
-      .map(n => noteMap[n.getAttribute('hlink')] || '').filter(Boolean);
+      .map(n => noteMap[n.getAttribute('hlink')]?.text || '').filter(Boolean);
     const srcMedia = [];
     for (const objRef of _byTag(src, 'objref')) {
       const obj = objMap[objRef.getAttribute('hlink')];
@@ -398,6 +559,10 @@ async function parseGRAMPS(file) {
         prim: srcMedia.length === 0,
         _grampsHandle: objRef.getAttribute('hlink')
       });
+    }
+    const srcExtra = [];
+    for (const ch of src.children) {
+      if (!_SRC_MODELLED.has(ch.localName)) srcExtra.push(_xmlEl(ch));
     }
     sources[sId] = {
       id: sId, _passthrough: [], dataExtra: [], media: srcMedia,
@@ -410,6 +575,7 @@ async function parseGRAMPS(file) {
       agnc: '', date: '', _date: '',
       grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
+      priv, _extra: srcExtra,
     };
   }
 
@@ -440,9 +606,11 @@ async function parseGRAMPS(file) {
     const nId = nh;  // GRAMPS handle direkt als Key — verhindert Kollisionen bei nh.slice(-10)
     if (!notes[nId] && noteMap[nh] !== undefined) {
       notes[nId] = {
-        id: nId, text: noteMap[nh] || '',
+        id: nId, text: noteMap[nh]?.text || '', type: noteMap[nh]?.type || 'General',
+        grampId: noteMap[nh]?.grampId || '',
+        _extra: noteMap[nh]?._extra || [],
         _passthrough: [], lastChanged: '', lastChangedTime: '',
-        _grampsHandle: nh
+        _grampsHandle: nh,
       };
     }
     return nId;
@@ -454,9 +622,11 @@ async function parseGRAMPS(file) {
   }
 
   // ─── Persons (second pass: build full objects) ─────────────────────────────
+  const _PERSON_MODELLED = new Set(['gender','name','eventref','objref','attribute','childof','parentin','noteref','citationref','personref','address','url']);
   for (const person of _byTag(doc, 'person')) {
     const h   = person.getAttribute('handle');
     if (!h) continue;
+    const priv = person.getAttribute('priv') || null;
     const gid = person.getAttribute('id') || '';
     const pId = personHandleToId[h];
 
@@ -500,6 +670,13 @@ async function parseGRAMPS(file) {
     }
 
     // Build person object
+    const pExtra = [];
+    const pTags  = [];
+    for (const ch of person.children) {
+      const ln = ch.localName || ch.tagName;
+      if (!_PERSON_MODELLED.has(ln)) pExtra.push(_xmlEl(ch));
+      if (ln === 'tagref') { const t = tagMap[ch.getAttribute('hlink')]; if (t) pTags.push({ name: t.name, color: t.color }); }
+    }
     const p = {
       id: pId, _passthrough: [], _nameParsed: true,
       name: nameRaw, nameRaw, surname, given, nick, prefix, suffix, _grampsCall: _pCall,
@@ -519,11 +696,15 @@ async function parseGRAMPS(file) {
       media: [], titl: '', reli: '', resn: '', email: '', www: '',
       _stat: null, grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
-      sourceRefs: new Set()
+      sourceRefs: new Set(),
+      priv, _extra: pExtra, _grampsTags: pTags,
+      // GED7-Felder: werden ggf. bei Attribut-/URL-Parsing befüllt
+      noEvents: new Set(), exids: [], aliaNames: [], nameTrans: [], createdDate: '',
+      refns: [], aliases: [],
     };
 
     // Attributes
-    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK']);
+    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK','_RLOG','_HYPO']);
     const uidA   = _attr(person, '_UID');   if (uidA)  p.uid   = uidA.getAttribute('value')  || '';
     const statA  = _attr(person, '_STAT');  if (statA) p._stat = statA.getAttribute('value') || null;
     const resnA  = _attr(person, 'RESN');   if (resnA) p.resn  = resnA.getAttribute('value') || '';
@@ -532,18 +713,42 @@ async function parseGRAMPS(file) {
       .filter(a => a.getAttribute('type') === '_TASK')
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
       .filter(t => t && t.text);
+    p._rlog = _byTag(person, 'attribute')
+      .filter(a => a.getAttribute('type') === '_RLOG')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(r => r && (r.query || r.note));
+    p._hypotheses = _byTag(person, 'attribute')   // RES-HYPO (ADR-023)
+      .filter(a => a.getAttribute('type') === '_HYPO')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(h => h && (h.text || h.rationale));
     p._grampsAttrs = _byTag(person, 'attribute')
-      .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
+      .filter(a => {
+        const t = a.getAttribute('type') || '';
+        // GED7 noEvents: attribute type="No BIRT" value="Y" → p.noEvents
+        if (t.startsWith('No ') && (a.getAttribute('value') || '').toUpperCase() === 'Y') {
+          const evTag = t.slice(3).trim();
+          if (evTag) p.noEvents.add(evTag);
+          return false; // aus _grampsAttrs herausnehmen
+        }
+        return !_HANDLED_P_ATTRS.has(t);
+      })
       .map(a => {
         const atgt = { citations: [] };
         for (const cr of _byTag(a, 'citationref'))
           _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
-          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+          .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
         const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;
       });
+
+    // GED7 EXID: <url> Elemente (vom GRAMPS-Writer für exids[] geschrieben) → p.exids[]
+    for (const urlEl of _byTag(person, 'url')) {
+      const href = urlEl.getAttribute('href') || '';
+      const type = urlEl.getAttribute('type') || '';
+      if (href) p.exids.push({ value: href, type });
+    }
 
     // Event refs
     for (const evRef of _byTag(person, 'eventref')) {
@@ -556,7 +761,7 @@ async function parseGRAMPS(file) {
           const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
           const plTitle = pl?.title || null;
           const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
-          const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+          const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
           const wtgt = { citations: [] };
           for (const ch of ev.citRefs) _applyCit(wtgt, ch, citMap, srcHandleToId);
           if (!p._grampsWitnessRefs) p._grampsWitnessRefs = [];
@@ -568,6 +773,8 @@ async function parseGRAMPS(file) {
             cause: ev.cause || '',
             note: evNote, desc: ev.desc || '',
             citations: wtgt.citations,
+            _grampsEvExtra: ev._extra || [],
+            _grampsEvPriv:  ev._priv  || null,
           });
         }
         continue;
@@ -576,7 +783,7 @@ async function parseGRAMPS(file) {
       if (!ev) continue;
 
       const mapped  = _GRAMPS_EV[ev.type] || { tag:'EVEN', sp:null };
-      const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+      const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
       const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
@@ -593,9 +800,11 @@ async function parseGRAMPS(file) {
           tgt.placeId      = plId;
           tgt.lati         = lat;
           tgt.long         = lng;
-          tgt.note         = evNote;
+          tgt.note          = evNote;
           tgt._grampsAttrs  = ev.attrs || [];
           tgt._grampsEvHlink = evH;
+          tgt._grampsEvExtra = ev._extra || [];
+          tgt._grampsEvPriv  = ev._priv  || null;
           if (sp === 'death' && ev.cause) tgt.cause = ev.cause;
           for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
         }
@@ -615,8 +824,10 @@ async function parseGRAMPS(file) {
           phon: [], email: [],
           noteRefs: [],
           citations: [], _extra: [],
-          _grampsAttrs: ev.attrs || [],
-          _grampsEvHlink: evH
+          _grampsAttrs:   ev.attrs  || [],
+          _grampsEvHlink: evH,
+          _grampsEvExtra: ev._extra || [],
+          _grampsEvPriv:  ev._priv  || null,
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         p.events.push(evObj);
@@ -666,16 +877,24 @@ async function parseGRAMPS(file) {
       });
     }
 
-    // Top-level citation refs (on the person record itself)
-    const topTarget = { sources: p.topSources, sourcePages: p.topSourcePages,
-                        sourceQUAY: p.topSourceQUAY, sourceNote: {}, sourceExtra: p.topSourceExtra, sourceMedia: {} };
-    for (const cr of _byTag(person, 'citationref'))
-      _applyCit(topTarget, cr.getAttribute('hlink'), citMap, srcHandleToId);
+    // Top-level citation refs (direct children of person, not nested in name/attribute)
+    const topTarget = { citations: [] };
+    for (const ch of person.children) {
+      if ((ch.localName || ch.tagName) === 'citationref')
+        _applyCit(topTarget, ch.getAttribute('hlink'), citMap, srcHandleToId);
+    }
+    for (const c of topTarget.citations) {
+      if (!p.topSources.includes(c.sid)) {
+        p.topSources.push(c.sid);
+        if (c.page) p.topSourcePages[c.sid] = c.page;
+        if (c.quay != null) p.topSourceQUAY[c.sid] = +c.quay;
+      }
+    }
 
     // Notes
     for (const nr of _byTag(person, 'noteref')) {
       const nh  = nr.getAttribute('hlink');
-      const txt = noteMap[nh] || '';
+      const txt = noteMap[nh]?.text || '';
       if (txt) p.noteTexts.push(txt);
       p.noteRefs.push(_noteId(nh));
     }
@@ -690,8 +909,8 @@ async function parseGRAMPS(file) {
       for (const cr of _byTag(pref, 'citationref'))
         _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
       const aNote = _byTag(pref, 'noteref')
-        .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
-      p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, citations: atgt.citations });
+        .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
+      p.associations.push({ xref: aXref, _grampsHlink: aHlink, role: aRel, note: aNote, citations: atgt.citations });
     }
 
     // Family links (resolved in families pass)
@@ -702,9 +921,11 @@ async function parseGRAMPS(file) {
   }
 
   // ─── Families ─────────────────────────────────────────────────────────────
+  const _FAMILY_MODELLED = new Set(['rel','father','mother','eventref','childref','attribute','noteref','citationref']);
   for (const fam of _byTag(doc, 'family')) {
     const h   = fam.getAttribute('handle');
     if (!h) continue;
+    const priv = fam.getAttribute('priv') || null;
     const gid = fam.getAttribute('id') || '';
     const fId = famHandleToId[h];
 
@@ -724,6 +945,13 @@ async function parseGRAMPS(file) {
       if (frel || mrel) childRels[ch] = { frel, mrel };
     }
 
+    const fExtra = [];
+    const fTags  = [];
+    for (const ch of fam.children) {
+      const ln = ch.localName || ch.tagName;
+      if (!_FAMILY_MODELLED.has(ln)) fExtra.push(_xmlEl(ch));
+      if (ln === 'tagref') { const t = tagMap[ch.getAttribute('hlink')]; if (t) fTags.push({ name: t.name, color: t.color }); }
+    }
     const f = {
       id: fId, _passthrough: [],
       husb, wife, children, childRelations: childRels, _lastChil: null,
@@ -733,7 +961,8 @@ async function parseGRAMPS(file) {
       noteRefs: [], noteTexts: [], noteText: '',
       sourceRefs: new Set(),
       media: [],
-      lastChanged: '', lastChangedTime: ''
+      lastChanged: '', lastChangedTime: '',
+      priv, _extra: fExtra, _grampsTags: fTags,
     };
 
     // Family event refs
@@ -742,7 +971,7 @@ async function parseGRAMPS(file) {
       const ev  = evMap[evH];
       if (!ev) continue;
       const mapped  = _GRAMPS_EV[ev.type] || { tag:'EVEN', sp:null };
-      const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+      const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
       const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
@@ -759,8 +988,11 @@ async function parseGRAMPS(file) {
         tgt.placeId      = plId;
         tgt.lati         = lat;
         tgt.long         = lng;
-        tgt.note         = evNote;
-        tgt._grampsAttrs = ev.attrs || [];
+        tgt.note           = evNote;
+        tgt._grampsAttrs   = ev.attrs  || [];
+        tgt._grampsEvHlink = evH;
+        tgt._grampsEvExtra = ev._extra || [];
+        tgt._grampsEvPriv  = ev._priv  || null;
         for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
       } else if (!tgt) {
         const evObj = {
@@ -769,7 +1001,10 @@ async function parseGRAMPS(file) {
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
           note: evNote, addr: ev.addr || '', noteRefs: [],
           citations: [], _extra: [],
-          _grampsAttrs: ev.attrs || []
+          _grampsAttrs:   ev.attrs  || [],
+          _grampsEvHlink: evH,
+          _grampsEvExtra: ev._extra || [],
+          _grampsEvPriv:  ev._priv  || null,
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         f.events.push(evObj);
@@ -785,20 +1020,34 @@ async function parseGRAMPS(file) {
     // Notes
     for (const nr of _byTag(fam, 'noteref')) {
       const nh  = nr.getAttribute('hlink');
-      const txt = noteMap[nh] || '';
+      const txt = noteMap[nh]?.text || '';
       if (txt) f.noteTexts.push(txt);
       f.noteRefs.push(_noteId(nh));
     }
     f.noteText = f.noteTexts.join('\n\n');
 
     // Extra attributes (all <attribute> on family, with optional citations/notes)
+    const _HANDLED_F_ATTRS = new Set(['_TASK', '_RLOG', '_HYPO']);
+    f._tasks = _byTag(fam, 'attribute')
+      .filter(a => a.getAttribute('type') === '_TASK')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(t => t && t.text);
+    f._rlog = _byTag(fam, 'attribute')
+      .filter(a => a.getAttribute('type') === '_RLOG')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(r => r && (r.query || r.note));
+    f._hypotheses = _byTag(fam, 'attribute')   // RES-HYPO (ADR-023)
+      .filter(a => a.getAttribute('type') === '_HYPO')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(h => h && (h.text || h.rationale));
     f._grampsAttrs = _byTag(fam, 'attribute')
+      .filter(a => !_HANDLED_F_ATTRS.has(a.getAttribute('type') || ''))
       .map(a => {
         const atgt = { citations: [] };
         for (const cr of _byTag(a, 'citationref'))
           _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
-          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+          .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
         const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;
@@ -825,6 +1074,34 @@ async function parseGRAMPS(file) {
   for (const p of Object.values(individuals)) _rebuildPersonSourceRefs(p);
   for (const f of Object.values(families))    _rebuildFamilySourceRefs(f);
 
+  // ADR-027 P2: hofId-Backfill für Events, deren placeId auf eine Farm/Building-PO zeigt.
+  // Setzt ev.hofId parallel zu ev.placeId; ev.placeId bleibt auf die Farm-PO (Phase 3
+  // wird auf villageId umhängen). In Phase 2 dürfen beide Felder koexistieren — der
+  // Writer geoLines bevorzugt hofId-Koords vor placeId-Koords (siehe gedcom-writer.js).
+  if (Object.keys(_farmPidToHofId).length) {
+    const _setHofIdOnEv = ev => {
+      if (ev && ev.placeId && _farmPidToHofId[ev.placeId]) ev.hofId = _farmPidToHofId[ev.placeId];
+    };
+    for (const p of Object.values(individuals)) {
+      [p.birth, p.chr, p.death, p.buri].forEach(_setHofIdOnEv);
+      (p.events || []).forEach(_setHofIdOnEv);
+    }
+    for (const f of Object.values(families)) {
+      [f.marr, f.engag, f.div, f.divf].forEach(_setHofIdOnEv);
+      (f.events || []).forEach(_setHofIdOnEv);
+    }
+  }
+
+  // ADR-027 P3: Farm/Building-placeObjects direkt in V2-hofObjects migrieren —
+  // im Parser-Output dem finalen ADR-027-Modell entsprechen. Idempotent (kein zweites
+  // Mal beim Re-Parse derselben Datei). Repointet Events: placeId Farm-PO → villageId,
+  // hofId neu. Damit ist der GRAMPS-Roundtrip nach Phase 3 stable: parse → write →
+  // parse → write konvergiert, weil keine Farm-POs mehr im Output erscheinen können.
+  if (typeof _migrateFarmPOsToHofObjects === 'function') {
+    const _parsedDb = { placeObjects, hofObjects, individuals, families };
+    _migrateFarmPOsToHofObjects(_parsedDb);
+  }
+
   // ─── idCounter ────────────────────────────────────────────────────────────
   let maxId = 1000;
   for (const id of [
@@ -846,7 +1123,11 @@ async function parseGRAMPS(file) {
     extraRecords: [], headLines: [],
     _sourceFormat: 'gramps',
     _grampsMaster: true,
+    tags: Object.fromEntries(Object.entries(tagMap).map(([h, t]) => [h, { name: t.name, color: t.color, priority: t.priority }])),
     _grampsHandles,
+    _grampsObjMeta: Object.fromEntries(
+      Object.entries(objMap).map(([h, o]) => [h, { src: o.src, mime: o.mime, desc: o.desc, id: o.id, priv: o.priv || null, _extra: o._extra || [] }])
+    ),
     _grampsNS, _grampsNSVersion, _grampsVersion,
     _idCounterMax: maxId
   };

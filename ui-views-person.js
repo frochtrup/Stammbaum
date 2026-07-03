@@ -102,7 +102,7 @@ function _personRowHtml(p, isCurrent, pos, total) {
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
   let meta = '';
   if (p.birth.date) meta += '* ' + p.birth.date;
-  if (p.birth.place) meta += (meta ? ', ' : '') + compactPlace(p.birth.place);
+  if (p.birth.place) meta += (meta ? ', ' : '') + shortPlace(p.birth.place, p.birth.placeId);
   if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
@@ -120,17 +120,54 @@ function _personRowHtml(p, isCurrent, pos, total) {
     </div>`;
 }
 
+let _lastFilteredPersons = null;
+// P0-R5: Cache-Invalidierung von markChanged() in ui-views.js — exportPersonsCsv
+// soll nach Edit nicht die alte gefilterte Liste benutzen.
+function _invalidatePersonListCache() { _lastFilteredPersons = null; UIState._personSortCache = null; }
+
+function exportPersonsCsv() {
+  const persons = _lastFilteredPersons || Object.values(AppState.db.individuals);
+  const SEP = ';';
+  const cols = ['ID','Nachname','Vorname','Geschlecht','Geburtsdatum','Geburtsort','Sterbedatum','Sterbeort','Quellen'];
+  const rows = [cols.join(SEP)];
+  for (const p of persons) {
+    const sex = p.sex === 'M' ? 'M' : p.sex === 'F' ? 'F' : '';
+    rows.push([
+      p.id, p.surname || '', p.given || '', sex,
+      p.birth.date || '', compactPlace(p.birth.place || ''),
+      p.death.date || '', compactPlace(p.death.place || ''),
+      String(p.sourceRefs?.size || 0)
+    ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(SEP));
+  }
+  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'personen.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function renderPersonList(persons) {
+  _lastFilteredPersons = persons;
   _buildKekuleMap();
-  const sorted = [...persons].sort((a, b) => {
-    if (_personSort === 'date') {
-      const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
-      if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+
+  const allCount = Object.keys(AppState.db.individuals || {}).length;
+  const sc = UIState._personSortCache;
+  let sorted;
+  if (sc && sc.mode === _personSort && sc.count === allCount && persons.length === allCount) {
+    sorted = sc.sorted;
+  } else {
+    sorted = [...persons].sort((a, b) => {
+      if (_personSort === 'date') {
+        const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
+        if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+      }
+      const c = (a.surname || '').localeCompare(b.surname || '', 'de');
+      if (c !== 0) return c;
+      return (a.given || '').localeCompare(b.given || '', 'de');
+    });
+    if (persons.length === allCount) {
+      UIState._personSortCache = { mode: _personSort, count: allCount, sorted };
     }
-    const c = (a.surname || '').localeCompare(b.surname || '', 'de');
-    if (c !== 0) return c;
-    return (a.given || '').localeCompare(b.given || '', 'de');
-  });
+  }
   const listEl = document.getElementById('personList');
   if (!sorted.length) {
     _vsTeardown(_vsP);
@@ -140,7 +177,7 @@ function renderPersonList(persons) {
         <div class="empty-state-icon">◇</div>
         <div class="empty-state-title">Noch keine Personen</div>
         <div class="empty-state-msg">Importieren Sie eine GEDCOM- oder GRAMPS-Datei, oder legen Sie die erste Person manuell an.</div>
-        <button class="empty-state-btn" onclick="showPersonForm(null)">Erste Person anlegen</button>
+        <button class="empty-state-btn" data-action="showPersonForm">Erste Person anlegen</button>
       </div>`;
     } else {
       listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';
@@ -208,22 +245,11 @@ function renderPersonList(persons) {
   _vsSetup(listEl, _vsP);
   _announceList(sorted.length + (sorted.length === 1 ? ' Person' : ' Personen'));
 
-  // Zum aktuellen Eintrag scrollen
+  // Nach _vsSetup hat st.bot die volle Restliste als Spacer → scrollHeight groß genug.
+  // _vsScrollAndHighlight scrollt synchron zur aktuellen Person und rendert neu.
   if (curId) {
     const idx = _vsP.items.findIndex(it => it.id === curId);
-    if (idx >= 0) {
-      requestAnimationFrame(() => {
-        const sc  = _vsP.sc;
-        const iOff = _vsP.offsets[idx];
-        const viewH = sc ? sc.clientHeight : window.innerHeight;
-        const scTop = sc ? sc.scrollTop : window.scrollY;
-        const lr  = listEl.getBoundingClientRect();
-        const sr  = sc ? sc.getBoundingClientRect().top : 0;
-        const lstAbs = scTop + lr.top - sr;
-        const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
-        if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
-      });
-    }
+    if (idx >= 0) _vsScrollAndHighlight(_vsP, listEl, idx, 'data-pid', curId);
   }
 }
 
@@ -311,6 +337,12 @@ function _updateFamilyListCurrent(id) {
 }
 
 function applyPersonFilter() {
+  // QA-Session-Filter: nur neu angelegte Personen zeigen
+  if (UIState._qaSessionIds) {
+    const ids = UIState._qaSessionIds;
+    renderPersonList(Object.values(AppState.db.individuals).filter(p => ids.has(p.id)));
+    return;
+  }
   const q          = (document.getElementById('searchInput')?.value)      || '';
   const from       = parseInt(document.getElementById('yearFrom')?.value)  || null;
   const to         = parseInt(document.getElementById('yearTo')?.value)    || null;
@@ -318,7 +350,19 @@ function applyPersonFilter() {
   const birthPlace = (document.getElementById('birthPlaceFilter')?.value)  || '';
   const clearBtn   = document.getElementById('yearFilterClear');
   if (clearBtn) clearBtn.hidden = !(from || to);
-  _applyPersonFilterDebounced(q, from, to, sex, birthPlace);
+  const flags = {
+    noDeathDate: document.getElementById('fltrNoDeathDate')?.checked || false,
+    noSources:   document.getElementById('fltrNoSources')?.checked   || false,
+    noParents:   document.getElementById('fltrNoParents')?.checked   || false,
+  };
+  _applyPersonFilterDebounced(q, from, to, sex, birthPlace, flags);
+}
+
+function clearQaFilter() {
+  UIState._qaSessionIds = null;
+  const banner = document.getElementById('qa-session-banner');
+  if (banner) banner.hidden = true;
+  applyPersonFilter();
 }
 
 function clearYearFilter() {
@@ -342,6 +386,10 @@ function toggleAdvFilter() {
     const bp = document.getElementById('birthPlaceFilter');
     if (sf) sf.value = '';
     if (bp) bp.value = '';
+    ['fltrNoDeathDate', 'fltrNoSources', 'fltrNoParents'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
     applyPersonFilter();
   } else {
     panel.hidden = false;
@@ -362,13 +410,15 @@ function _buildSearchIndex() {
       p.chr.place,  p.buri.place,
       p.reli,       p.noteText,
       ...p.events.map(ev => [ev.value, ev.place, ev.date, ev.eventType].join(' ')),
-    ].filter(Boolean).join(' ').toLowerCase();
+    ].filter(Boolean).join(' ').toLowerCase().replace(/,/g, ' ');
+    p._sdxSurname = germanSoundex(p.surname || '');
+    p._sdxGiven   = germanSoundex(p.given   || '');
   }
   UIState._searchIndexDirty = false;
 }
 
-function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
-  const lower      = q.toLowerCase().trim();
+function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {}) {
+  const lower      = q.toLowerCase().trim().replace(/,/g, ' ');
   const lowerPlace = birthPlace.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
 
@@ -397,22 +447,50 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
       const bp = compactPlace(p.birth.place || p.chr.place || '').toLowerCase();
       if (!bp.includes(lowerPlace)) return false;
     }
+    // Fehlende-Felder-Filter
+    if (flags.noDeathDate && p.death.date) return false;
+    if (flags.noSources   && p.sourceRefs?.size > 0) return false;
+    if (flags.noParents   && p.famc?.length > 0) return false;
     if (!lower) return true;
     if ((p._searchStr || '').includes(lower)) return true;
     if (UIState._soundexMode && /^[a-zäöüß]+$/i.test(lower)) {
       const qSdx = germanSoundex(lower);
-      if (germanSoundex(p.surname) === qSdx) return true;
-      if (germanSoundex(p.given)   === qSdx) return true;
+      if ((p._sdxSurname || germanSoundex(p.surname)) === qSdx) return true;
+      if ((p._sdxGiven   || germanSoundex(p.given))   === qSdx) return true;
     }
     return false;
   });
 
   renderPersonList(filtered);
+  // Zum Anfang scrollen nur wenn aktuelle Person nicht im Ergebnis — renderPersonList
+  // hat via _vsScrollAndHighlight bereits gescrollt falls curId in der Liste liegt.
+  const sc = document.getElementById('v-main');
+  if (sc && !_vsP.items.some(it => it.id === AppState.currentPersonId)) sc.scrollTop = 0;
 }
 
 // ─────────────────────────────────────
 //  DETAIL: PERSON
 // ─────────────────────────────────────
+
+// GEDCOM-Datumstring → lesbare deutsche Kurzform (nur Display, keine Daten-Mutation).
+// Nutzt parseGedDate() aus gedcom.js.
+function _localizeGedDate(raw) {
+  if (!raw) return raw;
+  const { qual, date1, date2 } = parseGedDate(raw);
+  const d1 = date1 || '';
+  const d2 = date2 || '';
+  switch (qual) {
+    case 'FROM': return d2 ? `${d1}–${d2}` : `ab ${d1}`;
+    case 'BET':  return d2 ? `${d1}–${d2}` : d1;
+    case 'BEF':  return `vor ${d1}`;
+    case 'AFT':  return `nach ${d1}`;
+    case 'ABT':  return `um ${d1}`;
+    case 'CAL':
+    case 'EST':  return `≈${d1}`;
+    case 'TO':   return `bis ${d1}`;
+    default:     return raw;
+  }
+}
 
 // Alter in Jahren zwischen zwei GEDCOM-Datumsstrings.
 // Gibt '<span class="age-tag">…</span>' zurück oder '' wenn nicht berechenbar.
@@ -437,17 +515,29 @@ function _ageAt(refDateStr, evDateStr) {
   return `<span class="age-tag">${approx}${age} J.</span>`;
 }
 function _pdetLifeData(p, id) {
+  // Item 9: Koords via _eventCoords — auch ohne ev.lati true wenn placeObject Koords hat
   const _hasGeo = [p.birth, p.chr, p.death, p.buri, ...p.events]
-    .some(ev => ev && _validCoord(ev.lati, ev.long));
+    .some(ev => { if (!ev) return false; const c = _eventCoords(ev); return _validCoord(c.lati, c.long); });
   let html = `<div class="section fade-up" id="pdet-life">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
       <div class="det-btn-row">
         ${_hasGeo ? `<button class="section-add c-gold-lt" data-action="showPersonOnMap" data-pid="${id}">📍 Karte</button>` : ''}
         ${UIState._eventClipboard ? `<button class="section-add c-gold-lt" data-action="applyClipboardEvent" data-pid="${id}" title="${esc((EVENT_LABELS[UIState._eventClipboard.type]||UIState._eventClipboard.type) + (UIState._eventClipboard.addr||UIState._eventClipboard.place ? ': '+(UIState._eventClipboard.addr||UIState._eventClipboard.place) : ''))}">+ Übernehmen</button>` : ''}
+        <button class="section-add" data-action="showAddAliasFlow" data-pid="${id}">+ Alias</button>
         <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
       </div>
     </div>`;
+
+  // GED7: nameTrans[] als read-only Chips
+  if (p.nameTrans?.length) {
+    const chips = p.nameTrans.map(nt => {
+      const val = nt.nameRaw ? nt.nameRaw.replace(/\/([^/]*)\//g,'$1').trim() : [nt.given, nt.surname].filter(Boolean).join(' ');
+      const langTag = nt.lang ? `<em class="tran-lang">${esc(nt.lang)}</em>` : '';
+      return `<span class="tran-chip">${esc(val)}${langTag}</span>`;
+    }).join('');
+    html += `<div class="fact-row"><span class="fact-lbl">Namensübers.</span><span class="fact-val">${chips}</span></div>`;
+  }
 
   (p.extraNames || []).forEach((en, enIdx) => {
     const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
@@ -460,44 +550,70 @@ function _pdetLifeData(p, id) {
     </div>`;
   });
 
+  (p.aliases || []).forEach(aliasXref => {
+    const aliasP = AppState.db.individuals[aliasXref];
+    if (!aliasP) return;
+    html += `<div class="fact-row fact-row--alias fact-row--center">
+      <span class="fact-lbl">Selbe Person?</span>
+      <span class="fact-val fact-val--flex"><span class="alias-name-link" data-action="showDetail" data-id="${aliasXref}">${esc(aliasP.name)}</span></span>
+      <button class="unlink-btn" data-action="removeAlias" data-pid="${id}" data-aliasid="${aliasXref}">×</button>
+    </div>`;
+  });
+  // GED7: aliaNames (Textaliase, nicht @xref@)
+  (p.aliaNames || []).forEach(name => {
+    html += `<div class="fact-row"><span class="fact-lbl">Alias-Name</span><span class="fact-val">${esc(name)}</span></div>`;
+  });
+
   // Referenzdatum für Altersberechnung: Geburt, Proxy Taufe
-  const _refDate = p.birth.date || p.chr.date || '';
+  const _refDate = p.birth.date || p.chr.date || p.events.find(e => e.type === 'BAPM')?.date || '';
+  // GED7: datePhrase (menschenlesbares Datum) kursiv unter dem codierten Datum
+  const _dpHtml = (obj) => (obj?.datePhrase) ? `<em class="date-phrase">${esc(obj.datePhrase)}</em>` : '';
 
   if (p.birth.date || p.birth.place) {
-    const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
+    const geoBtn = evGeoLink(p.birth);
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, _evFullPlace(p.birth)].filter(Boolean).join(', '))}${_dpHtml(p.birth)}${_evPlaceNavBtn(p.birth)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
-  const _chrGodparents = (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
-  if (p.chr.date || p.chr.place || _chrGodparents.length) {
-    const _godparents = _chrGodparents;
-    const _gpHtml = _godparents.length
-      ? `<div class="event-godparents">${_godparents.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('')}</div>`
-      : '';
-    // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
+  const _chrGodparents = (p.associations || []).filter(a => a.role === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  const _bapms = p.events.map((ev, idx) => ({ev, idx})).filter(({ev}) => ev.type === 'BAPM');
+  // Paten auf CHR zeigen wenn CHR vorhanden, sonst auf BAPM
+  const _hasChr = p.chr.date || p.chr.place || _chrGodparents.length;
+  const _gpHtmlFor = (showGodparents) => (showGodparents && _chrGodparents.length)
+    ? `<div class="event-godparents">${_chrGodparents.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('')}</div>`
+    : '';
+  if (_hasChr) {
     const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, _evFullPlace(p.chr)].filter(Boolean).join(', '))}${_dpHtml(p.chr)}${_evPlaceNavBtn(p.chr)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtmlFor(true)}</span></div>`;
+  }
+  for (const {ev, idx} of _bapms) {
+    const _bapAge = p.birth.date ? _ageAt(p.birth.date, ev.date) : '';
+    const geoBtn = evGeoLink(ev);
+    const parts = [ev.date, _evFullPlace(ev)].filter(Boolean).join(', ');
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}"><span class="fact-lbl">Taufe (BAPM)</span><span class="fact-val">${esc(parts)}${_dpHtml(ev)}${_evPlaceNavBtn(ev)}${_bapAge}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}${_gpHtmlFor(!_hasChr)}</span></div>`;
   }
   if (p.death.date || p.death.place) {
-    const geoBtn = evGeoLink(p.death.lati, p.death.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
+    const geoBtn = evGeoLink(p.death);
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, _evFullPlace(p.death), p.death.cause].filter(Boolean).join(', '))}${_dpHtml(p.death)}${_evPlaceNavBtn(p.death)}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
-    const geoBtn = evGeoLink(p.buri.lati, p.buri.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+    const geoBtn = evGeoLink(p.buri);
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, _evFullPlace(p.buri)].filter(Boolean).join(', '))}${_dpHtml(p.buri)}${_evPlaceNavBtn(p.buri)}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Alle Quick-Add-Chips in einer Zeile: fehlende Sonder-Events + generische Shortcuts
   const _quickChips = [
     !(p.birth.date || p.birth.place)                         && { ev: 'BIRT', lbl: '+ Geburt' },
     !(p.chr.date  || p.chr.place  || _chrGodparents.length)  && { ev: 'CHR',  lbl: '+ Taufe' },
+    !_bapms.length                                            && { ev: 'BAPM', lbl: '+ Taufe (BAPM)', generic: true },
     !(p.death.date || p.death.place)                         && { ev: 'DEAT', lbl: '+ Tod' },
     !(p.buri.date  || p.buri.place)                          && { ev: 'BURI', lbl: '+ Beerdigung' },
     { ev: 'RESI', lbl: '+ Wohnort', generic: true },
     { ev: 'OCCU', lbl: '+ Beruf',   generic: true },
     { ev: 'CENS', lbl: '+ Zählung', generic: true },
+    { ev: 'RELI', lbl: '+ röm.-kath.', val: 'röm.-kath.', generic: true },
+    { ev: 'RELI', lbl: '+ evang.',     val: 'evang.',     generic: true },
   ].filter(Boolean);
   html += `<div class="missing-events-row">${_quickChips.map(m =>
-    `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
+    `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}"${m.val ? ` data-evval="${m.val}"` : ''}>${m.lbl}</button>`
   ).join('')}</div>`;
 
   // Alle bekannten Hof-Notiztexte vorberechnen — verhindert Anzeige von HOF-Notiztexten
@@ -507,6 +623,9 @@ function _pdetLifeData(p, id) {
   );
   // Hof-Notiz-Dedup: pro Adresse nur einmal anzeigen
   const _shownAddrNotes = new Set();
+  // ADR-027 P5: Ignore-Set der Review-Funktion einmal laden (pro Render-Pass),
+  // damit der ⚠-Indikator beim Event nicht je Event neu in localStorage liest.
+  const _hofReviewIgnored = (typeof _ignoredHofKeysSet === 'function') ? _ignoredHofKeysSet() : new Set();
 
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
   // sort within each subgroup by date (undated last).
@@ -515,6 +634,7 @@ function _pdetLifeData(p, id) {
   // type → Map(eventType → [{ev,idx}])
   const _evGroups = new Map();
   p.events.forEach((ev, idx) => {
+    if (ev.type === 'BAPM') return; // oben als Kerndatum gerendert
     if (!_evTypeSet.has(ev.type)) { _evTypeOrder.push(ev.type); _evTypeSet.add(ev.type); }
     if (!_evGroups.has(ev.type)) _evGroups.set(ev.type, new Map());
     const subKey = ev.eventType || '';
@@ -532,35 +652,78 @@ function _pdetLifeData(p, id) {
         const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
           ? ev.eventType
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
-        const geoBtn = evGeoLink(ev.lati, ev.long);
-        const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+        const geoBtn = evGeoLink(ev);
+        const fullPlace = _evFullPlace(ev);
+        // Farm-placeObject: Titel = Adresse → ev.addr wäre Duplikat von fullPlace-Präfix
+        const _farmPo = ev.placeId ? AppState.db.placeObjects?.[ev.placeId] : null;
+        const _skipAddr = _farmPo && (_farmPo.type === 'Farm' || _farmPo.type === 'Building');
+        const parts = [ev.value, _skipAddr ? null : ev.addr, _localizeGedDate(ev.date), fullPlace].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
-        // Hof-Notiz: nur zeigen wenn dieses konkrete Event via noteRefs auf die Hof-Notiz verweist
+        // Hof-Notiz: bei jedem RESI-Event mit passendem addr anzeigen (einmal pro Adresse)
         const _addrKey = ev.addr?.trim() || null;
         const _hofNote = _addrKey ? (AppState.db.hofObjects?.[_addrKey]?.note || null) : null;
-        const _evRefersToHofNote = _hofNote && (ev.noteRefs || []).some(
-          r => AppState.db.notes?.[r]?.text === _hofNote
-        );
-        const _showHofNote = _evRefersToHofNote && !_shownAddrNotes.has(_addrKey);
+        const _showHofNote = !!_hofNote && !_shownAddrNotes.has(_addrKey);
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
-        // Persönliche Event-Notiz: zeigen wenn kein Hof-Notiztext und nicht dupliziert
-        const _isAnyHofNote = ev.note ? _allHofNoteTexts.has(ev.note) : false;
-        const _evNoteKey = (_addrKey && ev.note) ? `${_addrKey}\x00${ev.note}` : null;
-        const _showEvNote = ev.note && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
+        // Anzuzeigende Notiz aus den Einzelteilen rekonstruieren — ev.note ist
+        // nach _resolveNoteRefs eine Konkatenation aller Refs inkl. aller Hof-Notizen,
+        // daher ungeeignet für Vergleiche. Stattdessen: ev._noteOrig (Inline-Anteil)
+        // + alle noteRefs deren Text KEINE bekannte Hof-Notiz ist.
+        // Inline-Notiz (ev._noteOrig) ist IMMER die eigene Notiz des Events — sie darf
+        // NICHT durch das globale _allHofNoteTexts verschwinden (Bug: Streu-hofObject
+        // unter abweichendem Adress-Key verschluckte sie). Sie wird nur gegen die für
+        // DIESE Adresse geltende Hof-Notiz dedupliziert. NoteRefs behalten die globale
+        // Unterdrückung (Schutz gegen über geteilte NOTE-Records hereingeblutete Hof-Notizen).
+        const _nonHofParts = [
+          (ev._noteOrig && !_isHofNoteText(ev._noteOrig) && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
+          ...(ev.noteRefs || []).map(r => {
+            const t = AppState.db.notes?.[r]?.text;
+            return (t && !_isHofNoteText(t) && !_allHofNoteTexts.has(t)) ? t : null;
+          }),
+        ].filter(Boolean);
+        const _combinedNote = _nonHofParts.join('\n') || null;
+        const _evNoteKey = _combinedNote ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + _combinedNote) : null;
+        const _showEvNote = _combinedNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
+        // ADR-027 P5: Event-Detail-Indikator — Adresse vorhanden, aber kein Hof
+        // verknüpft → ⚠ neben dem Event. Klick öffnet Review-Modal fokussiert auf
+        // diese Zeile. Ignorierte Events bekommen keinen Indikator.
+        let _hofReviewBadge = '';
+        if (ev.addr && !ev.hofId && typeof _eventReviewKey === 'function') {
+          const _revKey = _eventReviewKey(id, ev.type || '', ev.addr, ev.date || '');
+          if (!_hofReviewIgnored.has(_revKey)) {
+            _hofReviewBadge = ` <span class="hof-review-warn" data-action="openHofReviewModal" data-key="${esc(_revKey)}" title="Hof-Zuweisung prüfen" style="cursor:pointer;color:#c08020;font-weight:700">⚠</span>`;
+          }
+        }
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${_hofReviewBadge}${_dpHtml(ev)}${_evPlaceNavBtn(ev)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
         </div>`;
       }
     }
 
+  // GED7: NO-Ereignisse (bestätigtes Fehlen)
+  if (p.noEvents?.size) {
+    const noBadges = [...p.noEvents].map(tag => {
+      const lbl = EVENT_LABELS[tag] || tag;
+      return `<span class="no-ev-badge">✗ ${esc(lbl)}</span>`;
+    }).join('');
+    html += `<div class="fact-row fact-row--no-ev"><span class="fact-lbl">Kein Eintrag</span><span class="fact-val">${noBadges}</span></div>`;
+  }
+
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
   if (p.resn)  html += factRow('Beschränkung', p.resn);
+  if (p.refns && p.refns.length) for (const r of p.refns) html += factRow(r.type ? `Ref (${esc(r.type)})` : 'Ref', r.val);
+  // GED7: EXID (externe Kennungen, z.B. FamilySearch, WikiTree)
+  if (p.exids?.length) for (const ex of p.exids) {
+    const lbl = ex.type ? `EXID (${esc(ex.type)})` : 'EXID';
+    html += factRow(lbl, ex.value);
+  }
   if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" class="person-email-link">${esc(p.email)}</a></span></div>`;
   if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" class="person-www-link">${esc(p.www)}</a></span></div>`;
+  if (p._grampsTags?.length) html += `<div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${p._grampsTags.map(t => `<span class="gramps-tag" data-il-style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div>`;
+  if (p._grampsAttrs?.length) html += p._grampsAttrs.map(a => `<div class="fact-row"><span class="fact-lbl">${esc(a.type)}</span><span class="fact-val">${esc(a.value)}${a.note ? `<div class="note-text">${esc(a.note)}</div>` : ''}</span></div>`).join('');
 
   if (!p.birth.date && !p.death.date && !p.events.length && !p.chr.date && !p.buri.date)
     html += `<div class="no-data">Keine Lebensdaten eingetragen</div>`;
@@ -571,30 +734,19 @@ function _pdetLifeData(p, id) {
 
 function showDetail(id, pushHistory = true) {
   const p = AppState.db.individuals[id];
-  if (!p) return;
+  if (!p) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId  = id;
-  AppState.currentFamilyId  = null;
-  AppState.currentSourceId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = null;
+  ViewState.setCurrent('persons', id);
   if (document.body.classList.contains('desktop-mode')) {
     if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
     _updateFamilyListCurrent(null);
   }
 
-  document.getElementById('detailTopTitle').textContent = p.name || id;
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = false;
-  document.getElementById('treeBtn').dataset.id = id;
-  const pb = document.getElementById('probandBtn');
-  if (pb) {
-    pb.hidden = false;
-    pb.dataset.id = id;
-    const isProband = getProbandId() === id;
-    pb.classList.toggle('proband-active', isProband);
-    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
-  }
+  // P6-B5: Toolbar-Konfig zentral in _configureDetailToolbar (ui-views.js) — gleiche
+  // Helper-Funktion wird auch im _dcAlreadyShows-Skip-Pfad aufgerufen.
+  _configureDetailToolbar('persons', id);
+  _announceList((p.name || id) + ' — Details');
+
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
@@ -611,50 +763,78 @@ function showDetail(id, pushHistory = true) {
       ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
       ${spitzname ? `<div class="detail-rufname detail-spitzname">Spitzname: ${esc(spitzname)}</div>` : ''}
       <div class="detail-id"><span class="detail-id-xref">${esc(id)}</span>${p.lastChanged ? ' · Geändert ' + p.lastChanged : ''}</div>
+      ${topSourceCitsHtml(p) ? `<div class="detail-hero-src">${topSourceCitsHtml(p)}</div>` : ''}
     </div>
   </div>`;
 
   html += _pdetLifeData(p, id);
 
-  // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
-  // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
-  const _computedGodchildren = Object.entries(AppState.db.individuals)
-    .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.rela === 'Godparent' && a.xref === id))
-    .map(([cid]) => ({ xref: cid, rela: 'Godchild', _derived: true }));
-  const _storedNonGp = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
-  // Gespeicherte Godchild-Einträge deduplizieren (könnten schon via UI-Sync da sein)
-  const _gcXrefs = new Set(_computedGodchildren.map(a => a.xref));
-  const _storedGc = _storedNonGp.filter(a => a.rela === 'Godchild' && !_gcXrefs.has(a.xref) && AppState.db.individuals[a.xref]);
-  const _displayAssos = [..._storedNonGp.filter(a => a.rela !== 'Godchild'), ..._storedGc, ..._computedGodchildren];
-  if (_displayAssos.length) {
-    const _assoByRela = {};
-    for (const a of _displayAssos) {
-      if (!_assoByRela[a.rela]) _assoByRela[a.rela] = [];
-      _assoByRela[a.rela].push(a);
+  // Assoziationen — editierbar (alle gespeicherten + abgeleitete Patenkinder read-only)
+  {
+    const _storedAssos = (p.associations || []).filter(a => a.xref && AppState.db.individuals[a.xref]);
+    // Patenkinder: Personen, die diesen als 'Godparent' führen (read-only, abgeleitet)
+    const _gcXrefs = new Set(_storedAssos.filter(a => a.role === 'Godchild').map(a => a.xref));
+    const _computedGodchildren = Object.entries(AppState.db.individuals)
+      .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.role === 'Godparent' && a.xref === id) && !_gcXrefs.has(cid))
+      .map(([cid]) => ({ xref: cid, role: 'Godchild', _derived: true }));
+
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Assoziationen</div>
+        <button class="section-add" data-action="showAddAssoFlow" data-pid="${id}">+ Hinzufügen</button>
+      </div>`;
+
+    if (!_storedAssos.length && !_computedGodchildren.length) {
+      html += `<div class="no-data-pad">Keine Assoziationen eingetragen</div>`;
+    } else {
+      for (let _ai = 0; _ai < _storedAssos.length; _ai++) {
+        const a = _storedAssos[_ai];
+        const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[a.role]) || a.role || '?';
+        const aName = AppState.db.individuals[a.xref]?.name || a.xref;
+        html += `<div class="fact-row fact-row--top">
+          <span class="fact-lbl">${esc(label)}</span>
+          <span class="fact-val fact-val--flex">
+            <span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(aName)}</span>
+            ${a.note ? `<div class="ev-note">${esc(a.note)}</div>` : ''}
+          </span>
+          <div class="btn-row btn-row--ml">
+            <button class="edit-media-btn" data-action="editAsso" data-pid="${id}" data-aidx="${_ai}" title="Bearbeiten">✎</button>
+            <button class="unlink-btn" data-action="deleteAsso" data-pid="${id}" data-aidx="${_ai}" title="Entfernen">×</button>
+          </div>
+        </div>`;
+      }
+      for (const a of _computedGodchildren) {
+        const aName = AppState.db.individuals[a.xref]?.name || a.xref;
+        html += `<div class="fact-row">
+          <span class="fact-lbl">Patenkind</span>
+          <span class="fact-val"><span class="asso-chip asso-chip--derived" data-action="showDetail" data-id="${a.xref}" title="Abgeleitet">${esc(aName)}</span></span>
+        </div>`;
+      }
     }
-    html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Assoziationen</div></div><div class="section-body">`;
-    for (const [rela, assos] of Object.entries(_assoByRela)) {
-      const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[rela]) || rela;
-      const chips = assos.map(a => `<span class="asso-chip${a._derived ? ' asso-chip--derived' : ''}" data-action="showDetail" data-id="${a.xref}" title="${a._derived ? 'Abgeleitet (nicht im Datenmodell gespeichert)' : ''}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('');
-      html += `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val"><div class="event-godparents">${chips}</div></span></div>`;
-    }
-    html += `</div></div>`;
+    html += `</div>`;
   }
 
-  // Verwandtschaft zum Probanden
+  // Verwandtschaft
   const _probandId = getProbandId();
-  if (_probandId && id !== _probandId) {
-    const _rel = calcRelationship(id, _probandId);
-    if (_rel && _rel.label !== 'Nicht verwandt') {
-      const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
-      html += `<div class="section fade-up">
-        <div class="section-head"><div class="section-title">Verwandtschaft</div></div>
-        <div class="fact-row fact-row--clickable" data-action="showRelPath" data-pid="${id}">
-          <span class="fact-lbl">${esc(_probandName)}</span>
-          <span class="fact-val rel-val-italic">${esc(_rel.label)}<span class="p-arrow ml-6">›</span></span>
-        </div>
+  const _hasMultiPersons = Object.keys(AppState.db.individuals || {}).length > 1;
+  if (_hasMultiPersons) {
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Verwandtschaft</div>
+        <button class="section-add" data-action="showRelCalcPicker" data-pid="${id}">🔗 zu …</button>
       </div>`;
+    if (_probandId && id !== _probandId) {
+      const _rel = calcRelationship(id, _probandId);
+      if (_rel && _rel.label !== 'Nicht verwandt') {
+        const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
+        const _ancHint = _relAncestorHint(_rel);
+        html += `<div class="fact-row fact-row--clickable" data-action="showRelPath" data-pid="${id}">
+          <span class="fact-lbl">${esc(_probandName)}</span>
+          <span class="fact-val rel-val-italic">${esc(_rel.label)}${_ancHint ? `<span class="rel-anc-hint"> (${esc(_ancHint)})</span>` : ''}<span class="p-arrow ml-6">›</span></span>
+        </div>`;
+      }
     }
+    html += `</div>`;
   }
 
   // Notizen
@@ -725,18 +905,19 @@ function showDetail(id, pushHistory = true) {
       <div class="section-title">Ehepartner &amp; Kinder</div>
       <button class="section-add" data-action="showAddSpouseFlow" data-pid="${id}">+ Ehepartner</button>
     </div>`;
-  const _sortedFams = [...p.fams].sort((a, b) => {
-    const da = AppState.db.families[a]?.marr?.date || '';
-    const db_ = AppState.db.families[b]?.marr?.date || '';
-    return evDateKey(da).localeCompare(evDateKey(db_));
-  });
-  for (const famId of _sortedFams) {
+  const nFams = p.fams.length;
+  for (let _fi = 0; _fi < nFams; _fi++) {
+    const famId = p.fams[_fi];
     const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
+    const upBtn   = nFams > 1 && _fi > 0
+      ? `<button class="fam-order-btn" data-action="moveFamUp"   data-pid="${id}" data-fid="${famId}" title="Früher">↑</button>` : '';
+    const downBtn = nFams > 1 && _fi < nFams - 1
+      ? `<button class="fam-order-btn" data-action="moveFamDown" data-pid="${id}" data-fid="${famId}" title="Später">↓</button>` : '';
     html += `<div class="family-nav-row" data-action="showFamilyDetail" data-id="${famId}">
       <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
-      <span class="row-arrow">›</span>
+      <span class="fnr-reorder">${upBtn}${downBtn}<span class="row-arrow">›</span></span>
     </div>`;
     const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
     const partner = partnerId ? AppState.db.individuals[partnerId] : null;
@@ -783,8 +964,19 @@ function showDetail(id, pushHistory = true) {
   // Aufgaben-Placeholder — wird async befüllt sobald IDB geladen
   html += `<div id="tasks-section-placeholder-${id}" class="section fade-up" data-jump-id="pdet-tasks"></div>`;
 
-  document.getElementById('detailContent').innerHTML = html;
+  // Forschungsprotokoll
+  if (typeof _rlogSectionHtml === 'function') html += _rlogSectionHtml(id);
+
+  // Hypothesen (RES-HYPO, ADR-023)
+  if (typeof _hypoSectionHtml === 'function') html += _hypoSectionHtml(id);
+  // GPS-Beweisführungsnotiz (RES-HYPO 4e) — nur bei vorhandenen Hypothesen
+  if (typeof _gpsNoteHtml === 'function') html += _gpsNoteHtml(id);
+
+  const _dpEl = document.getElementById('detailPerson');
+  _dpEl.innerHTML = html;
+  _applyDynStyles(_dpEl);
   _injectJumpBar();
+  _activateDetailContainer('detailPerson', id);
   showView('v-detail');
   if (typeof _renderTasksSectionAsync === 'function') _renderTasksSectionAsync(id);
 
@@ -817,22 +1009,35 @@ function showDetail(id, pushHistory = true) {
   }
 }
 
-function showRelPath(id) {
-  const probandId = getProbandId();
-  if (!probandId || !id) return;
-  const rel = calcRelationship(id, probandId);
+function _relAncestorHint(rel) {
+  if (!rel || !rel.commonId || rel.distA === 0 || rel.distB === 0) return '';
+  const anc = AppState.db.individuals[rel.commonId];
+  if (!anc) return '';
+  const year = (anc.birth?.date || '').match(/\d{4}/)?.[0];
+  return `gm. Vorfahre: ${anc.name || rel.commonId}${year ? ' *' + year : ''}`;
+}
+
+function showRelPath(idA, targetId) {
+  const bId = targetId || getProbandId();
+  if (!bId || !idA) return;
+  const rel = calcRelationship(idA, bId);
   if (!rel) return;
 
-  const pA = AppState.db.individuals[id];
-  const pB = AppState.db.individuals[probandId];
+  // Für Verwandtschafts-Zertifikat-Export (B4) merken
+  UIState._relCertA = idA;
+  UIState._relCertB = bId;
+
+  const pA = AppState.db.individuals[idA];
+  const pB = AppState.db.individuals[bId];
   document.getElementById('relPathTitle').textContent =
-    `${pA?.name || id} → ${pB?.name || probandId}`;
+    `${pA?.name || idA} → ${pB?.name || bId}`;
 
   const body = document.getElementById('relPathBody');
   if (!rel.path.length) {
     body.innerHTML = `<div class="rel-path-not-found">Keine verwandtschaftliche Verbindung gefunden.</div>`;
   } else {
-    const kNum = id => _kekuleMap[id] ? `<span class="p-kekule">#${_kekuleMap[id]}</span>` : '';
+    const kNum = pid => _kekuleMap[pid] ? `<span class="p-kekule">#${_kekuleMap[pid]}</span>` : '';
+    const ancestorHint = _relAncestorHint(rel);
     const rows = rel.path.map((pid, i) => {
       const person = AppState.db.individuals[pid];
       const name = person?.name || pid;
@@ -846,12 +1051,22 @@ function showRelPath(id) {
       </div>${arrow}`;
     }).join('');
     body.innerHTML = `<div class="rel-path-body-title">${esc(rel.label)}</div>
+      ${ancestorHint ? `<div class="rel-path-ancestor">${esc(ancestorHint)}</div>` : ''}
       <div class="rel-path-legend">⬡ = gemeinsamer Vorfahre</div>
       ${rel.multiPath ? `<div class="rel-path-multi">Mehrere Verwandtschaftspfade möglich – kürzester angezeigt.</div>` : '<div class="mb-10"></div>'}
       ${rows}`;
   }
 
   openModal('modalRelPath');
+}
+
+function showRelCalcPicker(anchorId) {
+  UIState._relMode = 'relcalc';
+  UIState._relAnchorId = anchorId;
+  document.getElementById('relPickerTitle').textContent = 'Verwandtschaft berechnen zu …';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
 }
 
 function _injectJumpBar() {
@@ -869,5 +1084,93 @@ function _injectJumpBar() {
   bar.innerHTML = present.map(s =>
     `<button class="jump-chip" data-action="jumpToSection" data-jump="${s.id}">${s.lbl}</button>`
   ).join('');
-  document.getElementById('detailContent').prepend(bar);
+  document.getElementById('detailPerson').prepend(bar);
+}
+
+// ── Familien-Reihenfolge ändern ──
+window.moveFamOrder = function (pid, famId, dir) {
+  const p = AppState.db.individuals[pid];
+  if (!p) return;
+  const i = p.fams.indexOf(famId);
+  if (i < 0) return;
+  const j = i + dir;
+  if (j < 0 || j >= p.fams.length) return;
+  [p.fams[i], p.fams[j]] = [p.fams[j], p.fams[i]];
+  markChanged();
+  showDetail(pid);
+};
+
+function showAddAliasFlow(pid) {
+  UIState._relMode = 'alias'; UIState._relAnchorId = pid;
+  document.getElementById('relPickerTitle').textContent = 'Möglichen Doppeleintrag verknüpfen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+// ─── Assoziationen (ASSO) ────────────────────────────────────────────────────
+function showAddAssoFlow(pid) {
+  UIState._relMode = 'asso'; UIState._relAnchorId = pid;
+  document.getElementById('relPickerTitle').textContent = 'Person für Assoziation wählen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+function showAssoRoleStep(anchorPid, assoPid, editIdx = -1) {
+  const assoP = AppState.db.individuals[assoPid];
+  document.getElementById('asso-anchor-pid').value = anchorPid;
+  document.getElementById('asso-target-pid').value = assoPid;
+  document.getElementById('asso-edit-idx').value   = String(editIdx);
+  document.getElementById('asso-target-name').textContent = assoP?.name || assoPid;
+  const existing = editIdx >= 0 ? (AppState.db.individuals[anchorPid]?.associations?.[editIdx] || null) : null;
+  const role = existing?.role || 'Witness';
+  const knownRoles = ['Godparent', 'Witness', 'Informant', 'Friend', 'Associate'];
+  const sel = document.getElementById('asso-role-select');
+  sel.value = knownRoles.includes(role) ? role : '_custom';
+  const customEl = document.getElementById('asso-role-custom');
+  if (sel.value === '_custom') { customEl.style.display = ''; customEl.value = role; }
+  else customEl.style.display = 'none';
+  document.getElementById('asso-note').value = existing?.note || '';
+  openModal('modalAsso');
+}
+
+function assoRoleChange() {
+  const sel = document.getElementById('asso-role-select');
+  const customEl = document.getElementById('asso-role-custom');
+  if (sel.value === '_custom') { customEl.style.display = ''; customEl.focus(); }
+  else customEl.style.display = 'none';
+}
+
+function saveAsso() {
+  const anchorPid = document.getElementById('asso-anchor-pid').value;
+  const assoPid   = document.getElementById('asso-target-pid').value;
+  const editIdx   = parseInt(document.getElementById('asso-edit-idx').value, 10);
+  const sel       = document.getElementById('asso-role-select');
+  const role      = sel.value === '_custom'
+    ? (document.getElementById('asso-role-custom').value.trim() || 'Associate')
+    : sel.value;
+  const note = document.getElementById('asso-note').value.trim();
+  const p = AppState.db.individuals[anchorPid];
+  if (!p) return;
+  if (!p.associations) p.associations = [];
+  if (editIdx >= 0 && p.associations[editIdx]) {
+    p.associations[editIdx].role = role;
+    p.associations[editIdx].note = note;
+  } else {
+    p.associations.push({ xref: assoPid, role, note, citations: [] });
+  }
+  closeModal('modalAsso');
+  markChanged();
+  showToast('✓ Assoziation gespeichert');
+  showDetail(anchorPid, false);
+}
+
+async function deleteAsso(pid, idx) {
+  if (!await confirmModal('Assoziation wirklich entfernen?', 'Entfernen')) return;
+  const p = AppState.db.individuals[pid];
+  if (!p?.associations) return;
+  p.associations.splice(idx, 1);
+  markChanged();
+  showDetail(pid, false);
 }

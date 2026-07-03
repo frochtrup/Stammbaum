@@ -1,13 +1,16 @@
 // ─────────────────────────────────────
 //  FORMS: PERSON
 // ─────────────────────────────────────
-function showAddSheet() { openModal('modalAdd'); }
+function showAddSheet() {
+  if (AppState.currentTab === 'persons') { showPersonForm(null); return; }
+  openModal('modalAdd');
+}
 function showEditSheet() {
   if (AppState.currentPersonId) showPersonForm(AppState.currentPersonId);
   else if (AppState.currentFamilyId) showFamilyForm(AppState.currentFamilyId);
   else if (AppState.currentSourceId) showSourceForm(AppState.currentSourceId);
   else if (AppState.currentRepoId) showRepoForm(AppState.currentRepoId);
-  else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName);
+  else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName, AppState.currentPlaceId);
 }
 
 // _pfExtraNames lebt in UIState._formState.pfExtraNames (shimmiert als _pfExtraNames)
@@ -82,6 +85,7 @@ const _PF_PILLS = [
   { field: 'www',           label: 'Website' },
 ];
 let _pfActivePills = new Set();
+let _pfGrampsAttrs = [];
 
 function _renderPills() {
   const container = document.getElementById('pf-field-pills');
@@ -150,10 +154,14 @@ function showPersonForm(id) {
   const surnameEl = document.getElementById('pf-surname');
   givenEl.classList.remove('field-invalid');
   surnameEl.classList.remove('field-invalid');
+  givenEl.removeAttribute('aria-invalid');
+  surnameEl.removeAttribute('aria-invalid');
   const _checkNameBlur = () => {
     const empty = !givenEl.value.trim() && !surnameEl.value.trim();
     givenEl.classList.toggle('field-invalid', empty);
     surnameEl.classList.toggle('field-invalid', empty);
+    givenEl.setAttribute('aria-invalid', empty ? 'true' : 'false');
+    surnameEl.setAttribute('aria-invalid', empty ? 'true' : 'false');
     if (errEl) { if (empty) errEl.removeAttribute('hidden'); else errEl.setAttribute('hidden', ''); }
   };
   givenEl.onblur = _checkNameBlur;
@@ -184,6 +192,29 @@ function showPersonForm(id) {
   }
   const saveNewBtn = document.getElementById('pfSaveNewBtn');
   if (saveNewBtn) saveNewBtn.hidden = !isNew;
+
+  // GRAMPS-Sektion: nur wenn grampId oder _grampsAttrs vorhanden (nie bei neuer Person)
+  _pfGrampsAttrs = (p?._grampsAttrs || []).map(a => ({ ...a }));
+  const grampsSection = document.getElementById('pf-gramps-section');
+  const hasGrampsData = !isNew && !!(p?.grampId || _pfGrampsAttrs.length > 0);
+  if (grampsSection) {
+    grampsSection.hidden = !hasGrampsData;
+    if (hasGrampsData) {
+      const gidEl = document.getElementById('pf-gramps-id');
+      if (gidEl) gidEl.value = p?.grampId || '';
+      const tagsRow = document.getElementById('pf-gramps-tags-row');
+      const tagsEl  = document.getElementById('pf-gramps-tags');
+      const tags = p?._grampsTags || [];
+      if (tagsRow && tagsEl) {
+        tagsRow.hidden = tags.length === 0;
+        tagsEl.innerHTML = tags.map(t =>
+          `<span class="gramps-tag" data-il-style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`
+        ).join('');
+        _applyDynStyles(tagsEl);
+      }
+      _renderPfGrampsAttrs();
+    }
+  }
 
   openModal('modalPerson');
 }
@@ -225,6 +256,49 @@ function _renderPfExtraNames() {
   });
 }
 
+function _renderPfGrampsAttrs() {
+  const list = document.getElementById('pf-gramps-attrs-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!_pfGrampsAttrs.length) {
+    const empty = document.createElement('div');
+    empty.className = 'tasks-empty';
+    empty.style.cssText = 'font-size:0.85em;padding:4px 0';
+    empty.textContent = 'Keine Attribute';
+    list.appendChild(empty);
+    return;
+  }
+  _pfGrampsAttrs.forEach((a, idx) => {
+    const row = document.createElement('div');
+    row.className = 'gramps-attr-row';
+    const typeEl = document.createElement('input');
+    typeEl.className = 'form-input';
+    typeEl.placeholder = 'Typ';
+    typeEl.value = a.type || '';
+    typeEl.addEventListener('input', () => { _pfGrampsAttrs[idx].type = typeEl.value; });
+    const valEl = document.createElement('input');
+    valEl.className = 'form-input';
+    valEl.placeholder = 'Wert';
+    valEl.value = a.value || '';
+    valEl.addEventListener('input', () => { _pfGrampsAttrs[idx].value = valEl.value; });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:4px 10px;flex-shrink:0';
+    del.addEventListener('click', () => { _pfGrampsAttrs.splice(idx, 1); _renderPfGrampsAttrs(); });
+    row.appendChild(typeEl);
+    row.appendChild(valEl);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function addPfGrampsAttr() {
+  _pfGrampsAttrs.push({ type: '', value: '', citations: [] });
+  _renderPfGrampsAttrs();
+}
+
 function addPfExtraName() {
   _pfExtraNames.push({ nameRaw:'', given:'', surname:'', prefix:'', suffix:'', type:'', sources:[], sourcePages:{}, sourceQUAY:{}, _extra:[] });
   _renderPfExtraNames();
@@ -253,8 +327,10 @@ function savePerson(openNew = false) {
   if (!given && !surname) {
     const errEl = document.getElementById('pf-name-err');
     if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.removeAttribute('hidden'); }
-    document.getElementById('pf-given').classList.add('field-invalid');
-    document.getElementById('pf-surname').classList.add('field-invalid');
+    const gEl = document.getElementById('pf-given');
+    const sEl = document.getElementById('pf-surname');
+    gEl.classList.add('field-invalid'); gEl.setAttribute('aria-invalid', 'true');
+    sEl.classList.add('field-invalid'); sEl.setAttribute('aria-invalid', 'true');
     return;
   }
 
@@ -278,6 +354,12 @@ function savePerson(openNew = false) {
   const chrPlace   = document.getElementById('pf-chr-place')?.value.trim()   || '';
   const buriDate   = document.getElementById('pf-buri-date')?.value.trim()   || '';
   const buriPlace  = document.getElementById('pf-buri-place')?.value.trim()  || '';
+
+  const _keepPlaceId = (existing, newPlace) => {
+    const id = existing?.placeId || null;
+    const po = id && AppState.db.placeObjects?.[id];
+    return (po && (po.title === newPlace || (po.pnames||[]).some(pn=>pn.value===newPlace))) ? id : null;
+  };
 
   const nameCitations = [...(srcWidgetState['pf']?.citations || [])];
   // Auto-assign: Quelle wird allen befüllten Sonderevents zugeordnet (ohne Duplikate)
@@ -310,10 +392,10 @@ function savePerson(openNew = false) {
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
-    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace, citations: _eventCits(existing.birth, birthDate || birthPlace) },
-    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace, citations: _eventCits(existing.death, deathDate || deathPlace) },
-    chr:   { ...(existing.chr   || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: chrDate,  place: chrPlace,  citations: _eventCits(existing.chr,   chrDate  || chrPlace)  },
-    buri:  { ...(existing.buri  || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: buriDate, place: buriPlace, citations: _eventCits(existing.buri,  buriDate || buriPlace) },
+    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace, placeId: _keepPlaceId(existing.birth, birthPlace), citations: _eventCits(existing.birth, birthDate || birthPlace) },
+    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace, placeId: _keepPlaceId(existing.death, deathPlace), citations: _eventCits(existing.death, deathDate || deathPlace) },
+    chr:   { ...(existing.chr   || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: chrDate,  place: chrPlace,  placeId: _keepPlaceId(existing.chr,   chrPlace),  citations: _eventCits(existing.chr,   chrDate  || chrPlace)  },
+    buri:  { ...(existing.buri  || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: buriDate, place: buriPlace, placeId: _keepPlaceId(existing.buri,  buriPlace), citations: _eventCits(existing.buri,  buriDate || buriPlace) },
     events,
     noteTexts: note ? [note] : [],
     noteRefs: existing.noteRefs || [],
@@ -336,24 +418,35 @@ function savePerson(openNew = false) {
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date()),
     nameCitations,
+    _grampsAttrs: _pfGrampsAttrs.filter(a => a.type || a.value),
     sourceRefs: new Set()
   };
   _rebuildPersonSourceRefs(AppState.db.individuals[id]);
 
-  // _pendingRelation vor closeModal sichern — closeModal löscht es sonst
+  // _pendingRelation / _pendingFfState vor closeModal sichern — closeModal löscht es sonst
   const _pendingRel = UIState._pendingRelation;
   UIState._pendingRelation = null;
+  const _pendingFf = UIState._pendingFfState;
+  UIState._pendingFfState = null;
   closeModal('modalPerson');
 
   markChanged();
   renderTab();
 
+  if (_pendingFf) {
+    showToast('✓ Person erstellt');
+    const ctx = { ..._pendingFf, [_pendingFf.slot]: id, addChild: _pendingFf.addChild || null };
+    setTimeout(() => showFamilyForm(_pendingFf.id, ctx), 80);
+    return;
+  }
   if (_pendingRel) {
     showToast('✓ Person erstellt');
     setTimeout(() => openRelFamilyForm(_pendingRel.anchorId, id, _pendingRel.mode), 80);
     return;
   }
   showToast('✓ Person gespeichert');
+  // P0-K3: Liste refresh damit Name/Geb-Jahr/Counts ohne Tab-Wechsel aktuell sind
+  renderTab();
   if (openNew) { showPersonForm(null); return; }
   if (AppState.currentPersonId === id) showDetail(id);
 }
@@ -449,3 +542,156 @@ function deleteExtraName() {
   closeModal('modalExtraName');
   showDetail(pid);
 }
+
+initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd',  null);
+initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd',  null);
+initPlaceAutocomplete('pf-chr-place',    'pf-chr-place-dd',    null);
+initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
+
+// ─── QUICK-ADD: Schnellerfassung neue Person ────────────────────────────────
+let _qaSessionIds = [];
+let _qaSrcId      = null;
+let _qaSrcClip    = null; // { srcId, label, page } — session clipboard
+const _qaSelectedEvs = new Set();
+
+function _qaUpdateClipBtns() {
+  const copyBtn  = document.getElementById('qa-src-copy-btn');
+  const pasteBtn = document.getElementById('qa-src-paste-btn');
+  if (!copyBtn || !pasteBtn) return;
+  copyBtn.hidden  = !_qaSrcId;
+  pasteBtn.hidden = !_qaSrcClip;
+  if (_qaSrcClip) pasteBtn.title = `Einfügen: ${_qaSrcClip.label}${_qaSrcClip.page ? ' S.' + _qaSrcClip.page : ''}`;
+}
+
+function qaCopySrc() {
+  if (!_qaSrcId) return;
+  const src = AppState.db.sources?.[_qaSrcId];
+  const label = src ? (src.abbr || src.title || _qaSrcId) : _qaSrcId;
+  const page  = document.getElementById('qa-page')?.value.trim() || '';
+  _qaSrcClip = { srcId: _qaSrcId, label, page };
+  _qaUpdateClipBtns();
+  showToast(`Quelle „${label}" kopiert`, 'success');
+}
+
+function qaPasteSrc() {
+  if (!_qaSrcClip) return;
+  _qaSrcId = _qaSrcClip.srcId;
+  document.getElementById('qa-src-input').value = _qaSrcClip.label;
+  document.getElementById('qa-page').value       = _qaSrcClip.page;
+  _qaUpdateClipBtns();
+}
+
+function qaToggleEv(evType, btn) {
+  if (_qaSelectedEvs.has(evType)) {
+    _qaSelectedEvs.delete(evType);
+    btn.classList.remove('quick-chip--active');
+  } else {
+    _qaSelectedEvs.add(evType);
+    btn.classList.add('quick-chip--active');
+  }
+  document.getElementById('qa-ev-fields').hidden = _qaSelectedEvs.size === 0;
+}
+
+function showQuickAdd() {
+  closeModal('modalAdd');
+  const prevSrcId = _qaSrcId;
+  const prevPage  = document.getElementById('qa-page').value;
+  // Personenfelder leeren
+  ['qa-given','qa-surname','qa-date','qa-place'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  // Ereignis-Chips zurücksetzen
+  _qaSelectedEvs.clear();
+  document.querySelectorAll('#qa-ev-chips .quick-chip').forEach(c => c.classList.remove('quick-chip--active'));
+  document.getElementById('qa-ev-fields').hidden = true;
+  // Quelle + Seite wiederherstellen
+  _qaSrcId = prevSrcId;
+  const prevSrc = prevSrcId ? AppState.db.sources?.[prevSrcId] : null;
+  document.getElementById('qa-src-input').value = prevSrc ? (prevSrc.abbr || prevSrc.title || prevSrcId) : '';
+  document.getElementById('qa-page').value = prevPage;
+  document.getElementById('qa-hint').hidden = true;
+  document.getElementById('qa-done-btn').hidden = !_qaSessionIds.length;
+  _qaUpdateClipBtns();
+  openModal('modalQuickAdd');
+  document.getElementById('qa-given').focus();
+}
+
+function saveQuickAdd() {
+  const given   = document.getElementById('qa-given').value.trim();
+  const surname = document.getElementById('qa-surname').value.trim();
+  if (!given && !surname) {
+    showToast('Vorname oder Nachname erforderlich', 'warn');
+    return;
+  }
+  const date  = _normQuickDate(document.getElementById('qa-date').value.trim());
+  const place = document.getElementById('qa-place').value.trim();
+  const srcId = _qaSrcId;
+  const page  = document.getElementById('qa-page').value.trim();
+
+  const id  = nextId('I');
+  const cit = srcId ? [citationObj(srcId, page)] : [];
+  const _ev = (d, p) => ({ lati:null, long:null, citations: d || p ? cit : [], _extra:[], value:'', seen:false, note:'', noteRefs:[], date: d, place: p, placeId:null });
+
+  const person = {
+    id, given, surname,
+    name: [given, surname].filter(Boolean).join(' '),
+    nameRaw: '', sex: 'U', prefix: '', nick: '', _rufname: '', suffix: '', titl: '', resn: '', email: '', www: '',
+    birth: _ev('',''), death: _ev('',''), chr: _ev('',''), buri: _ev('',''),
+    events: [], noteTexts: [], noteRefs: [], noteText: '',
+    famc: [], fams: [], media: [], extraNames: [],
+    lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    nameCitations: [], sourceRefs: new Set()
+  };
+
+  const _SPEC = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+  for (const evType of _qaSelectedEvs) {
+    if (_SPEC[evType]) {
+      person[_SPEC[evType]].date  = date;
+      person[_SPEC[evType]].place = place;
+      person[_SPEC[evType]].citations = cit;
+    } else {
+      person.events.push({ type:evType, value:'', date, place, lati:null, long:null,
+        eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:cit, media:[], _extra:[] });
+    }
+  }
+
+  pushUndo('Person angelegt', { personIds: [id] });
+  AppState.db.individuals[id] = person;
+  _rebuildPersonSourceRefs(person);
+  _qaSessionIds.push(id);
+  markChanged();
+  renderTab();
+
+  // Personenfelder leeren, Chips + Ereignisfelder zurücksetzen; Quelle/Seite bleibt
+  ['qa-given','qa-surname','qa-date','qa-place'].forEach(elId => {
+    document.getElementById(elId).value = '';
+  });
+  _qaSelectedEvs.clear();
+  document.querySelectorAll('#qa-ev-chips .quick-chip').forEach(c => c.classList.remove('quick-chip--active'));
+  document.getElementById('qa-ev-fields').hidden = true;
+  document.getElementById('qa-given').focus();
+  document.getElementById('qa-done-btn').hidden = false;
+
+  const n     = _qaSessionIds.length;
+  const label = person.name || id;
+  const hint  = document.getElementById('qa-hint');
+  hint.textContent = `✓ ${label} angelegt (${n} in dieser Session)`;
+  hint.hidden = false;
+}
+
+function quickAddDone() {
+  closeModal('modalQuickAdd');
+  if (!_qaSessionIds.length) return;
+  UIState._qaSessionIds = new Set(_qaSessionIds);
+  _qaSessionIds = [];
+  const banner = document.getElementById('qa-session-banner');
+  const label  = document.getElementById('qa-session-label');
+  const n = UIState._qaSessionIds.size;
+  if (banner && label) {
+    label.textContent = `${n} neu angelegte Person${n > 1 ? 'en' : ''}`;
+    banner.hidden = false;
+  }
+  if (AppState.currentTab !== 'persons') switchTab('persons');
+  else applyPersonFilter();
+}
+initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd', null);

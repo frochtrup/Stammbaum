@@ -24,8 +24,24 @@ function _odUpdateUI() {
   if (ob)  ob.hidden  = !conn;
   if (sb)  sb.hidden  = !conn;
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
-  const gb = document.getElementById('grampsExportBtn');
-  if (gb)  gb.hidden = !AppState.db;
+  const gb  = document.getElementById('formatConvertBtn');
+  const g7b = document.getElementById('ged7ExportBtn');
+  const ggb = document.getElementById('grampsExportBtn');
+  if (gb) {
+    gb.hidden = !AppState.db;
+    if (AppState.db) {
+      const sp = gb.querySelector('span');
+      const _altFmt = AppState.db._grampsMaster || AppState.db.gedVersion === '7.0';
+      if (sp) sp.textContent = _altFmt ? 'Als GEDCOM 5.5.1 exportieren' : 'Als GRAMPS exportieren';
+    }
+  }
+  // GED7-Button: ausblenden wenn keine Datei geladen oder GED7 bereits aktives Format
+  if (g7b) g7b.hidden = !AppState.db || AppState.db.gedVersion === '7.0';
+  // GRAMPS-Button: nur sichtbar wenn GED7-Datei geladen (zusätzliche Cross-Export-Option)
+  if (ggb) ggb.hidden = !AppState.db || AppState.db.gedVersion !== '7.0';
+  // Strict-Button: sichtbar wenn Datei geladen (immer verfügbar)
+  const gsb = document.getElementById('strictExportBtn');
+  if (gsb) gsb.hidden = !AppState.db;
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');
@@ -48,25 +64,30 @@ function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
 function odLogout() {
   ['od_access_token','od_refresh_token','od_token_expiry']
     .forEach(k => sessionStorage.removeItem(k));
-  ['od_file_id','od_file_name']
-    .forEach(k => localStorage.removeItem(k));
+  idbDel('od_file_id').catch(() => {});
+  idbDel('od_file_name').catch(() => {});
+  _odCurFileId = null; _odCurFileName = null;
   _odUpdateUI();
   showToast('OneDrive getrennt');
 }
 
 async function odLogin() {
-  const verifier  = _odCodeVerifier();
-  const challenge = await _odCodeChallenge(verifier);
-  const stateVal  = _odCodeVerifier();
-  sessionStorage.setItem('od_verifier', verifier);
-  sessionStorage.setItem('od_state', stateVal);
-  const p = new URLSearchParams({
-    client_id: OD_CLIENT_ID, response_type: 'code',
-    redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
-    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
-    state: stateVal
-  });
-  location.href = OD_AUTH_EP + '?' + p;
+  try {
+    const verifier  = _odCodeVerifier();
+    const challenge = await _odCodeChallenge(verifier);
+    const stateVal  = _odCodeVerifier();
+    sessionStorage.setItem('od_verifier', verifier);
+    sessionStorage.setItem('od_state', stateVal);
+    const p = new URLSearchParams({
+      client_id: OD_CLIENT_ID, response_type: 'code',
+      redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
+      code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
+      state: stateVal
+    });
+    location.href = OD_AUTH_EP + '?' + p;
+  } catch(e) {
+    showToast('OneDrive: Anmeldung nicht möglich — ' + e.message, 'error');
+  }
 }
 
 function _odCodeVerifier() {

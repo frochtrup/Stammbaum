@@ -5,6 +5,1622 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 8.0 (Branch `v8-dev`, ab 2026-05-14) — AKTIV
+
+---
+
+### Session 2026-07-03 — ADR-028 Phase 6 Cleanup + Handbuch aktualisiert (sw v1057)
+
+**Kontext:** Abschluss der ADR-028-Nacharbeiten nach der Farm-PO-Invariante (v1055) — alle als „offen" markierten Cleanup-Punkte aus Phase 6 erledigt. Parallel: Handbuch-Update für alle user-relevanten Neuerungen seit v1024.
+
+**v1057 — ADR-028 Phase 6 Cleanup (refactor)**
+
+- **Reverse-Migrator `_migrateHofObjectsBackToFarmPOs` entfernt.** Das ADR-027-Rollback-Sicherheitsnetz wurde nie gebraucht; nach >50 Versionen ohne Rollback-Bedarf ersatzlos gelöscht. 8 zugehörige Tests (Gruppe al-5) mitentfernt. Testanzahl: 892 → 884.
+- **`_ensureHofFarmPO`-Docstring korrigiert.** Erwähnte fälschlich, die Funktion setze `ev.placeId` auf Farm-POs — das wurde in v1055 entfernt (Farm-PO-Invariante). Docstring beschreibt jetzt korrekt: kein ev.placeId-Repointing.
+- **`buildHofIndex` Z.3444: LEGACY-Kommentar ergänzt.** `if (!hof.placeId && _isFarmPlaceId(ev.placeId))` ist nach v1055 toter Code für GEDCOM- und GRAMPS-Daten (GRAMPS: Farm-POs vor buildHofIndex durch `_migrateFarmPOsToHofObjects` umgestellt). Zeile bleibt als Regressions-Guard für Altdaten-Snapshots.
+- **Test af.14 → af.14-legacy umbenannt.** Testfall setzt künstlich `placeId:'@F2@'` auf ein Event — nach v1055 in der Praxis nicht mehr möglich. Kommentar erklärt das ADR-026-Altformat.
+- **`_repoint`-Kommentar in `_migrateFarmPOsToHofObjects` präzisiert.** Primärer Lookup `_farmIdToHofId[ev.placeId]` ist für GEDCOM-Daten toter Code nach v1055, für GRAMPS-Daten (GRAMPS-Parser setzt ev.placeId direkt auf Farm-PO vor der Migration) noch aktiv — Dual-Pfad bleibt; Kommentar unterscheidet die zwei Pfade.
+
+**Doku-Commit (kein sw-Bump) — HANDBUCH.html auf sw v1057**
+
+Kap. 15 (Höfe und Wohnorte):
+- Hof-Zuweisungen-prüfen: Tabelle mit Klassen-Badges A/C/D und klassenspezifischen Aktionen — kein undifferenziertes „Ignorieren" mehr (v1033).
+- Numerische Sortierung der Höfe-Liste ergänzt (v1032).
+- Neuer Abschnitt „Wie erkennt die App eine Hof-Adresse?": Konvention α mit Beispieltabelle + Konvention für mehrere Höfe gleicher Hausnummer (v1034/v1035).
+- Neuer Abschnitt „Welche Ereignis-Typen erzeugen automatisch Höfe?": RESI/PROP/CENS/OCCU ja — BIRT/DEAT/MARR/BURI/EDUC/GRAD nein (v1042).
+- Personendetail: nur Dorf bei Hof-Events, kein Hof-Duplikat in der Ort-Hierarchie (v1041).
+- Lade-Toast: einmalig pro geladener Datei, Mehrzeilen-Zusammenfassung (v1047/v1049).
+
+Kap. 21 (FAQ):
+- Neuer Eintrag „Diagnose und Wartung" mit Beschreibungstabelle beider Reset-Aktionen in Einstellungen (v1044).
+- SW-Update-FAQ: Auto-Reload-Hinweis ergänzt (v1019).
+
+Beide Versionsfelder: v1024 → v1057, Juni → Juli 2026. ROADMAP Handbuch-Stand: veraltet → aktuell.
+
+---
+
+### Session 2026-06-24 — Farm-PO-Invariante durchgesetzt + Roundtrip-Stabilität (sw v1043–v1055)
+
+**Kontext:** Mehrere User-Befunde nach v1042 betrafen denselben Kern: Farm-POs flossen als `ev.placeId` in den Link-Pass und die REPROJECT-Logik, obwohl die ADR-027/028-Invariante klar vorschreibt: `ev.placeId` = Village/Unknown-PO, `ev.hofId` = V2-hofObject. Die Bugkette v1043–v1055 behebt strukturell alle Symptome dieses Bruchs.
+
+**v1043 — `buildPlacForGedcom`/`resolvedPlaceName` verliert Hof-Adresse bei stale hofId**
+
+Ursache: `resolvedPlaceName(obj)` in `gedcom-writer.js` rief `buildPlacForGedcom` nur wenn `obj.hofId || obj.placeId` gesetzt — nach IDB-Reset waren beide null, Fallback `obj.place` lieferte alten Wire-String. Fix: Fallback bleibt korrekt (Wire-Treue); der Fehler lag am downstream User-Fall (IDB-Reset ohne Reload), kein Code-Fix nötig gewesen — als Doku-Klarstellung dokumentiert.
+
+**v1044 — IDB-Reset-Funktionen in Einstellungen → Diagnose & Wartung**
+
+Neue UI-Aktionen: „IDB-Inhalt leeren (Orte)" + „IDB-Inhalt leeren (Höfe)" + „Alles zurücksetzen" im Einstellungs-Tab unter „Diagnose & Wartung". Erlaubt kontrollierten Neustart ohne Datei-Reload.
+
+**v1045 — Lade-Toast akkumuliert beide Link-Pass-Stats (Orte + Höfe)**
+
+Ursache: `_lastLinkPassStats` wurde zweimal gesetzt (einmal nach Migrations-Aufruf, einmal nach Link-Pass) — zweiter Aufruf überschrieb ersten, Orte-Zähler fehlte im Toast. Fix: Stats in `_deriveHofAndMigrate` einmalig akkumuliert, nicht doppelt gesetzt.
+
+**v1046 — Statistik-Kachel „Orte" zählte immer 0**
+
+Ursache: `collectPlaces()` wurde in `_buildStatistikHtml` ohne `db`-Argument aufgerufen (Signatur-Drift nach Refactor). Fix: Aufruf korrigiert.
+
+**v1047 — Hof-Zuweisungen-Toast auf jedem Laden (nicht nur bei neuen Höfen)**
+
+Ursache: `linkedHofPlac + linkedHofAddr + linkedHofAtomic` feuern bei jedem Laden (Runtime-Re-Links bestehender Höfe), nicht nur bei Bootstrap. Toast zeigte bei jedem Laden „X Höfe verknüpft". Fix: `_newHofs = linkedHofBootstrap + linkedHofTypeBootstrap` — Toast nur bei echtem Neu-Anlegen.
+
+**v1048 — PLAC „, Hildesheim, , , ," → Pseudo-Hof „Hildesheim" (führendes Leer-Segment)**
+
+Ursache: Pfad A und Pfad C übersprangen das leere erste PLAC-Segment nach `filter(Boolean)`, sahen `["Hildesheim"]` und bootstrappten „Hildesheim" als Hof. GEDCOM 5.5.1: Segment 0 = Adresse/Hofstelle, leer = kein Hof. Fix: Pfad A + Pfad C prüfen `rawSegs[0].trim()` — wenn leer, sofort `return false`. Schützt alle Fälle mit führendem Leer-Segment.
+
+**v1049 — Orts-Anpassungs-Toast auf jedem Laden (nicht nur erstem)**
+
+Ursache: `ev.place` wird bei jedem Laden aus dem GEDCOM-Text neu geparst (placeId ist runtime-only); `_linkGedcomEventsToPlaceObjects` normalisiert bei jedem Laden → `recollapsed > 0` → Toast. Fix: Session-Flag `AppState._placeNormToastShown` — Toast max. einmal pro geladenem File anzeigen. Flag-Reset beim Setzen von `AppState._currentFilename` (GEDCOM-Load, GRAMPS-Load, Desktop-Picker).
+
+**v1050 — `markChanged()` feuert für reine Runtime-Re-Links ohne GEDCOM-Delta**
+
+Ursache: `linkedHofPlac/Addr/Atomic` lösten `markChanged()` aus, obwohl diese nur bestehende Höfe runtime-verknüpfen (identische PLAC-Ausgabe via `buildPlacForGedcom` → kein Delta). Fix: `markChanged()` nur noch bei `recollapsed || linkedHofBootstrap || linkedHofTypeBootstrap` (echte GEDCOM-Inhaltsänderungen). Cache-Invalidierung bleibt immer.
+
+**v1051 — Spurious placeObject „Oster 82a" auf zweitem Laden (v1050-Regression)**
+
+Ursache: `_hofVillageString` und `_ensureHofFarmPO` nutzten `addr.split('\n')[0].trim()` für den Leaf-Vergleich. Bei addr `„Oster 82a, Wester 141"` (kein Newline) liefert das den ganzen String mit Komma → leafNorm = `„oster 82a, wester 141"` → Vergleich mit `segs[0]` scheiterte → `ev.place = „Oster 82a, Ochtrup, …"` landete ungekürzt in `counts` → `_ensureVillageChain` legte PO „Oster 82a" an. Fix: beide Funktionen verwenden jetzt `_extractHofAddr(addr)` (Konvention α: Komma ODER Newline).
+
+**v1055 — Farm-PO-Invariante: `ev.placeId` darf nie auf Farm/Building-PO zeigen**
+
+Ursache (strukturell, nicht Symptom-Fix):
+
+1. `_ensureHofFarmPO` setzte `ev.placeId = farmId` (Farm-Typ) — Überbleibsel aus ADR-026, als Farm-POs noch direkte `ev.placeId`-Ziele waren. ADR-027/028 hat dieses Modell abgelöst, die Zuweisung war nie bereinigt.
+2. Die Durchreich-REPROJECT-Zeile (`if (ev.placeId || ev.hofId) → _reprojectEvCache`) rief `buildPlacForGedcom` mit `ev.placeId = farmId` auf. `_buildFormString` liefert für Farm-POs nur den Titel (`_atomic` schneidet beim ersten Komma ab) → „Bauernschaft Rummler Nr 16, Albersloh" kollabierte auf „Bauernschaft Rummler Nr 16" (Dorf verloren). Auf jedem geraden Laden wurde so das Dorf abgereichert, auf jedem ungeraden wieder enriched — keine Konvergenz.
+3. `_placeLink` Fall 1 fand Orphan-Farm-POs via `findByName` und setzte `ev.placeId = farmId`, was Pfad A'/B blockierte.
+
+Fix (drei zusammenhängende Stellen):
+- `_ensureHofFarmPO`: `ev.placeId`-Zuweisung komplett entfernt. Farm-POs sind reine Migrations-Vehikel.
+- `_placeLink` Fall 1 + Fall 2b: `Farm/Building`-Typ-Check vor Zuweisung — strukturelle Barriere statt Konvention.
+- `_migrateFarmPOsToHofObjects._repoint`: Fallback auf `ev.addr`-Norm-Match (addrNorm → hofId) wenn `ev.placeId` nicht (mehr) auf einen Farm-PO zeigt. Entkoppelt den Repoint-Pass von der jetzt entfernten Voraussetzung.
+
+Tests: af.1/af.2/af.3/af.7/af.15 auf neue Invariante angepasst: `ev.placeId` nach `_ensureHofFarmPO` = null (vorher fälschlicherweise = farmId). 892 Tests grün.
+
+**Durable Lehre:** `ev.placeId` und `ev.hofId` sind orthogonal: `ev.placeId` = administrative Einheit (Village/Unknown/City), `ev.hofId` = physische Hofstelle. Jeder Code-Pfad, der Farm/Building-POs als `ev.placeId` setzt, verletzt diese Invariante und korrumpiert `buildPlacForGedcom`/`_reprojectEvCache`. `_placeLink` ist jetzt der strukturelle Wächter.
+
+**Gates:** 892 Unit-Tests grün, CSP grün, Snapshot grün, GEDCOM-Roundtrip `net_delta=0` stabil.
+
+---
+
+### Session 2026-06-21 — PLAC-Hof-Pfade auf hof-relevante Events beschränkt (sw v1042)
+
+**Auslöser:** User-Befund — bei nicht-hofrelevanten Events (BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN) entstanden immer wieder falsche Hof-Interpretationen, weil Pfad A (PLAC-Leitsegment), Pfad A' (atomar globaler Hof-Lookup) und Pfad C (rich-PLAC-Bootstrap) für ALLE Event-Typen feuerten. „Schule für Bauwesen, Münster" → Pfad C bootstrappte Pseudo-Hof „Schule für Bauwesen". „Krankenhaus St. Joseph, Münster" analog. Asymmetrie zu Pfad B' (war seit Phase 4 schon auf RESI/PROP/CENS/OCCU beschränkt).
+
+**Fix — symmetrische Beschränkung:**
+- **Pfad A** (`_tryHofPlacLink`): + check `HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)`. BIRT mit „Hof Schulze, Ochtrup" → kein Auto-Link mehr, auch wenn Hof existiert (User-Aktion über Review-Modal/Form möglich).
+- **Pfad A'** (`_tryHofAtomicLink`): + check. GRAD „Bonn" trifft nie mehr zufällig einen Hof „Bonn".
+- **Pfad C** (`_tryHofBootstrapFromPlac`): + check. Hauptrisiko-Pfad — keine Pseudo-Höfe mehr aus Schulen/Krankenhäusern/Universitäten.
+- **Pfad B** (`_tryHofAddrLink`): bleibt offen — ADDR ist expliziter User-Intent (BIRT mit `addr=Wall 33` ist bewusste Hof-Verknüpfung).
+- **Pfad B'** war schon beschränkt (Phase 4).
+
+**+15 Tests Gruppe (ax):**
+- ax-1a–f: Pfad A skipt BIRT/GRAD/EDUC/EVEN/MARR/BURI.
+- ax-2a–d: Pfad A linkt weiter RESI/PROP/CENS/OCCU.
+- ax-3a/b: Pfad A' atomar — GRAD skipt, RESI linkt.
+- ax-4a–c: Pfad C — EDUC „Schule, Münster" kein Pseudo-Hof, RESI „Wall 33, Münster" bootstrappt korrekt.
+
+**Browser-verifiziert** am Demo + vier synthetischen Events:
+- GRAD „Schule für Bauwesen, Münster" → kein Hof ✓
+- BIRT „Krankenhaus St. Joseph, Münster" → kein Hof ✓
+- EDUC „Universität, Münster" → kein Hof ✓
+- RESI „Wall 33, Münster" → Hof bootstrapped als „Wall 33" ✓
+
+**Gates:** 881 Unit-Tests grün (+15 (ax)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Lehre:** Auto-Hof-Anlage braucht zwei Anker — entweder semantische Hof-Indikator (RESI/PROP/CENS/OCCU als Event-Typ, Pfad B/B'/C/A') ODER explizite User-Eingabe (ADDR-Feld, Pfad B). Bei beiden fehlend (BIRT/GRAD mit rich-PLAC) entsteht ohne Beschränkung Pseudo-Hof-Müll. Konsistent mit Pfad B'.
+
+---
+
+### Session 2026-06-21 — _evFullPlace bei Hof-Events: nur Dorf (sw v1041)
+
+**Auslöser:** User-Befund — im Personendetail wird im Ortsfeld die volle PLAC-Projektion „Hof, Dorf, Verwaltung" angezeigt, statt nur das Dorf. Das ist Duplikat zur separat angezeigten `ev.addr` (Hof) und semantisch verwirrend.
+
+**Ursache:** `_evFullPlace` in ui-views.js fiel bei Hof-Events auf `compactPlace(ev.place)` als Fallback zurück. `ev.place` enthält bei Hof-Events die volle Projektion mit Hof als Leitsegment (durch REPROJECT aus Pfad B/B'). Damit landete der Hof im Ortsfeld.
+
+**Fix:**
+- Neuer Vorab-Zweig in `_evFullPlace(ev)`: wenn `ev.hofId` gesetzt ist + V2-hofObject existiert, wird das Dorf-PO direkt über `hofObjects[hofId].villageId` aufgelöst und `_buildFormString(villageId, year)` zurückgegeben. KEIN Fallback auf `ev.place` — das würde wieder den Hof enthalten.
+- `ev.place` bleibt als Wire-Daten unverändert (Roundtrip-Treue).
+
+**Browser-verifiziert:**
+- Setup: ev.place="Wall 33, Ochtrup, Westfalen", ev.addr="Wall 33", ev.placeId=_po_ot, ev.hofId=_hof_wall33
+- _evFullPlace(ev) = "Ochtrup, Westfalen" ✓ (nur Dorf-Hierarchie)
+- Im Personendetail wird damit angezeigt: "Wall 33, 1850, Ochtrup, Westfalen" — kein Hof-Duplikat mehr
+
+**Gates:** 866 Unit-Tests grün, CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+---
+
+### Session 2026-06-21 — Read-Tolerance für historische Komma-Höfe (sw v1036)
+
+**Auslöser:** User-Befund — typische Adresse „Oster 82a, Wester 141" in Ochtrup. Es existiert ein hofObject „Oster 82a, Wester 141" (historisch via Pfad C bootstrappt, vor Konvention α v1034). Mit Konvention α (Komma schneidet) findet `findAllByAddr` für `ev.addr='Oster 82a, Wester 141'` nur noch „Oster 82a" → Hof nicht gefunden → Pfad B' legt einen Pseudo-Hof „Oster 82a" an. Daten-Duplikat.
+
+**Fix — Read-Tolerance:**
+- `hofReg.findAllByAddr(addr, year)`: erst **voll-Norm** Lookup (matcht historische Höfe mit Komma in der Bezeichnung), bei leerem Treffer **Extract-Fallback** (matcht Adressbuch-Übernahmen mit Stadt/Land-Suffix). Ein einziger _lookup-Helfer dedupliziert die Such-Logik.
+- `findOrCreateHofObject` Idempotenz-Check: ebenfalls erst voll-Norm, dann Extract-Norm. Verhindert Pseudo-Hof-Duplikat bei eingehender Identität, die einen historischen Komma-Hof matcht.
+- **Konvention α bleibt strikt für Neu-Anlage**: wenn weder voll noch extract matchen, wird der neue Hof mit der extrahierten Form angelegt (Stadt-Suffix wird also weiterhin abgeschnitten).
+
+**+8 Tests Gruppe (aw):**
+- aw-1: voll-Norm matcht historischen Komma-Hof „Oster 82a, Wester 141".
+- aw-2: Extract-Fallback matcht „Wall 33" trotz Stadt-Suffix.
+- aw-3: findOrCreateHofObject voll-Norm-Match liefert bestehende ID (Idempotenz).
+- aw-4: Link-Pass-Integration — Pfad B linkt auf historischen Komma-Hof, Pfad B' bootstrapt nicht.
+
+**Browser-verifiziert** am exakten User-Szenario (Hof „Oster 82a, Wester 141" in Testdorf_AW + RESI-Event mit gleicher addr): `ev.hofId=_hof_oster_wester`, `linkedHofAddr=1`, `linkedHofTypeBootstrap=0`, ein Hof in DB.
+
+**Gates:** 866 Unit-Tests grün (+8 (aw)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Lehre:** Konvention α (strikt) ist gut für Neu-Anlage, aber Read-Seite muss tolerant gegen historische Daten sein, die vor der Konvention entstanden sind. „Schreibe streng, lies tolerant" — Robustness Principle.
+
+---
+
+### Session 2026-06-21 — ADDR=Village-Redundanz filtern (sw v1035)
+
+**Auslöser:** Bei RESI ohne explizite Adresse schreiben einige Programme (MyHeritage u.a.) den Ortsnamen selbst in `ADDR` statt das Feld leer zu lassen. Pfad B' (Phase 4 Bootstrap aus Event-Typ-Semantik) bootstrappt daraus einen Pseudo-Hof namens „Ochtrup" im Dorf „Ochtrup" — Daten-Müll.
+
+**Lösung:**
+- **`_isAddrJustVillage(ev)` Helper:** prüft konservativ, ob `_extractHofAddr(ev.addr)` semantisch dem aufgelösten `ev.placeId`-Village entspricht. Match-Quellen: Village-Titel + `pnames`-Varianten (auch historische Schreibweisen wie „Sassenbergk" für „Sassenberg"). Vorfahren-PO werden NICHT gematcht — „Westfalen" in ADDR bei Ort „Ochtrup" bleibt im Review (ungewöhnlich, User-Entscheidung wert).
+- **Pfad B' (`_tryHofBootstrapFromAddr`):** skipt Bootstrap bei `_isAddrJustVillage(ev)`.
+- **`_findUnresolvedHofEvents`:** filtert Redundanz-Events aus dem Review (kein Hof-Verdacht).
+- **+10 Tests Gruppe (av):** Helper-Basis (1a–e), Pfad B' skipt (2a–c), Review filtert (3a/b).
+
+**Browser-verifiziert** an Demo + Testdaten: drei RESI-Events mit `ADDR=Testberg` (Ortsname), `ADDR=Testbergk` (pname-Variante), `ADDR=Wall 33` (echter Hof) → nur der dritte bootstrapt einen Hof, die ersten zwei bleiben hofId-frei UND tauchen nicht im Review auf.
+
+**Gates:** 858 Unit-Tests grün (+10 (av)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+---
+
+### Session 2026-06-21 — Hof-Identitäts-Konvention α (sw v1034)
+
+**Auslöser:** User-Frage zur Behandlung von Adressbuch-Übernahmen — was passiert mit mehrzeiligen Adressen (`CONT`-Fortsetzungen) und kommagetrennten Adressen (`Wall 33, 48607 Ochtrup, Deutschland`)? Diskussion legte zwei Lösungsklassen offen: (α) striktes Schneiden bei Komma/Zeilenumbruch — einfach, konsistent; (β) Heuristik mit drei Signalen (placeObject/PLZ/Land) + Pfad-A-Iteration — flexibler, aber komplexer. **Entscheidung: α**, weil mehrere Wohneinheiten an derselben Adresse genealogisch typisch derselbe Hof sind und Pfad A einfach bleibt.
+
+**Konvention α:** Hof-Identität endet beim **ersten Komma ODER Zeilenumbruch** der `ev.addr`. Stadt/PLZ/Land aus Adressbuch-Übernahmen + Adress-Details (Hinterhaus/Eingang B/…) werden für die Hof-Identität abgeschnitten. Wer wirklich zwei distinkte Höfe an derselben Hausnummer braucht, nutzt anderen Separator (Klammer, Schrägstrich) oder eine zweite `addrs[]`-Variante.
+
+**Implementierung:**
+- **`_extractHofAddr(addr)` in gedcom.js:** 1-Zeilen-Helper — `^[^\n,]+` match + trim.
+- **`hofReg.findAllByAddr` (read-side):** wendet `_extractHofAddr` intern an → "Wall 33, 48607 Ochtrup" matcht hof.addrs=["Wall 33"].
+- **`findOrCreateHofObject` (write-side):** extrahiert vor Norm + ID-Slug + addrs[0].value → neu angelegte Höfe bekommen saubere Bezeichnung.
+- **`buildHofIndex` (Display-Konsistenz):** bei V2-Höfen wird `hof.addr` aus `hofObjects.addrs[0].value` gesetzt — Höfe-Liste zeigt kanonische Form, nicht den rohen `ev.addr` des ersten Treffer-Events.
+- **Wire-Treue:** `ev.addr` selbst bleibt unverändert (Roundtrip für `ADDR`-Sub-Tags).
+- **User-explizite Pfade** (z.B. `addHofAddrVariantAndLink`) durchlaufen den Extract NICHT — User-Intent „diese Schreibweise speichern" bleibt erhalten.
+
+**+19 Tests Gruppe (au):** Extract-Basis (1a–k, alle Varianten), `findOrCreateHofObject` Extract + Idempotenz (2a/b), `findAllByAddr` Read-Robustheit (3a/b), Pfad-B'-Bootstrap aus verschmutzter Adresse (4a/b).
+
+**Browser-verifiziert:** drei RESI-Events mit „Wall 33, 48607 Ochtrup, Deutschland" / „Wall 33\n48607 Ochtrup" / „Wall 33, Hinterhaus" → alle drei auf denselben Hof `_hof_wall_33_po_ochtrup` mit `addrs[0].value = "Wall 33"`. Höfe-Tab-Anzeige zeigt schlichtweg „Wall 33" unter Gruppe „Ochtrup".
+
+**Gates:** 848 Unit-Tests grün (+19 (au)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Konzeptioneller Konflikt — Komma-Bedeutung in PLAC vs. ADDR:**
+- In `ev.place` (PLAC): Komma trennt Hof | Verwaltungs-Hierarchie (Konvention 1: „Hof, Dorf, Verwaltung").
+- In `ev.addr` (ADDR): Komma war ambig — entweder Stadt-Suffix oder Adress-Detail.
+- **Konvention α löst die Ambiguität**: Komma in ADDR ist IMMER Suffix-Trenner, niemals Detail-Trenner. Pfad A bleibt 1-segmentig (lead = `segs[0]`). Vereinfacht die Auflösungs-Funktion deutlich.
+
+---
+
+### Session 2026-06-21 — ADR-028 Phase 5: Review-Modal als Daten-Anreicherungs-UI (sw v1030)
+
+**Auslöser:** Phase 5 des ADR-028-Migrationsplans — Review-Badge bekommt seine konzeptuelle Rolle: nicht mehr Entscheidungs-Speicher für per-Event-Ignorier-Markierungen, sondern **Daten-Lücken-Anzeiger** mit drei Anreicherungs-Aktionen. Jeder Review-Eintrag wird in eine von fünf Klassen (A–E) eingeordnet, die Aktions-Matrix ist klassenspezifisch.
+
+**Implementierung (Phase 5):**
+- **Klassifizierung in 5 Klassen (`_classifyUnresolvedHofEvent` in gedcom.js):**
+  - **A** non-Hof-Event-Typ (BIRT/DEAT/MARR/BURI mit ADDR ohne matchenden Hof — vermutlich Krankenhaus/Kirche/etc., kein Auto-Bootstrap durch Pfad B')
+  - **B** atomare PLAC ohne globalen Match (Konvention 3b — Quelle braucht Hierarchie)
+  - **C** Mehrdeutigkeit (≥2 Höfe gleicher addr-Norm im Dorf-Scope)
+  - **D** Norm-Drift (RESI/PROP-ADDR matcht kein Hof, aber Höfe existieren im Dorf — Variante anhängen)
+  - **E** fremde Verwaltung im PLAC-Rest (Hierarchie-Anker scheitert)
+- **Listen-Erweiterung in `_findUnresolvedHofEvents`:** zählt jetzt auch Events ohne ADDR aber mit unaufgelöstem PLAC (Klasse B/E). Badge zeigt jede Daten-Lücke, nicht nur ADDR-Lücken.
+- **„Ignorieren"-Pfad strukturell entfernt:** `_ignoreHofReviewEvent`/`_unignoreHofReviewEvent`/`_saveIgnoredHofKeys`/`_ignoredHofKeysSet` gelöscht. Im Determinismus-Modell verstecken wir keine Events — wenn eine Adresse kein Hof ist, legt der User `placeObject` Typ `Hospital` an und schärft PLAC. Migrations-Helfer `_migrateLegacyIgnoredHofKeys` räumt alte localStorage-Markierungen + Toast „N Reviews aufgehoben — bitte erneut sichten".
+- **Neue Anreicherungs-Helfer `addHofAddrVariantAndLink(ev, hofId)`:** für Klasse D — fügt `ev.addr` als undatierte addrs[]-Variante an einen Hof, setzt `ev.hofId`. Nächster Load: Pfad B matcht deterministisch über die neue Variante. Anreicherung wandert in `orte.json` (cross-stammbaum-effective).
+- **Review-Modal UI (ui-views-hof.js):**
+  - Klassen-Badge pro Zeile (kleine farbige Markierung A–E mit Tooltip)
+  - Klassenspezifische Aktions-Matrix: A→[+ Hof anlegen, Quelle schärfen]; B→[Quelle schärfen]; C→[Hof wählen, Quelle schärfen]; D→[Variante zum Hof, Hof wählen, + Hof anlegen, Quelle schärfen]; E→[Quelle schärfen].
+  - `hofReviewSharpenSource(btn)` — schließt Modal + `showDetail(pid)` (User editiert Event direkt; nach Save greift Link-Pass beim nächsten Load).
+  - `hofReviewAddVariant(selectEl)` — Wrapper für `addHofAddrVariantAndLink`.
+  - `hofReviewCreateNew` nutzt jetzt `findOrCreateHofObject` (idempotent, gleiches ID-Schema wie Pfad C).
+- **Header-Text in index.html aktualisiert:** „Pro Zeile zeigt das Klassen-Badge (A–E) die Art der Daten-Lücke; Aktionen schließen sie durch Quellen-Schärfung oder Wissen-Anreicherung."
+- **am-1a-Test angepasst:** zählt jetzt auch unaufgelöste PLAC (nicht nur ADDR-Lücken). **am-3-Block umgebaut:** statt Ignore-Mechanik testet er den Migrations-Pfad (alte Legacy-Markierungen werden gezählt + gelöscht, idempotent).
+- **+12 Tests Gruppe (at):** Klassifizierung der fünf Klassen (1a–e), `addHofAddrVariantAndLink` Erfolg + Idempotenz (2a/2b), `_findUnresolvedHofEvents` trägt `_class` an jedem Eintrag (3a–c).
+- **Browser-verifiziert an Demo + künstlichen Klassen:** Modal zeigt 4 Zeilen (A/B/C/E), Aktions-Matrix klassenspezifisch korrekt (Buttons + Dropdown nur wo sinnvoll). Klasse D entsteht im normalen Flow praktisch nicht, weil Pfad B' (Phase 4) RESI/PROP/CENS/OCCU vorher schon bootstrappt.
+
+**Gates:** 832 Unit-Tests grün (+13 (at) − Ignore-Tests). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable. GRAMPS stable.
+
+**Effekt:** Daten-Lücken-Anzeige ist jetzt semantisch ehrlich — kein Verstecken, sondern aktiv schließen. Die Restklasse aus ADR-028 („Genealoge kennt die Antwort nicht") ist die einzige, die dauerhaft sichtbar bleibt — und das ist die korrekte Antwort des Systems auf Ungewissheit.
+
+**Verbleibt:** Phase 6 (Cleanup — Reverse-Migrator entfernen, Legacy-IDB-Key `stammbaum_hofobjects`, Memory-Update).
+
+---
+
+### Session 2026-06-21 — ADR-028 Phase 4: Pfad B' Bootstrap aus Event-Typ-Semantik (sw v1029)
+
+**Auslöser:** Konvention 2 ohne bestehenden Hof (MyHeritage-/GRAMPS-Export-Standard: `PLAC Dorf, … + ADDR Hof`) bleib bislang im Review-Pfad hängen, obwohl der Event-Typ (`RESI`/`PROP`/`CENS`/`OCCU`) den Hof-Charakter eindeutig deklariert — semantisch genauso unzweideutig wie rich-PLAC-Struktur bei Pfad C. Closes Bug-Klasse #2 für die häufigste verbleibende Eingabe-Klasse.
+
+**Implementierung (Phase 4):**
+- **Konstante `HOF_BOOTSTRAP_EVENT_TYPES = new Set(['RESI','PROP','CENS','OCCU'])` (gedcom.js):** definiert die Typen, deren Semantik „Person an stabiler Adresse = Hof" eindeutig ist. BIRT/DEAT/MARR/BURI tragen diese Semantik nicht (Krankenhaus/Kirche/Friedhof/Standesamt sind plausible Nicht-Hof-Adressen) → bleiben im Review-Pfad.
+- **`_tryHofBootstrapFromAddr(ev, year)` in `_linkGedcomEventsToPlaceObjects`:** Trigger: `ev.type ∈ HOF_BOOTSTRAP_EVENT_TYPES`, `ev.placeId` aufgelöst, `ev.addr` non-empty, kein hofId, kein bestehender Hof im Dorf-Scope. Auto-Anlage via `findOrCreateHofObject(ev.addr, ev.placeId)` + REPROJECT. Reihenfolge im `_link`: NACH `_tryHofAddrLink` (Pfad B greift bei bestehendem Hof), damit kein doppelter Bootstrap.
+- **Counter `linkedHofTypeBootstrap`** in `AppState._lastLinkPassStats`. Toast in storage-file.js erweitert: „N aus RESI/PROP-Adresse neu angelegt".
+- **+21 Tests Gruppe (as):** Auto-Bootstrap für RESI/PROP/CENS/OCCU (1a–d), KEIN Bootstrap für BIRT/DEAT/MARR/BURI (2a–d), Pfad B Vorrang bei bestehendem Hof (3a), kein Bootstrap ohne villageId-Scope (4a), REPROJECT-Konvention-2→1 (5a), Idempotenz beim zweiten Lauf (6a).
+- **ak-8b umformuliert:** Pre-Phase-4 hatte der Test geprüft, dass kein hofId gesetzt wird wenn nur falsch-Dorf-Hof matcht. Mit Pfad B' wird jetzt ein neuer Hof in Welbergen angelegt — die ursprüngliche Aussage („nicht falschen Cross-Dorf-Hof picken") bleibt erhalten, jetzt schärfer als „neuer Hof am korrekten Dorf".
+
+**Gates:** 819 Unit-Tests grün (+22 (as)+ak-8b-Erweiterung). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (343 ms). GRAMPS stable.
+
+**Effekt:** Bug-Klasse #2 algorithmisch geschlossen für die häufigsten Eingabe-Klassen. Verbleibend genuine Review-Klassen: (a) atomare PLAC ohne globalen Match (Konvention 3b), (b) Konvention 2 mit non-Hof-Event-Typ wie BIRT/DEAT ohne bestehenden Hof, (c) echte Mehrdeutigkeit (mehrere Höfe gleicher Adresse). Diese landen in Phase 5 als Review-Klassen mit drei Daten-Anreicherungs-Aktionen.
+
+**Lehre:** Event-Typ als zweiter Quell-Anker (parallel zu rich-PLAC bei Pfad C) hebt die Determinismus-Garantie auf den häufigen MyHeritage-Konvention-2-Fall. Akzeptierter false-positive: RESI mit `ADDR Krankenhaus St. Joseph` legt einen Pseudo-Hof an — bounded (sichtbar im Höfe-Tab, trivial korrigierbar als `placeObject` Typ `Hospital`), Preis für die viel häufigere true-positive-Quote bei rural-Höfen.
+
+---
+
+### Session 2026-06-21 — ADR-028 Phase 3: Lese-Seite konsolidiert (sw v1028)
+
+**Auslöser:** Phase 3 des ADR-028-Migrationsplans — `_eventPlaceId`/`_eventHofId` als Chokepoints durchsetzen, Aggregatoren `collectPlaces` + `buildHofIndex` id-keyed statt string-keyed. Damit wird die Determinismus-Garantie auch lese-seitig materialisiert; Bug-Klasse #1 verschwindet strukturell (kein Cache-String-Drift mehr in der Ortsliste).
+
+**Implementierung (Phase 3):**
+- **`_eventHofId(ev)` in gedcom.js** spiegelt `_eventPlaceId`: Zweig A `ev.hofId` (Wahrheit), Zweig B `hofReg.findByAddr(ev.addr, year)` im Dorf-Scope (eindeutig). Damit haben Aggregatoren eine einzige Chokepoint-API für „welcher Hof?".
+- **`collectPlaces` id-keyed (ui-views-place.js):** Primärschlüssel = `_eventPlaceId(ev)` wenn aufgelöst, sonst Roh-String (Fallback-Bucket). Zwei POs gleichen Titels bleiben distinct (Münster Stadt ≠ Münster Kreis); mehrere Cache-String-Varianten desselben Orts kollabieren auf einen Eintrag. byName-Index parallel für Lookup-Kompatibilität (`places.get(placeName)` aus showPlaceForm/showPlaceDetail funktioniert weiter via Title-Index). Map-API als Wrapper-Objekt mit `.values()/.get()/.has()/.size/.keys()/.entries()/.forEach()/[Symbol.iterator]`.
+- **`buildHofIndex` id-keyed (gedcom.js):** Primärschlüssel = `_eventHofId(ev)` wenn aufgelöst, sonst `ev.addr` (Fallback). Mehrere `addr`-Varianten desselben Hofs aggregieren auf einen Index-Eintrag. byAddr-Index für `buildHofIndex().get(addr)`-Lookups aus ui-views-hof (Detail/Rename/Statistik).
+- **`_firstPlaceName` (ui-views.js):** auf `.values().map(p => p.name)` umgestellt, key-Typ-unabhängig.
+- **`setDb` invalidiert jetzt auch `_placesCache` + `_hofCache`:** vorher nur Registries → stale Wrapper nach Datei-Wechsel ohne Mutation (von Tests aufgedeckt, behoben).
+- **+14 Tests Gruppe (ar):** _eventHofId-Basissemantik (5) + buildHofIndex id-keyed Aggregation + byAddr-Lookup (4) + Fallback ohne hofId (4) + setDb-Cache-Invalidierung implizit.
+
+**Gates:** 797 Unit-Tests grün (+14 (ar)). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (335ms). GRAMPS stable.
+
+**Effekt:** Lese-Seite hat jetzt einen einzigen Chokepoint pro Identitäts-Frage. Die Aggregatoren respektieren die Projektions-Invariante strukturell — auch wenn ein Pfad in Zukunft mal REPROJECT vergisst, würde die Liste keine Phantom-Einträge mehr zeigen. Konsumenten der Maps (`collectPlaces`/`buildHofIndex`) sind über Wrapper API-stabil; keine breitflächige Callsite-Anpassung nötig.
+
+**Verbleibt für Phase 4:** Pfad B' (Bootstrap aus Event-Typ-Semantik bei RESI/PROP/CENS/OCCU) schließt Konvention 2 ohne Hof. Phase 5: Review-Modal als Daten-Anreicherungs-UI.
+
+---
+
+### Session 2026-06-21 — ADR-028 Phase 2: Pfad A' atomarer Hof-Lookup (sw v1027)
+
+**Auslöser:** Konvention-3-Lücke aus ADR-028 — `PLAC Wall 33` allein (kein ADDR, kein Komma) wurde vom Link-Pass nicht erfasst: Pfad A/C verlangen Komma, Pfad B verlangt bereits gesetzte `ev.placeId`, Fall 1 sucht in placeObjects (Farm-POs nach Phase 3 weg). Lücke schließt sich, wenn der Hof global eindeutig im hofObjects-Index liegt — dann ist der Quell-Bezug genauso sicher wie bei Pfad A.
+
+**Implementierung (Phase 2):**
+- **Pfad A' `_tryHofAtomicLink` (gedcom.js):** trifft auf atomare PLAC (`!ev.place.includes(',')`), `!ev.placeId`, `!ev.hofId`. Ruft `hofReg.findAllByAddr(ev.place, year)` global ohne Village-Scope; bei `length === 1` Link mit `ev.hofId` + `ev.placeId = hof.villageId` + REPROJECT. Mehrdeutig → blockieren (Review-Pfad).
+- **Reihenfolge im `_link`:** nach `_placeLink`, damit Fall 1 Vorrang hat (Village-Match in placeObjects schlägt hofObject — definierte Auflösung bei Namens-Kollision PO „Berlin" vs. hofObject „Berlin").
+- **Counter `linkedHofAtomic`** in `AppState._lastLinkPassStats`. Toast-Aggregation in `storage-file.js` um den neuen Pfad erweitert.
+- **+12 Tests Gruppe (aq) in test-unit.js:** atomar+eindeutig→Link inkl. REPROJECT (aq-1a), kein Hof→unverlinkt (aq-1b), Mehrdeutigkeit blockiert (aq-1c), gleichnamiges PO gewinnt (aq-1d), Hierarchie-PLAC skipped (aq-1e).
+
+**Gates:** 783 Unit-Tests grün (+12 (aq)). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (336 ms), strict `out2===out3` stable. GRAMPS-Roundtrip stable.
+
+**Bug-Klasse #2 weiter geschlossen:** Konvention 3a (atomar mit global eindeutigem Hof) löst jetzt automatisch auf. Verbleibt: Konvention 3b (atomar ohne Match) → Review-Pfad (Phase 5); Konvention 2 ohne Hof → Pfad B' (Phase 4). Phasen 3 (Lese-Seite-Konsolidierung), 4 (Pfad B'), 5 (Review-Modal) ausstehend.
+
+---
+
+### Session 2026-06-21 — ADR-028 Phase 1: REPROJECT + Migration-ohne-Skip (sw v1026)
+
+**Auslöser:** Bei der konzeptionellen Analyse zur dritten Hof-/Orts-Session zeigten sich zwei strukturelle Bug-Klassen: (#1) Höfe tauchen in der Ortsliste auf — verursacht durch stale `ev.place`-Cache nach Pfad-A/B/C-Match plus Zombie-Farm-POs, die `_migrateFarmPOsToHofObjects` bei fehlendem `villageId` übersprang. (#2) RESI-Events verlieren Ortszuordnung — Lücken im Link-Pass (Konvention 3 atomar, Pfad-B-Bootstrap, Norm-Drift). Tiefe Design-Sitzung führte zu **ADR-028: Deterministische Identitäts-Auflösung — Persistenz durch Daten, nicht durch Annotationen**. Standalone-Spec `ADR-028-DETERMINISTIC-LINK-ENTWURF.md`.
+
+**Architekturprinzip:** `(ev.placeId, ev.hofId)` ist eine reine, totale, deterministische Funktion über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)`. Wo die Funktion partial ist, schließen Algorithmus-Vollständigung und Daten-Anreicherungs-Pfade die Lücken — ohne event-lokale Annotationen, ohne Sidecar, ohne Custom-Tags. Die Re-Derivation beim Load **ist** die Persistenz.
+
+**Phase 1 (sw v1026)** — mechanische Determinismus-Korrekturen, schließt Bug-Klasse #1 strukturell:
+
+- **REPROJECT-Helper `_reprojectEvCache(ev, year)` (gedcom.js):** setzt die ADR-024-Projektions-Invariante strukturell durch. Bei `ev.hofId` → `ev.place = buildPlacForGedcom(ev, year)`, `ev.addr = resolveAddrAsOf(hofId, year)` *nur wenn leer* (User-Wire-ADDR bleibt byte-identisch). Bei nur `ev.placeId` → `ev.place = _buildFormString(placeId, year)`. Rückgabe: `true` bei Mutation → speist `recollapsed`-Counter (analog Fall 1/2a/2b).
+- **Verdrahtung in `_linkGedcomEventsToPlaceObjects`:** REPROJECT am Ende von Pfad A (PLAC-Leitsegment), Pfad B (ADDR im Dorf-Scope, sichtbarer Konvention-2→1-Übergang), Pfad C (Bootstrap, idempotent durch Exakt-Projektions-Voraussetzung). Plus Durchreich-REPROJECT für bereits gelinkte Events (GRAMPS-Parser/IDB-Restore/vorige Loads) — picks Modell-Anreicherungen am Orts-/Hof-Modell auf, ohne die Match-Pfade unnötig zu durchlaufen.
+- **Migration ohne Skip in `_migrateFarmPOsToHofObjects` (gedcom.js):** Bei fehlendem `villageId` zuerst `_hofVillageString(db, pl.title)` probieren → bei Treffer `_ensureVillageChain` aufrufen, `pl.enclosedBy` setzen, regulär migrieren. Echte Orphans (kein Event-Bezug) bekommen `_orphan: true`-Flag statt Skip.
+- **`collectPlaces` blendet Orphan-Farm-POs aus (ui-views-place.js):** `if (po._orphan) continue;` im Fallback-Block → sichtbares Symptom „Höfe in der Ortsliste" verschwindet, Daten bleiben für User-Eingriff erhalten.
+- **+25 Tests Gruppe (ap) in test-unit.js:** _reprojectEvCache-Basissemantik (mit/ohne hofId/placeId, Idempotenz, ADDR-Schutz) · Link-Pass-Integration für Pfade A/B/C inkl. Konvention-2→1-Übergang · Durchreich-REPROJECT für gelinkte Events · Migration mit `_hofVillageString`-Promotion · Orphan-Flag-Markierung. API-Whitelist um `_reprojectEvCache` + `_ensureVillageChain` erweitert.
+
+**Gates:** 771 Unit-Tests grün (+25 (ap)). CSP-Gate grün (Ziel=0). Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (345 ms), `strict` no _-tags stable. GRAMPS-Roundtrip `Unsere Familie_2026-04-11.gramps` stable. „Unsere Familie 2026.ged" REFN-Reordering präexistent (Diff identisch vor und nach den Edits — kein Regress durch ADR-028).
+
+**Lehre:** Der einfachste Determinismus-Garant ist die Reprojektion am Pfad-Ende. Pfad A/B/C haben den Cache `ev.place` *nicht* aktualisiert — Bug-Klasse #1 war die Folge. Eine 3-Zeilen-Helfer-Funktion in 4 Einsatzstellen schließt das strukturell, ohne neue Mechanik. Das Migrations-Skip ohne `villageId` war die zweite Hälfte: `_hofVillageString` existiert seit ADR-026 P2A, war aber an dieser Stelle nicht verdrahtet — Promotion statt Skip ist die korrekte Antwort auf „kein Dorf-Anker da". Phasen 2–6 (Pfad A' atomar, Lese-Seite konsolidiert, Pfad B' Bootstrap, Review-Modal-Refactor, Cleanup) sind in `ADR-028-DETERMINISTIC-LINK-ENTWURF.md` spezifiziert; ausstehend.
+
+---
+
+### Session 2026-06-21 — ADR-027 Pfad C: Bootstrap aus rich-PLAC (sw v1025)
+
+**Auslöser:** User-Befund — Höfe werden in der Orte-Liste angezeigt + Hof-Prefix landet doppelt im ORT-Feld trotz ADR-027 Phase 1–5. Ursachenanalyse: Pfad A ([gedcom.js:1259-1260](gedcom.js:1259)) bricht bei `!hofRegHasData` ab — Pfad A matcht nur gegen *bestehende* hofObjects. Bei einer Datei mit Konvention-1-PLAC („Hof, Dorf, Verwaltung, …"), die nie ADR-026 mit Farm-POs samt `enclosedBy`-Dorf durchlaufen hat, existieren weder Farm-POs (Phase-3-Migration fasst nur welche mit `villageId` an) noch hofObjects → Pfad A fired nie, die rich-PLAC-Events bleiben unaufgelöst. „Migration null Ergebnis" beim User war kein Migrations-Bug, sondern eine Bootstrap-Lücke im Modell.
+
+**Entscheidung (ADR-027 erweitert):** Neuer **Pfad C — PLAC-Bootstrap** parallel zu A+B im Link-Pass. Greedy-shortest-prefix-Loop: für `i = 1 … 2` prüft, ob `segs[i..N].join(', ')` exakt der periodengerechten Projektion (`_buildFormString`) eines `findAllByName(segs[i])`-Kandidaten entspricht. Bei eindeutigem Treffer → `villageId = cand`, `hofAddr = segs[0..i]`, `hofId = findOrCreateHofObject(hofAddr, villageId)`, Event gepointet. Begründung der Auto-Anlage: Quell-Bezug ist eindeutig (exakte Projektions-Reproduktion ist semantisch schärfer als Pfad-A-Anker-Token); semantisch eine Spezialisierung von Pfad A, nicht eine Aufweichung der „bewusste-User-Aktion"-Regel. Reihenfolge: A → Place-Link (Fall 1/2a/2b) → C → B. Spec in `ADR-027-HOF-ENTITY-ENTWURF.md` (Pfad-C-Sektion + Akzeptanzkriterium 2a + Beschlossene Entscheidung Nr. 10 mit Begründung der Policy-Erweiterung).
+
+**Implementierung:**
+- **`findOrCreateHofObject(addr, villageId)` (gedcom.js):** neuer öffentlicher Helfer. Idempotenz gegen bestehende V2-Höfe (`_normHofAddr`-Match), deterministische ID `_hof_<addrSlug>_<vSlug>` mit Kollisions-Suffix, delegiert Anlage an bestehenden `upsertHofObject`. Migration `_migrateFarmPOsToHofObjects` nicht refactored (eigene reichere Logik mit pname→addrs).
+- **`_tryHofBootstrapFromPlac` (gedcom.js):** in `_linkGedcomEventsToPlaceObjects` eingefügt, läuft NACH `_placeLink`. Trigger: `!ev.placeId && !ev.hofId && ev.place.includes(',') && segs.length >= 2`. Schutz 1: mehrere village-Kandidaten mit exakter Projektion → blockieren. Schutz 2: ≥2 bestehende hofObjects an `(norm(lead), winner-villageId)` → blockieren (mirror Pfad A).
+- **Counter `linkedHofBootstrap`** in `AppState._lastLinkPassStats`. Toast-Meldung im File-Load-Pfad: „🏡 N Hof-Zuweisungen erkannt (M aus rich-PLAC neu angelegt) — bitte speichern, …".
+- **Reihenfolge-Fix in `_finishLoad` (storage-file.js):** hofObjects-Aufbau + ADR-026 P2 + ADR-027 P3 MÜSSEN vor dem Link-Pass laufen, sonst würden V2-Höfe aus Pfad C beim `_mergeHofObjects` weggeräumt. Inline-Duplikat durch `await _deriveHofAndMigrate()` ersetzt; ADR-027 P3 wurde im File-Load-Pfad zuvor versehentlich nie gerufen.
+- **Link-Pass in `_deriveHofAndMigrate` (storage.js):** `_linkGedcomEventsToPlaceObjects` wird jetzt zentral nach den Migrationen aufgerufen. `ev.placeId`/`ev.hofId` sind runtime-only (nicht GEDCOM-serialisiert) → Re-Derivation auf jedem Load. Vorher nur im File-Load-Pfad; jetzt für Auto-Load/Revert/Demo gleiche Pfad-A/B/C-Coverage.
+- **+12 Tests Gruppe (ao) in test-unit.js:** findOrCreateHofObject (4) + Pfad C (8). `findOrCreateHofObject` in API-Whitelist eingetragen.
+- **Diagnose-Script `test-pfadc-diagnose.js`** zählt vor/nach Link-Pass; Hinweis am Skript-Kopf: ohne IDB-geladene placeObjects sieht Headless nichts — Pfad C braucht modellierte Dörfer als Anker.
+
+**Tests + Gates:** 746 Unit-Tests grün (+12 (ao)). CSP-Gate (Ziel=0) erreicht. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (332ms), strict `out2===out3` stable. Konvention 1 byte-identisch in Wire-Treue (Pfad C legt hofObject NUR an, wenn `hofAddr + ', ' + villagePart === ev.place` — Re-Save reproduziert original PLAC).
+
+**Doku synchronisiert:** ADR-027-HOF-ENTITY-ENTWURF.md (Pfad-C-Sektion + Konvention-Vielfalt-Update + Sonderfälle-Liste + Akzeptanzkriterium 2a + Prinzip-Endgültig + Phase-2-Eintrag + Beschlossene Entscheidung Nr. 10). ARCHITECTURE.md ADR-027 Phase-2-Beschreibung um Pfad C erweitert. ROADMAP.md sw v1024→v1025, 714→746 Tests, Handbuch-Stand als „veraltet" markiert.
+
+---
+
+### Session 2026-06-20 — ADR-027: Hof als eigenständige Entität (sw v1020–v1024)
+
+**Auslöser:** ADR-026 (Höfe als `placeObject` Typ `Farm`) hat in der Praxis vier strukturelle Schwächen offenbart: Adresse ohne Wahrheits-Anker (parallel in `po.title` + `ev.addr`), semantische Vermischung von Geografie und Adresse (Farm im selben Typ-Slot wie Town), `pnames` als Adress-Historie überlädt die Semantik (sprachliche Varianten ≠ Umnummerierung), Hof-Lebenszyklus nicht erstklassig modellierbar. v1011–v1018 waren Korrekturen entlang dieser Wurzel.
+
+**Konzept (ADR-027, ARCHITECTURE.md):** Hof = eigenständige Entität `hofObject` mit Fremdschlüssel auf ein Dorf-`placeObject`. `placeObjects` enthält fortan nur Verwaltungseinheiten. Events tragen `ev.placeId` immer auf das Dorf, `ev.hofId` optional auf den Hof. Adresse single source in `hofObject.addrs[]` mit Zeitfenstern. Wire-Treue erhalten: GEDCOM bit-identisch für Konvention 1/3; Konvention 2 (PLAC=Dorf + ADDR) wird auf Save in Konvention 1 transformiert (idempotent ab Iteration 2).
+
+- **Phase 1 (v1020):** Schema + Persistenz, kein UI-Effekt. `APP_KNOWN_SCHEMA_VERSION=2` + Schema-Refusal-Modal bei v3+-Datei; `orte.json` Wrapper v2 mit `hofObjects`-Sektion; IDB-Mirror `stammbaum_hofobjects_v2`; `getHofRegistry()` (byId/byVillageId/findByAddr/findAllByAddr/resolveAddrAsOf mit Existenzspanne-Disambiguierung); `mutateHofObject`/`upsertHofObject` (4-Schritt-Ritual verriegelt); `_normHofAddr`/`_isHofObjectV2`-Shape-Filter. +45 Tests Gruppe (aj). Auto-Reload aus v1019 als Vorbedingung.
+- **Phase 2 (v1021):** Mapping-Layer. `buildPlacForGedcom(ev, year)` baut PLAC aus Hof-Adresse + Dorf-Hierarchie (V2-Pfad) oder fällt auf Legacy ADR-026 zurück. Writer `_resolvedPlaceName` + `geoLines` priorisieren `ev.hofId` vor `ev.placeId`. **Link-Pass Pfad A** (PLAC-Leitsegment → Hof+Dorf in einem Schritt, Anker-Check ADR-024 v1015 wiederverwendet) + **Pfad B** (ADDR im Dorf-Scope → Hof, eindeutig). GRAMPS-Parser derived V2-hofObjects parallel zu Farm-POs (kein Roundtrip-Bruch). +15 Tests Gruppe (ak).
+- **Phase 3 (v1022):** Daten-Migration. `_migrateFarmPOsToHofObjects(db)` idempotent: Farm/Building-POs → V2-hofObjects (deterministische `_hof_<addr>_<village>`-IDs), Events repointet (placeId → villageId, hofId neu), Farm-POs gelöscht. Backup `stammbaum_orte_backup_pre_adr027_YYYYMMDD` in IDB vor erstem Lauf. Reverse-Migrator `_migrateHofObjectsBackToFarmPOs` als Sicherheitsnetz (2 Versionen aktiv). `_eventCoords`/`hofMeta`/`buildHofIndex` lesen V2-hofObjects mit Vorrang. GRAMPS-Parser+Writer komplett umgestellt (Building-placeobj aus V2). +33 Tests Gruppe (al).
+- **Phase 4 (v1023):** Cleanup. `_buildFormString` wieder einargumentig — `opts.includeAddrLeaf` + Farm/Building-Spezialfall entfernt. `collectPlaces` v1013-`_seenIds`-Workaround entfernt (bare-vs-rich-Farm-Dubletten strukturell unmöglich). Validator `HOF_NO_COORD`/`HOF_FAR` auf V2-hofObjects. Hofchronik V2-aware mit Adress-Historie als Sub-Zeile. Code-Hygiene-Gate: `grep includeAddrLeaf` in `*.js` leer. ADR-026-Tests `ah-2c` ersatzlos entfernt, `af.12` umgestellt auf V2-Modell.
+- **Phase 5 (v1024):** UI-Trennung + Anreicherung. **Höfe-Liste gruppiert nach Dorf** statt Alpha-Buchstabe. Hof-Detail zeigt Adress-Historie aus `hof.addrs[]` als Sub-Zeile. **„Hof-Zuweisungen prüfen"-Review** als permanente Datenqualitäts-Funktion: Button `🔗 Hof-Zuweisungen prüfen [N]` mit Badge-Zähler im Höfe-Tab; Modal mit Tabelle (Person/Datum/Adresse/Dorf); Pro-Zeile-Aktionen „Hof wählen" (Dropdown V2-Höfe im Dorf), „+ neu anlegen" (legt V2-hofObject aus ev.addr + ev.placeId an), „Ignorieren" (persistiert per Datei). **Event-Detail ⚠-Indikator** neben Adresse bei unresolved Events; Klick öffnet Review-Modal fokussiert auf diese Zeile. +13 Tests Gruppe (am), In-Memory-localStorage-Stub im Test-Harness. Browser-verifiziert an demo.ged.
+
+**Ergebnis nach Phase 5:** Eine Wahrheit pro Konzept (Adresse in `hofObject.addrs`, Koords in `hofObject.lat/long`, Verwaltungs-Hierarchie in `placeObject.enclosedBy`). Eine Projektion pro Funktion (`_buildFormString` einargumentig). Pname-Semantik sauber. Hof-Lebenszyklus erstklassig modellierbar. Höfe-Tab als orthogonale Domäne mit eigenem Validator, Review-Workflow + Adress-Historie. **714 Unit-Tests** (Gruppen (aj)+(ak)+(al)+(am), +106 ggü. v1019), GEDCOM `MeineDaten_ancestris.ged` `net_delta=0` + `out1===out2` stable, GRAMPS `xml1===xml2` stable.
+
+**Phase 6 ausstehend (≥ v1024+2):** Reverse-Migrator löschen, Legacy-IDB-Key `stammbaum_hofobjects`, v1-Schema-Read entfernen.
+
+**Lehre:** Migration in scharfen Phasen mit jeweils eigenem Gate (alle Tests + Roundtrips) erlaubt destruktive Refaktorierung ohne Risiko. Die Idempotenz der Migrations-Helper (norm-fold + villageId-Key) ist die Voraussetzung — zwei Loads dürfen denselben DB-Zustand erreichen, sonst entstehen Dubletten beim Lade-Pfad-Cross-Talk. Coexistenz-Phase 2 (V2 parallel zu Legacy in `db.hofObjects`, getrennt durch Shape-Filter) hat sich als sicheres Brückenmodell bewährt. Durable Detail: Standalone-Spec `ADR-027-HOF-ENTITY-ENTWURF.md`.
+
+---
+
+### Session 2026-06-19 — ADR-026: Höfe als geokodierte Orts-Objekte (sw v989–v998)
+
+**Auslöser:** Höfe sollen **geräteübergreifend eigene Geokoordinaten** haben, damit **Binnenwanderung** (Umzug zwischen Höfen im selben Ort) auf der Karte sichtbar wird. Bisher: Hof-Identität = `ev.addr`-String, Koords/Notiz im localStorage-Sidecar `hofObjects` (kein Sync); Koords nur ins GEDCOM, wenn das Event kein PLAC hatte.
+
+**Konzept (ADR-026, ARCHITECTURE.md):** Ein Hof wird ein `placeObject` vom Typ `Farm`, `enclosedBy` seinem Dorf, mit eigenen `lat/long/note`. GEDCOM-Zwang: `MAP`/`NOTE` nur unter `PLAC` → der Hof ist das spezifischste Glied der Orts-Hierarchie. Entscheidungen: ADDR als Postdetail behalten · harter Schnitt · Zwei-Felder-Eingabe.
+
+- **Phase 1 (v989):** `_migrateHofObjectsToPlaceObjects` + Helfer, unverdrahtet, +24 Tests.
+- **Phase 2A (v990):** Migration verdrahtet (Storage-Schicht, nach hofObjects-Ableitung). **Empirischer Befund:** GEDCOM hat keine Dorf-placeObjects → `_hofVillageString` promoviert das Dorf aus `ev.place` (führendes Hof-Blatt gestrippt → Reimport-idempotent). Kein Dorf bei `ev.place==Adresse`.
+- **Phase 2B (v991):** alle 5 Lade-Pfade via zentralem `_deriveHofAndMigrate`; echte Enclosure-Kette `_ensureVillageChain`; Typ neuer Orte `Unknown` (nicht „Stadt").
+- **Phase 2C/1 (v992):** scoped **Hof-Picker** (🏡) im Event-Formular (Farm-POs, auf gewählten Ort eingegrenzt); Ort-Picker filtert Höfe aus → saubere Eingabetrennung; `ev.place`-Reprojektion (ADR-024-Invariante).
+- **Phase 2C/2a (v993):** `buildHofIndex` führt Farm-`placeId` mit; `hofMeta` liest Koords/Notiz primär aus Farm-PO; Karte + Listen-Badges umgestellt.
+- **placeObjects-Reload-Persistenz (v995, T0-STORAGE-Fix):** `loadPlaceObjectsFromIDB` läuft jetzt auf **allen** Reload-Pfaden (vorher nur Datei-Laden) — behebt Pre-existing-Bug, entriegelt den Hartschnitt.
+- **Phase 2C/2b–2d (v994/v996):** Hof-Schreibwege + Detail auf Farm-PO; **Koords single-source** — `geoLines` exportiert über `ev.placeId` (nur bei Abweichung von `obj.lati` → `net_delta=0` erhalten); `saveHofRename` überträgt Koords + entfernt Orphan.
+- **Phase 2C/2c (v997):** **Notiz single-source** — `[Hof]`-Notiz-Writer aus Farm-PO gespeist (`_hofNoteFor`/`_hofNoteText`); bewährter `[Hof]`-Lesepfad unverändert (kein Parser-Risiko). Gate: af.16 (Notiz bei leerem Sidecar überlebt Roundtrip).
+- **Validierung (v998):** zwei Geo-Regeln in `validatePlaces()` — `HOF_NO_COORD` (Hof ohne Koordinaten) + `HOF_FAR` (Hof > 25 km vom Ort, `_placeDistKm`).
+
+**Ergebnis:** Koords + Notizen single-source im Farm-`placeObject` (geräteübergreifend); Binnenwanderung sichtbar; saubere Ort/Hof-Eingabetrennung; `hofObjects`-Sidecar write-frozen (nur noch Read für Altbestände). Verifiziert: Ort-Koord-Änderung lässt Hof-Koord unberührt (unabhängige placeObjects). **558 Unit-Tests** (Gruppen (ae)+(af), +38), GEDCOM `net_delta=0`, GRAMPS stable, browser-verifiziert an `demo.ged`.
+
+**Lehre:** Verifikation deckte mehrere verdeckte Fallen auf (Dorf-Verlust ohne Promotion, ev.place-Stale-Mischung, placeObjects-Reload-Lücke, geoLines-placeId-Lücke, Notiz-Export am Sidecar). Jede Entfernung eines Legacy-Stores erst nach Roundtrip-/Reload-Beweis. Durable Detail: Memory `place_hist`.
+
+---
+
+### Session 2026-06-15 — Hof-Notiz vs. Event-Notiz + RESI-Notiz-Anzeige (sw v987–v988)
+
+**Auslöser:** Beim Eintippen einer Notiz an einem RESI-Event wurde sie zur Hof-Notiz — keine getrennte Behandlung von adressbezogener Hof-Notiz und event-spezifischer Notiz.
+
+- **v987 — RESI-Event-Notiz verschwand bei Streu-Hof.** `_derivedHofObjectsFromDb` leitet Hof-Notizen aus RESI-Notizen ab → Notiztext landete in `_allHofNoteTexts`. Eine Event-eigene Inline-Notiz wurde **global** unterdrückt, sobald *irgendein* hofObject (auch unter abweichendem Adress-Key) denselben Text trug, während für die eigene Adresse keine Hof-Notiz angezeigt wurde → Notiz verschwand ganz. Fix: Inline-Notiz (`ev._noteOrig`) nur noch gegen die für DIESE Adresse geltende Hof-Notiz dedupliziert (`!== _hofNote`), nicht global. Gleiche Korrektur in `ui-book.js`.
+- **v988 — Saubere Trennung per GEDCOM-konformem `[Hof] `-Marker.** Hof-Notiz = normale `NOTE` mit Text-Präfix `[Hof] ` (kein Custom-Tag, in jedem Programm lesbar, deterministisch routbar). `HOF_NOTE_PREFIX` + `_isHofNoteText`/`_stripHofPrefix` in `gedcom.js`. **Parser** (`_derivedHofObjectsFromDb`): leitet `hof.note` nur noch aus `[Hof]`-präfixierten Notizen ab (Präfix gestrippt) → getippte Event-Notizen bleiben Event-Notizen. **Writer**: Hof-Notiz als `[Hof]`-präfixierter `@N_HOF@`-Record; event-eigene Inline-Notiz präfixlos; Dedup per Präfix-Form. **Anzeige** (Personendetail + Buch): präfixierte Teile aus der Event-eigenen Notiz ausgeschlossen, Hof-Notiz separat (clean ohne Präfix in der UI). **Hof-Editor** speichert Klartext, Präfix nur beim Schreiben. Verifiziert in laufender App: Event-Notiz bleibt event-spezifisch; explizite Hof-Notiz round-trippt als `[Hof] …`; beide koexistieren; Round-Trip stabil (o1=o2=o3); demo.ged net_delta=0; 475 Tests grün.
+
+**Lehre:** GEDCOM kennt keine Hof-Entität — ein lesbares Text-Präfix in einer Standard-`NOTE` trennt zwei logisch verschiedene Notiz-Arten konform und ohne proprietäre Tags. Durable Detail: Memory `place_hist`.
+
+---
+
+### Session 2026-06-14 — Quellen-Integrität + historische Ortsanzeige (sw v968–v986)
+
+#### Historische Ortsanzeige — Projektions-Invariante (v983–v986)
+
+Ausgelöst durch RESI-Events, die `"Ochtrup (Westf.)"` statt des historischen Hierarchie-Strings zeigten. Tiefe Design-Sitzung zum Ortskonzept (ADR-024):
+
+- **Invariante geklärt:** Bei gesetztem `ev.placeId` ist `ev.place` **keine eigene Wahrheit**, sondern die zwischengespeicherte periodengerechte Projektion `_buildFormString(placeId, year)`. Anzeige (`_evFullPlace`) und Writer (`_resolvedPlaceName`) leiten beide live aus dem Modell ab — `ev.place` ist für verknüpfte Events faktisch nur Cache.
+- **v984 war falsch** (verworfen): setzte `placeId`, ließ `ev.place` aber divergent → Invarianten-Bruch + stille Massen-Mutation beim nächsten beliebigen Save.
+- **v985 — Link-Pass A1** (`_linkGedcomEventsToPlaceObjects`): (1) Atomarer Cache-String (kein Komma) → Identitäts-Match via `findByName`, dann `ev.place` auf die Projektion neu kollabieren; weicht sie ab (enclosedBy nachträglich ergänzt) → überschreiben + `markChanged`. (2) Hierarchie-String (mit Komma) → nur bei exaktem Projektions-Match verknüpfen; fremde/manuelle Hierarchien NIE überschreiben. Erklärender Info-Toast in `storage-file.js`. Roundtrip net_delta=0 stabil, 475 Tests grün.
+- **v986 — Auffindbarkeit:** Dubletten-Zähler-Badge auf ⇉ (`_refreshPlaceMergeBadge`, analog Validator-/GOV-Badge). Stale Strings erscheinen ohnehin automatisch in der Ortsliste (`collectPlaces`) und werden von der String-Dedup (`_placeStringCoreFold` foldet erstes Komma-Segment) mit dem placeObject gruppiert → per Merge lösbar. Keine separate Validator-Regel nötig.
+- **v983** — `_evFullPlace`: historischer pname auch ohne Hierarchie-Komma auflösen (Zwischenschritt, durch A1 abgelöst).
+- **Lehre:** `net_delta=0` gilt nur für *unveränderte* Modelle. Orts-Anreicherung IST eine Änderung; dass Events neu kollabieren + Datei dirty wird, ist korrekt. Durable Lehren in Memory `place_hist`.
+
+#### Quellen-Integrität — verwaiste Quellbezüge (v975–v980)
+
+- **v975** — `deleteSource` ruft `_removeSourceRefs(id, db)`: entfernt alle Zitate der SID aus `citations[]` (birth/chr/death/buri/events), `nameCitations`, `extraNames[].citations`, `associations[].citations`, `topSources`(+`topSourcePages/QUAY/Extra`), FAM-Events, `childRelations[].citations`. Neue Validator-Regel `ORPHAN_CITATION` (warn) für Bezüge auf nicht-vorhandene Quellen (INDI + FAM).
+- **v976/v977** — verwaiste Bezüge visuell markiert: `.src-tag--orphan` (Form) + `.src-badge--orphan` (Detail/`citTagsHtml`), oranges ⚠ mit Tooltip.
+- **v978** — ✕-Button direkt im Orphan-Badge → `_removeOrphanCitBySid` (entfernt SID DB-weit + re-render).
+- **v979** — Fix: `showDetail()` statt nicht-existentem `showPersonDetail()`.
+- **v980** — Fix: `db.individuals` statt `db.persons` in `_removeSourceRefs` (vorher lief die Schleife ins Leere).
+
+#### Quellen-Darstellung + Selects (v969–v973, v981–v982)
+
+- **v970/v971** — `nameCitations` in Quellen-Zeile mitanzeigen, Quellen-Chips ins Hero-Banner verlagert.
+- **v969/v973** — „S."-Prefix bei Seitenangabe + Tooltip entfernt. **v972** — `src-badge-link` `cursor:pointer` + Hover-Farbe.
+- **v981/v982** — Quellen-Selects in Aufgabe-Modal (neues `addTaskSrcSid`, gespeichert als `t.sid`) + Forschungsprotokoll nach Kurzname (`abbr || title`) sortiert.
+
+#### Weitere Fixes
+
+- **v974** — Ortsliste-Filter persistent: `renderPlaceList()` (no-arg) delegiert an `filterPlaces()` mit aktuellem Suchtext → Typ-/GOV-Filter, Gruppierung + Suche überleben Tab-Wechsel und Datenänderungen.
+- **v968** — GEDCOM-Writer: CONC/NOTE byte-sichere 255-Byte-Grenze (Mehrbyte-UTF-8).
+
+---
+
+### Session 2026-06-13 — Refaktor-Härtung nach Selbstkritik (sw v950)
+
+Selbstkritische Bewertung des v949-Splits hatte 4 konkrete Schwächen benannt: `winner()`-Logik im View-Helper dupliziert (Invariante nur per Konvention geschützt), Naming inkonsistent (`_placeHist*` vs. `_placeDetail*`), Helfer nicht direkt testbar, Doku grandios. Behoben:
+
+- **Neue Registry-Methode `enclosureWinnerAsOf(placeId, year)`** in `gedcom.js` (Z. 951–971). Liefert den gewinnenden enclosedBy-Eintrag eines Knotens zum Stichjahr — die kanonische Auswahl-Logik (höchstes dateFrom gewinnt, undatiert als Fallback, truncated-Flag wenn datierte Eltern aber keiner passt). `enclosureChainAsOf` (Writer) ruft die Methode jetzt statt die Logik zu inlinen; `_placeDetailEnclosureTimeline` (View) ebenfalls. **WYSIWYG-Invariante strukturell verriegelt** statt per Doc-Comment.
+- **+18 Unit-Tests** (Block (i2), `test-unit.js`): 11 Szenarien (leer / undatiert / inside / outside-with-truncated / Grenzdatum-Überlappung / datiert+undatiert / year=null / unbekannter Knoten / verschachtelte Überlappung / Regression Sassenberg-Kette). Total **420 → 438** Tests grün.
+- **Helfer-Naming einheitlich `_placeDetail*`** (vorher `_placeHist*` für Phase A + `_placeDetail*` für Phase B). `sed`-Rename in `ui-views-place.js`, Snapshot unverändert.
+- **`_placeDetailEnclosureTimeline` schrumpft 78 → 66 Z.** durch Wegfall der lokalen `winner()`-Kopie.
+
+Verifikation: `test-csp.js` OK · `test-unit.js` 438/438 · `test-snapshot-place.js` 2/2 byte-identisch · `test-roundtrip.js MeineDaten_ancestris.ged` net_delta=0 stable.
+
+**Lehre:** Refactor-Selbstkritik *vor* dem Push hätte v949 direkt in diese Form gebracht. Künftig bei Helfer-Extraktion immer fragen: „Ist die Logik *kopiert* oder *aufgerufen*?" Kopie = schlecht. Aufruf = gut.
+
+---
+
+### Session 2026-06-13 — SHOWPLACE-SPLIT (schmale Variante) (sw v949)
+
+**Auslöser:** Re-Review v948 hatte `showPlaceDetail` (631 Z., länger als alle drei T0-FUNC-SPLIT-Opfer zusammen) als nächste konkrete Code-Qualitäts-Schuld identifiziert. Plan-Selbstkritik schlug die *schmale* Variante vor: erst Snapshot-Schutz, dann nur die zwei echten Logik-Sektionen + 4 triviale extrahieren — 30 % des ursprünglichen Aufwands für 80 % des Gewinns.
+
+#### Snapshot-Harness (`test-snapshot-place.js`)
+
+- JXA-Standalone-Skript, lädt `gedcom.js` + `gedcom-parser.js` + `ui-views-place.js` mit aggressiven Stubs (`_configureDetailToolbar`, `_beforeDetailNavigate`, `_updatePlaceListCurrent`, `_activateDetailContainer`, `showView`, `_initPlaceDetailMap`, `showMain`, `ViewState.setCurrent`, `relRow` als Nachbau aus ui-views.js).
+- Setup-Falle (durable): `const`-Bindings (`AppState`, `UIState`) leaken nicht aus dem JXA-Eval — Brücke `window._snapApi = { … }` muss **innerhalb** desselben Eval-Strings angehängt werden, nicht außerhalb (gleiches Muster wie test-unit.js).
+- Test-Datei: `demo.ged` (im Repo, reproduzierbar). Synthetisches PlaceObject `Test-Sassenberg` + Eltern `Test-Hochstift` injiziert nach `setDb`, deckt alle Phase-A-Sub-Sektionen ab (Verwaltungsgeschichte mit `winner()` / Verwaltungstyp historisch / Zugehörigkeit-nach-Jahr / Frühere Namen).
+- Deterministik-Falle (durable): `_evSectionId = 'place-ev-' + Date.now()` → `Date.now` global stubben (`return 1234567890000`), sonst non-deterministischer Snapshot pro Run.
+- Goldfile-Vergleich byte-genau, `--update` regeneriert. 240 ms Laufzeit.
+- Zwei Goldfiles getrackt (`test-snapshot-place.snap/standard_M_nchen…html` 31937 chars + `withHistory_Test-Sassenberg.html` 4126 chars).
+
+#### Phase A — zwei Logik-Helfer
+
+- **`_placeHistEnclosureTimeline(po, reg, placeId)`** (78 Z.) — Verwaltungsgeschichte aus `enclosedBy[]` als aufgelöste Zeitlinie. Enthält die `winner()`-Funktion, die *identisch zu `enclosureChainAsOf`* in gedcom.js ist (höchstes `dateFrom` gewinnt bei Überschneidung). Diese Identität ist die **WYSIWYG-Invariante v940**: Was der Ort-Steckbrief zeigt, schreibt der GEDCOM-Writer 1:1. Fallback ohne `enclosedBy`: aktuelle Kette als „Teil von"-Zeile.
+- **`_placeHistHierarchyTimeline(po, placeId, reg)`** (64 Z.) — „Zugehörigkeit nach Jahr". BFS-Schlüsseljahre rekursiv aus der Eltern-Kette, Klemmen auf Existenzdaten + dokumentierten enclosedBy-Bereich, Duplikat-Filter (gleiche Kette), Lücken als „unbekannt", abgebrochene Ketten mit „› ?"-Suffix.
+
+#### Phase B — vier triviale string-Helfer
+
+- `_placeDetailHero(place, placeName)` — Avatar + Name + Personen-Counter
+- `_placeDetailLinkButton(place, placeName)` — „🔗 Mit PlaceObject verknüpfen" wenn kein placeId
+- `_placeDetailNote(place)` — Notiz aus placeObject.note
+- `_placeDetailMapSection(place, placeName)` — Karte + Apple/OSM-Links + Geocode-Button (umbenannt von `_placeDetailMap`, weil `_placeDetailMap` schon als Leaflet-Map-Variable existiert — Namenskollision-Falle)
+- `_placeDetailDeleteRow(place, placeName)` — Lösch-Button am Ende (Bedingung intern)
+
+#### Bilanz
+
+| Vor | Nach Phase A | Nach Phase B |
+|---|---|---|
+| `showPlaceDetail` 631 Z. | 479 Z. (−152) | **423 Z. (−208 ges., −33 %)** |
+| 0 Helfer | 2 Logik-Helfer (78 + 64) | + 4 triviale (~58 Z.) |
+
+#### Pre-Commit-Gate erweitert
+
+`.git/hooks/pre-commit` + `setup-hooks.sh` führen jetzt **drei** Tests aus: `test-csp.js` + `test-unit.js` + `test-snapshot-place.js`. Das Snapshot-Gate verriegelt strukturell gegen UI-Drift in `showPlaceDetail` — Phase-A-Logik (WYSIWYG-Invariante v940) wird bit-genau geschützt. Bei beabsichtigter UI-Änderung: `osascript -l JavaScript test-snapshot-place.js --update` → Goldfile-Diff in den Commit nehmen.
+
+#### Lehren (durable)
+
+- **„Schmal vor breit":** der originale Plan (10 Helfer in 6 Phasen, M+ Aufwand) wurde durch Selbstkritik auf die zwei *echten* Logik-Sektionen reduziert. Phase B (triviale Helfer) ist trotzdem mitgenommen worden, weil sie nach Phase A noch billig waren und das Top-Level weiter aufräumen. Pure Funktionen mit klaren Argumenten — keine State-Magic, kein Closure-Tricks.
+- **Snapshot ist die *richtige* Antwort** auf „WYSIWYG-Invariante schützen". Pre-Refactor-Test → Goldfile → Refactor → byte-genaue Re-Verifikation. Manuelles Klicken nach 4 h Konzentration ist unzuverlässig; ein 240-ms-Test ist deterministisch.
+- **Namens-Hygiene matters:** `_placeDetailMap` schon vergeben (Leaflet-Variable seit P5a-5) → Helfer heißt `_placeDetailMapSection`. JXA-Eval bricht mit klarer Fehlermeldung („Cannot declare a function that shadows…").
+- **JXA-Eval-Brücke:** `const`-Bindings müssen *innerhalb* desselben eval-Strings auf `window.X` kopiert werden; das ist seit MEMORY („`const`-Eval-Leak", test-unit.js-Lehre) bekannt, aber leicht zu vergessen.
+
+#### Verifikation (live)
+
+```
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.
+
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+
+$ osascript -l JavaScript test-snapshot-place.js
+✓ standard / München, Bayern, Deutschland  (31937 chars)
+✓ withHistory / Test-Sassenberg  (4126 chars)
+✓ 2 Snapshots OK
+
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable
+```
+
+---
+
+### Session 2026-06-13 — CSP-Regress-Fix + Pre-Commit-Gate (sw v948)
+
+**Auslöser:** Komplette Re-Bewertung (Architektur/Code/Sicherheit) deckte auf, dass `test-csp.js` seit v945 (vor 3 Tagen) rot ist — `index.html:544` enthielt eine inline-`style="margin-top:8px;"`, die mit dem Template-Builder-Erweiterungsblock („Implizite Felder"-Select) eingeschleust wurde. Die ROADMAP-Aussage „CSP belegt statt behauptet — 0 Fundstellen" stimmte aktuell nicht. **Strukturelle Ursache:** kein automatisches Pre-Commit-Gate für die Test-Suite.
+
+#### v948 — Hebel #1: CSP-Regression beseitigt
+
+- `index.html:544`: `<label class="form-label" style="margin-top:8px;">` → `<label class="form-label mt-8">` (Utility-Klasse `.mt-8` existiert bereits in `styles.css:2136`).
+- `test-csp.js` → **OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.**
+- Die 19 INFO-Treffer in `ui-print.js` bleiben — sie landen in standalone-HTML-Druckdokumenten (Statistik-Report, Ortssippenbuch, Hofchronik), die in eigenen Browser-Fenstern ohne CSP-Header öffnen; sie sind kein Fail.
+
+#### v948 — Hebel #2: Pre-Commit-Test-Gate eingerichtet
+
+- Neuer Pre-Commit-Hook `.git/hooks/pre-commit` führt vor jedem Commit aus:
+  - `osascript -l JavaScript test-csp.js` (~0.5 s)
+  - `osascript -l JavaScript test-unit.js` (~5 s)
+- **Schlägt einer fehl, wird der Commit abgebrochen.**
+- Skip-Mechanismus für Notfälle: `git commit --no-verify` (bewusst, aber dokumentiert).
+- Hook ist nicht in Git versioniert (`.git/hooks/` ist nicht im Repo) — neue Worktrees / neue Geräte müssen ihn selbst installieren. Setup-Hilfe: `setup-hooks.sh` im Repo-Root (versioniert, idempotent: legt den Hook neu an, falls fehlend).
+
+#### Verifikation
+
+```
+$ ./setup-hooks.sh
+✓ Pre-Commit-Hook installiert.
+
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.
+
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable  332ms  (+622 PEDI)
+```
+
+**Lehre (durable):** `test-csp.js` muss als Gate laufen, nicht als gelegentlicher Lauf. v945 hat gezeigt: ein einzelnes inline-`style=` schlüpft durch, wenn nichts es vor dem Commit prüft. Roundtrip-Test bleibt bewusst außerhalb des Hooks (~1 s + Datei-Abhängigkeit von `MeineDaten_ancestris.ged`); er wird vor sw-Bumps / Release-Commits manuell ausgeführt.
+
+---
+
+### Session 2026-06-11 — Template-Generator: Ortspicker, implizite Defaults, Familien-Dedup (sw v945–v947)
+
+Drei Ausbaustufen am Frei-konfigurierbaren Template (Eingabe-Templates 🛠) — der Builder wird zu einem vollwertigen Erfassungs-Werkzeug für ortsfeste Quellen.
+
+#### v945 — Ortspicker + implizite Default-Werte mit hidden/prefill-Toggle
+
+- **Builder, pro Feld eine zusätzliche Wert-Spalte** (+ 📍-Button für Feldtyp `place`/`resi`): ausgefüllte Werte werden beim späteren Erfassen <em>implizit gesetzt</em>, leere weiterhin abgefragt.
+- **Per-Template-Schalter `context.implicitMode`** mit zwei Optionen:
+  - `hidden` — implizite Felder erscheinen als Chip im Kopfbereich der Erfassungs-Maske (Standardpfad für „immer gleich" wie Quelle/Ort eines Kirchenbuchs).
+  - `prefill` — implizite Felder erscheinen vorbelegt + 🔒 (überschreibbar, falls einzelne Einträge abweichen).
+- **Ortspicker zusätzlich für `qt-f-place` (Builder) und für place/resi-Inputs in der Erfassungs-Maske**; `placePickerSelect` feuert nun ein `input`-Event, damit der delegierte Listener (`qtFieldEdit`) Text **und** `placeId` aus dem versteckten Hidden-Input liest.
+- `ctx.placeId` und per-Feld-`placeId` fließen in alle vier Save-Pfade.
+
+#### v946 — Wohnort = Adresse, Ort kommt aus ctx (impliziter Beleg)
+
+- **Feldtyp `resi`** (Wohnort) verliert seinen Ortspicker: Builder-Placeholder „Adresse (leer = abfragen)", Erfassungs-Placeholder „Adresse" + bestehendes Adress-Autocomplete (`_initAddrAutocompleteFor`).
+- `_qtSaveCustom` schreibt RESI-Events nun korrekt mit `addr=val` (z. B. „Oster 12") und `place`/`placeId` aus dem Template-Kontext (z. B. „Ochtrup"); vorher wurde der Wert irrtümlich gleichzeitig in `place` UND `addr` geschrieben.
+- `qtSaveEntry`/`_qtAfterSave` führen kein `__pid` mehr für resi.
+
+#### v947 — Familien-Dedup bei verknüpften Eltern/Ehepartnern
+
+- **`_qtSaveCustom`** erkennt: wenn Vater UND Mutter beide via Treffer-Box mit einer bestehenden Person verknüpft sind und beide eine gemeinsame `fams`-Schnittmenge haben, wird die **bestehende Familie wiederverwendet** — die Hauptperson wird als zusätzliches Kind angehängt, der Beleg landet in `family.childRelations[main.id].citations`.
+- Analog für die Ehe-Familie (Hauptperson + Ehepartner beide verknüpft): bestehende Familie behalten, `marr`-Datum/Ort ergänzen falls leer, Beleg auf `marr.citations` anhängen.
+- Edge-Cases (nur einer verknüpft, beide oder einer neu) → neue Familie wie bisher. Der Hinweis-Text zeigt „🔗 Eltern-Fam"/„🔗 Ehe-Fam" bei Reuse.
+
+---
+
+### Session 2026-06-10 — Ortspicker periodengerecht + Verwaltungs-Zeitlinie (sw v937–v941)
+
+#### v937 — Ortspicker zeigt nur `po.title`, füllt periodengerechten Namen per resolveAsOf
+
+- Bisher wurden alle historischen Schreibweisen (`pnames`) als separate Einträge im Picker angeboten — bei einem Ort mit 4 Varianten 4 fast identische Zeilen.
+- Neu: **Deduplizierung nach `placeId`**, im Dropdown erscheint nur der Haupttitel (`po.title`).
+- **Bei Auswahl wird der periodengerechte Name eingesetzt**: `resolveAsOf(placeId, year)` schreibt für ein 1750er-Ereignis den damaligen Namen ins Feld (z. B. „Sassenbergk"), für ein 1900er-Ereignis den heutigen („Sassenberg"); `placeId` landet im Hidden-Feld.
+- `year` kommt aus dem zugehörigen Datumsfeld der aktuellen Maske (`ef-date-y`, `fev-date-y`, `ff-mdate-y`, `pf-*-date`); Helfer `_yearFromDateField()`.
+
+#### v938 — pname-Duplikate durch Hierarchie-Strings im Ortspicker beseitigen
+
+Zwei Ursachen einer hartnäckigen Duplikat-Schleife im Ortsregister behoben:
+
+1. **`onSelect`** schreibt nur noch Atom-Namen ins Feld — Hierarchie-Strings (mit Komma) werden abgelehnt, Fallback auf `po.title`. Verhindert, dass beim nächsten Roundtrip „Ochtrup, Grafschaft Salm-Horstmar, …" als neuer `pname` ankommt.
+2. **`_migratePlaceObjects`** (gedcom.js) räumt beim Laden `pnames` dedup-bereinigt auf (selber normalisierter Name + selbe Datumsgrenzen → nur erster Eintrag bleibt).
+
+Nachzug — Robustheit am Lade-Pfad:
+- `_migratePlaceObjects` wird jetzt zusätzlich am Ende von `loadPlaceObjectsFromIDB` aufgerufen (vorher lief setDb() vor dem JSON-Laden, deshalb wurden aus `stammbaum-orte.json` geladene PlaceObjects nie migriert → Duplikate blieben im Speicher).
+- Hierarchie-Strings mit Komma werden aus `pnames` jetzt unabhängig von Datumsvarianten entfernt (alter Dedup reagierte nur auf exakt gleiche `dateFrom`/`dateTo`-Kombination).
+
+Außerdem: `_resolvedPlaceId` (saveEvent, Person-Events, Familien-Events) prüfte nur `po.title === place`. Wenn `resolveAsOf()` einen historischen `pname`-Wert ins Feld geschrieben hatte (≠ Titel), wurde `placeId=null` gesetzt → die Detailansicht zeigte nur den Atom-Namen statt der Hierarchie. Alle drei Save-Pfade (Event, Familien-Event, Person-Form) prüfen jetzt zusätzlich `po.pnames[].value === place`.
+
+#### v939 — Ortsdetail-Verwaltungsgeschichte konsistent mit Writer-Auflösung
+
+Zwei Inkonsistenzen behoben:
+
+1. **`refYear`**: statt `dateFrom` jetzt Mittelpunkt `(dateFrom+dateTo)/2` → gleiche Basis wie der GEDCOM-Writer, der das Ereignisjahr nutzt.
+2. **Überlappungs-Erkennung**: bei mehreren zeitlich überschneidenden `enclosedBy`-Einträgen ein ⚠-Badge mit Tooltip „höchstes Startjahr gewinnt" — macht die Writer-Regel (`enclosureChainAsOf` `bestFrom`-Logik) sichtbar.
+
+#### v940 — Verwaltungsgeschichte als aufgelöste Zeitlinie (WYSIWYG zum Writer)
+
+Statt roher `enclosedBy`-Einträge (mit potenziellen Überschneidungen) zeigt der Ort-Steckbrief jetzt eine **aufgelöste Zeitlinie**: dieselbe Gewinner-Logik wie `enclosureChainAsOf` (höchstes `dateFrom` gewinnt). Überlappende Einträge werden zu klaren Perioden zusammengeführt — „ab JJJJ: X". Was die Detailansicht zeigt, entspricht exakt dem, was der GEDCOM-Writer ausgibt.
+
+#### v941 — `_evFullPlace`: Datengap-Fallback auf nächstgelegene Zugehörigkeit
+
+Wenn `enclosureChainAsOf` für das Ereignisjahr keinen Hierarchiestring liefert (Datenlücke zwischen zwei `enclosedBy`-Einträgen), wird der zeitlich nächste datierbare Eintrag als Referenzjahr verwendet. So zeigt auch ein Beruf-Event im Gap-Jahr den historischen Hierarchiestring statt nur „Vechta".
+
+Außerdem: **`enclosureChainAsOf`** wurde robuster — `_dateMatches(null,null,y)` war bewusst `false`, aber migrierte `parentId`→`enclosedBy[]`-Einträge sind „immer gültig". Undatierte Einträge greifen jetzt als Fallback, wenn kein datierter passt; datierte behalten weiterhin Vorrang.
+
+---
+
+### Session 2026-06-09 — Validator P17/P18 + UI-Politur (sw v929–v936)
+
+#### Validator: zwei neue Strukturregeln
+
+- **v929 — P17 `ISOLATED_PERSON`** *(Hinweis)*: Person hat weder `famc` (Herkunftsfamilie) noch `fams` (eigene Familie) — Hinweis auf nicht vernetzte Datensätze.
+- **v930 — P18 `DISCONNECTED_FROM_ROOT`** *(warn)*: BFS vom Probanden (`AppState._probandId`, Fallback kleinste ID) über alle `famc`/`fams`-Familien-Links. Personen außerhalb der erreichbaren Menge werden geflaggt.
+- **v931** ergänzt die Checkboxen für beide neuen Regeln im Konfigurations-Modal (`index.html`).
+- **v932** rendert die Prüfregel-Checkboxen **dynamisch aus `VAL_RULES`**: `openValConfig()` baut das `valcfg-rules-grid` per JS auf — neue Regeln in `gedcom-validator.js` erscheinen ab sofort automatisch im Konfig-Modal, kein Hardcode in `index.html` mehr.
+- **v934 — Fix BFS-Bug**: `p.famc` enthält Objekte `{famId, pedi, …}`, keine direkten IDs. BFS las deshalb keine Familien-IDs → die erreichbare Menge blieb leer → die Regel flaggte alle Personen. `.map(e => e.famId || e)` extrahiert die ID korrekt.
+
+#### v933 — `enclosureChainAsOf`: undatierte `enclosedBy`-Einträge als Fallback
+
+`_dateMatches(null, null, y)` war bewusst `false` (zeitlich begrenzte Einträge). Migrierte `parentId`→`enclosedBy[]`-Einträge sind aber „immer gültig". Fix: undatierte Einträge werden als Fallback genommen, wenn kein datierter Eintrag passt; datierte behalten weiterhin Vorrang.
+
+#### UX
+
+- **v935 — RESI-Datums-Schnellhilfe**: Bei Ereignistyp RESI erscheinen unter dem Datumsfeld zwei Quick-Chips (🎂 Geburt, ⚭ Heirat) mit den tatsächlichen Daten der Person. Ein Tipp übernimmt das Datum direkt — Buttons werden ausgeblendet, wenn das jeweilige Datum fehlt.
+- **v936 — Hof-Notiz immer bei RESI-Events mit passender Adresse**: Bisher war eine `noteRefs`-Verknüpfung nötig — neu/geänderte Hof-Notizen wurden deshalb bei bestehenden RESI-Events nicht angezeigt. Fix: Hof-Notiz wird für jedes RESI-Event mit passendem `ev.addr` direkt aus `hofObjects` gelesen; `_shownAddrNotes`-Dedup verhindert Mehrfachanzeige.
+
+---
+
+### Session 2026-06-08 — Ortsdarstellung periodengerecht in allen Ansichten (sw v921–v928)
+
+Roter Faden der Session: ein Ort hat **einen** Haupttitel (`po.title`) und beliebig viele historische Schreibweisen (`pnames`) mit Datumsspanne. Listen zeigen den Kurzname, Detail-Zeilen den vollen Hierarchiestring zum Ereigniszeitpunkt, ein 🏘-Button springt direkt in den Ort-Steckbrief.
+
+- **v921 — Such-Index nach Datei-Laden/Reset neu aufbauen** (`storage.js`, `storage-file.js`): nach jedem Reset/Open wurde der globale Such-Index nicht invalidiert → veraltete Treffer.
+- **v922 — Parser akzeptiert BAPM/BARM/BASM/CREM als INDI-Events** (vorher: stille Verluste bei Mormonen-/Konfirmations-Daten).
+- **v923 — BAPM wie CHR als Kerndatum in Personendetail**: direkt nach CHR gerendert (nicht im generischen Events-Block), mit Altersberechnung, Paten-Anzeige und Quick-Chip; `_refDate` nutzt BAPM als Proxy, wenn weder Geburtsdatum noch CHR vorhanden.
+- **v924 — Führende-Leer-Segment-Bug bei `', Ochtrup, , , ,'`-Strings**: `_linkGedcomEventsToPlaceObjects` Step 2 nahm `split(',')[0]` → leer bei führendem Komma → kein PlaceObject-Link möglich. Fix: erstes nicht-leeres Segment. `findPlaceDuplicates` nutzte den falschen Fold-Key → Dubletten unsichtbar; jetzt `_placeStringCoreFold`.
+- **v925 — periodengerechter Ortsname in der Personen-Detailansicht**: `_evPlaceName(ev)` → bei gesetzter `placeId` `resolveAsOf(placeId, year)` statt `compactPlace(ev.place)`; gilt für BIRT/CHR/BAPM/DEAT/BURI und alle generischen Events.
+- **v926 — Ortskurzname in Personen- und Familien­listen**: `shortPlace(placeStr, placeId)` → bei gesetzter `placeId` `po.title`, sonst erstes nicht-leeres Komma-Segment. Verhindert, dass der volle GEDCOM-Hierarchiestring in den Listenzeilen erscheint.
+- **v927 — voller Hierarchiestring + 🏘-Orts-Button in Detailansichten**: `_evFullPlace(ev)` nutzt `_buildFormString(placeId, year)` statt `compactPlace(ev.place)` → periodenkorrekter voller Hierarchiestring direkt in der Ereigniszeile; `_evPlaceNavBtn(ev)` → 🏘-Button → `showPlaceByTitle`, nur wenn `placeId` gesetzt. `_placeHierHtml`-Fineprint-Zeile entfernt (in Person + Familie redundant).
+- **v928 — `shortPlace` + `_evFullPlace` Leer-Segment-Handling**: `shortPlace` nimmt erstes Segment von `po.title` statt vollen String — verhindert „Burgsteinfurt, , , , Deutschland" in Listen, wenn `po.title` selbst ein Hierarchiestring ist. `_evFullPlace`: `_buildFormString` nur nutzen, wenn das Ergebnis ein Komma enthält (enclosedBy modelliert); sonst `compactPlace(ev.place)` als Fallback — verhindert Kurzname in Detail, wenn keine Hierarchie im PlaceObject hinterlegt ist.
+
+#### Nachträge zur OUTPUT-RICHNESS
+
+- **v919 — Statistik fasst historische Ortsvarianten zusammen** (s. unten Session 2026-06-08 OUTPUT-RICHNESS Tier A+B).
+- **v920 — Familienbogen + Ahnenliste laden `ui-book.js` mit**: ohne diesen Mit-Lade-Pfad fehlte die Kekulé-Berechnung in den Ausgaben.
+
+---
+
+### Session 2026-06-08 — OUTPUT-RICHNESS Tier A+B (sw v911–v915)
+
+Größter fachlicher Abstand zu MacFamilyTree (Hebel #3 aus Review 2026-06-07) geschlossen: sieben neue, eigenständige Ausgabe-Formate. Alle als standalone-HTML-Download (Browser-Druck → PDF), kein Server, keine PDF-Lib. ROADMAP-Abschnitt P4 vorab in 10 konkrete Items A2–C3 aufgegliedert (Quellen: MacFamilyTree, Gramps, RootsMagic, Legacy, Ancestris, Ahnenblatt).
+
+#### Tier A — Listen-/Daten-Reports (`ui-print.js`)
+
+- **A2 Quellenverzeichnis (v911):** `_buildBibliographieHtml`/`downloadBibliographie`. Alle Quellen alphabetisch nach Autor-Nachname, bibliografischer Eintrag (Autor. Titel. Verlag. Datum.) + Aufbewahrungsort/Signatur + Belegzählung (Personen/Familien via `sourceRefs`). Quellen ohne Beleg markiert (⚠), Summary-Kopf. Menü „Quellenverzeichnis".
+- **A3 Forschungsprotokoll-Export (v912):** `_buildForschungHtml`/`downloadForschungsProtokoll`. Aufgaben (`_tasks`) + Protokoll (`_rlog`) aller Personen/Familien, gruppiert nach Entität, Status-/Ergebnis-Badges, Repo/Quelle/Datum/Query/Notiz. Menü „Forschungsprotokoll".
+- **A4 Statistik-Report (v913):** `_buildStatistikHtml`/`downloadStatistik`. Übersichts-Kacheln, Geschlecht + Datenvollständigkeit, Lebens-/Heiratsalter, Kinderzahl, Ereignisse/Jahrzehnt, Top-15 Nach-/Vornamen + Top-12 Geburts-/Sterbeorte. Reuse `_yearFrom`/`_statsTop`/`compactPlace`; `collectPlaces` defensiv gewrappt. Menü „Statistik-Report (PDF)".
+
+#### Tier B — Erweiterte Ausgaben
+
+- **B1 Nachkommentafel (v914, `ui-print.js`):** `_buildNachkommenHtml`/`downloadNachkommentafel`. d'Aboville-Nummerierung (1, 1.1, 1.1.2) via DFS über `p.fams`→`fam.children` mit Zyklus-Guard, kontinuierlich über Mehrfach-Ehen. Register-Stil generationsweise gruppiert (röm. Header), Kurzbiografie + Ehe(n) + Kinder-Verweise. Root = `currentPersonId`. Menü „Nachkommentafel (PDF)".
+- **B2 Familienbuch-Buchreife (v915, `ui-book.js`):** Titelblatt-Coverfoto (Primärfoto Proband), `@page { size:A4; margin:2cm }` + `@bottom-right counter(page)` (best-effort), Glossar (Zeichen */~/†/⚰/⚭ + GEDCOM-Kürzel + Kekulé-Erklärung) mit `page-break-before`.
+- **B3 Großposter-SVG (v915, `ui-chart-export.js`):** `_svgToVectorFile`/`exportChartSvgVector`. Aktuelles Diagramm (Fächer/Nachkommen/Sanduhr) als `.svg`, `var(--*)` aufgelöst, width/height seitenverhältnistreu auf A1-Fit in mm, viewBox bleibt → beliebig auf A0 skalierbar. Topbar-Button ⬡ neben PNG-Export (CSS-Sichtbarkeit synchron).
+- **B4 Verwandtschaftsnachweis (v915, `ui-print.js`):** `_buildRelCertHtml`/`downloadRelCertificate` via `calcRelationship` — Verdikt + gemeinsamer Vorfahre + nummerierter Pfad (⬡ am Common Node) als A4-Zertifikat. Button im `modalRelPath`, ids via `UIState._relCertA/B`.
+
+#### Tier C — Großformate & Narrative (`ui-print.js`, v916)
+
+- **C1 Stammtafel Wall Chart:** `_buildWallChartHtml`/`downloadWallChart`. Vorfahren (Pedigree/Kekulé, rekursive Mittelung) + Nachkommen (rekursiv, Blatt-basiert) als kombinierte Sanduhr-SVG, direkt aus der DB berechnet (unabhängig vom Live-Baum), Zyklus-Guard, auf descRootX zentriert, A4-quer-Druck. Root = `currentPersonId`.
+- **C2 Ortssippenbuch + Narrative:** `_buildOrtssippenbuchHtml`/`downloadOrtssippenbuch`. Familien nach Ort gruppiert (Heirats-, sonst Geburtsort), je Familie ein erzählender Kurztext (Paar + Heirat + Kinder), TOC.
+- **C3 Periodisierter Zeitstrahl:** `_buildZeitstrahlHtml`/`downloadZeitstrahl`. Ereignisse von Person + Familie (Heirat, Partner, Kinder) auf horizontaler Zeitachse-SVG, überlagert mit historischen Epochen (`_STORY_EPOCHS`), Dekaden-Ticks, A4-quer.
+
+Damit ist OUTPUT-RICHNESS vollständig (Tier A+B+C, 11 Ausgabe-Formate).
+
+#### Hofchronik (v917, Nutzer-Wunsch)
+
+- **Hofgeschichten-Buch** (`_buildHofchronikHtml`/`downloadHofchronik`, `ui-print.js`): Ort › Hof › Eigentümer (PROP) + Bewohner (RESI) mit Familie + Zu-/Wegzug. Nutzt `buildHofIndex` (gedcom.js) + `hofObjects` (Notiz/Koordinaten). Zu-/Wegzug aus `_hofPersonStations` (chronologische RESI/PROP-Kette → voriger/nächster Ort). Familie kompakt (`_hofFamilyBrief`: Partner + Kinder). Dedup pro Abschnitt nach pid mit Datums-Spanne. Gruppierung nach Ort (`_placeFirstPart`), Höfe je Ort via `_hofSortFn`. Zugang: Menü „Hofchronik" + 📖-Button im Höfe-Tab (`#place-search-hoefe`). → 12 Ausgabe-Formate gesamt.
+
+#### Nachträge
+
+- **Hofchronik-Umzug zeigt Adresse (v918):** `_hofMoveLine` zeigt die konkrete Hof-/Adresszeile statt nur den Ort (Umzüge sind oft innerorts), Ort nur ergänzend in Klammern.
+- **Statistik: historische Ortsvarianten zusammenfassen (v919):** neuer Helfer `canonicalPlaceLabel(place, placeId)` in `gedcom.js` bildet historische Namensvarianten (placeObject-pnames) auf den Haupttitel ab. Eingesetzt in Geburts-/Sterbeort-Aggregation des Statistik-Reports (`_buildStatistikHtml`, ui-print.js) **und** des Statistik-Dashboards (`renderStatsTab`, ui-views-stats.js) → derselbe Ort wird nicht mehr mehrfach gezählt (z. B. „Sassenbergk" + „Sassenberg" = 1 Ort).
+
+#### Doku
+
+HANDBUCH.html Kap. 20 „Druckausgaben" um alle 11 Reports erweitert (inkl. Stammtafel, Ortssippenbuch, Zeitstrahl) + Kap. 8 um Diagramm-Export (PNG/SVG-Großposter); zusätzlich user-relevante v859–v909-Features nachgezogen (Orts-Notiz, Zugehörigkeit-nach-Jahr, Zeitraumverteilung, Ortsbuch, Skalierung-FAQ, Barrierefreiheit-FAQ); beide Versionsfelder → v916; TOC ergänzt. ROADMAP Bewertung (Funktionsstand 8.8→9.1, Doku 8.5→8.7, ∅ 8.5→8.7), Vergleichstabelle (Reports/Bücher/Poster ⚠→✅ sehr gut), Priorisierung (#3 Tier A+B+C ✅), Handbuch-Stand v916 (aktuell).
+
+---
+
+### Session 2026-06-07 — UI-Logik-Tests T0-UI (sw v891)
+
+Strukturelle Bug-Klassen aus den P0–P6-View-Robustheits-Sprints (v861–v890) wurden bisher nur manuell im Preview oder gar nicht abgesichert — kein Unit-Test erfasste UI-Logik. Diese Session schließt die Lücke mit **9 neuen Test-Blöcken (t)–(ab), +124 Tests, 296→420 total**.
+
+#### Harness-Erweiterung
+
+- **`_makeMiniDOM()`** (~250 LOC) in `test-unit.js`: schlankes DOM-Subset, das die UI-Module ohne Browser ausführbar macht. Element-Mock mit `classList` (add/remove/toggle/contains), `dataset` (direkte Property), `addEventListener`/`dispatchEvent` mit Listener-Bag, `closest`/`querySelector`/`querySelectorAll` mit eigenem Selektor-Matcher (`[attr=val]`, `tag[attr=val]`, `.class`, `#id`, `tag.class`). `document.getElementById` mit Tripel-Fallback: `_idMap` → `_fields` (Date-Tests) → Tree-Walk (dynamische createElement+appendChild-Elemente). `_dom.ensureId(id, tag)`, `_dom.fireDoc/fireWin`, `_dom.reset`.
+- **`_loadUI()`** lädt `ui-views-person.js`/`ui-views.js`/`ui-event-delegation.js`/`ui-lifecycle.js` + extrahierten Slice von `savePlaceObjects` aus `ui-forms.js` in einem zweiten Eval-Pass mit `_UI_STUBS` + `_UI_SUFFIX`. Brücken: `const AppState`/`UIState` aus erstem Eval auf `window.X` kopiert, im UI-Eval als `var X = window.X` wieder eingehängt. Funktions-Decls in `ui-views-person.js` (`showDetail`, `showFamilyDetail`, `_vsReattach`, `_vsTeardown`, `applyPersonFilter`, `renderTab`) werden nach Hoisting via `_UI_SUFFIX`-IIFE als Spy-Wrapper überschrieben (sonst gewinnt die letzte Decl gegen den Stub).
+- **`_uiReset()`** löscht IDs + body-children + viewstate-change-Listener, behält aber die UI-installierten click/change/input-Handler (sonst muss `_loadUI` pro Block neu laufen).
+- **Block (z) Toast-Once-Setup:** synchron-rejizierender Thenable (`_syncReject(err)`) ersetzt `Promise.reject().catch()`, da JXA keinen Event-Loop-Pulse hat → Microtask läuft nie ohne `await`. `ui._setIdbPut(fn)` reassigniert `idbPut` im Eval-Scope.
+
+#### Test-Blöcke
+
+| Block | Tests | Verriegelt |
+|---|---|---|
+| (t) ViewState | 17 | `setCurrent` exklusiver Fokus (alle anderen `currentX` → null), `viewstate-change`-Event mit `{tab,id}`-Detail, `_persistLastTabSel` schreibt nach IDB, `getCurrent` validiert gegen `AppState.db` (gelöschte IDs → null), places ungeprüft (Existenz erst in `collectPlaces`), Re-Set überschreibt. |
+| (u) `_activateDetailContainer` | 18 | 5 separate Detail-Container (dc-active exklusiv); Desktop Scroll-Save/Restore per-Entität via `dataset.savedScroll`; gleiche entityId → scrollTop=savedScroll; andere entityId → scrollTop=0; `dataset.viewInit='true'` + `dataset.currentId`; Mobile-Pfad (kein desktop-mode) ändert nichts am Scroll; entityId=undefined → früher Return nach Toggle. |
+| (v) ClickMap | 13 | `_CLICK_MAP[action]`-Dispatch, `dataset.pid \|\| dataset.id`-Fallback in showDetail, dataset.fid/sid/name, `data-action="stop"` → e.stopPropagation + return (kein Dispatch), unbekannte Action → kein Throw, `closest('[data-action]')` findet Action auch bei Klick auf inneres Span. |
+| (w) switchTab DirtyBit | 11 | `_dirty[tab]=true` → renderTab gerufen + dirty=false danach; `_dirty[tab]=false` + `vsP.top` truthy → `_vsReattach` (kein Re-Render); `_dirty[tab]=false` + kein vs.top → nichts; `_dirty[tab]=undefined` → renderTab; `AppState.currentTab` gesetzt. |
+| (x) Lifecycle | 10 | `visibilitychange` mit <60s-Pause → `_dirty` unverändert; mit >60s (Date.now-Monkeypatch) → alle 4 Tabs dirty; visible + `AppState._detailActive` → `v-detail.scrollTop=0` (Void-Artefakt-Fix); `pageshow {persisted:true}` → `location.reload()`; `pagehide` → `idbPut('last_tab_sel', _lastTabSel)`. |
+| (y) ListSync | 14 | `_updatePersonListCurrent` setzt `.current` auf neuem `[data-pid=X]`, entfernt von altem; null → alle entfernt; analog für Family/Place/Source; fehlende Liste → kein Throw. |
+| (z) Toast-Once | 8 | `savePlaceObjects` OK → kein Toast, IDB-Eintrag geschrieben; 1× IDB-Fehler → 1 Toast (Typ=error, enthält „IDB"); 3× Fehler → noch immer 1 Toast (`_savePoIDBErrored`-Once-Flag); nach `_resetToastFlags()` → erneut 1 Toast (Session-Reset-Simulation). |
+| (aa) PLAC-Mode | 11 | `initPlaceMode('birth')` → `_placeModes.birth='free'`, free sichtbar/parts versteckt/Toggle-Text; `togglePlaceMode` wechselt free↔parts; `getPlaceFromForm` in free → Input.value (getrimmt); in parts → `joinPlaceParts` ohne trailing leere Teile. |
+| (ab) FormSaveMerge | 14 | `_buildFormString(placeId, year)` periodengerecht (Sassenbergk 1700, Sassenberg 1900, atomar bei null); enclosure-Kette „Sassenberg, Fürstbistum Münster"; `applyStringPlaceLink` setzt `ev.placeId` + `ev.place` auf konfirmierten String; nicht-konfirmierter String → 0 Links; invalidiert `_placesCache` + `_placeRegistry`; null targetPlaceId → 0. |
+
+#### Stolperfallen + Lehren (durable)
+
+- **Function-Decl-Hoisting im Stub-Pattern:** `function showDetail(){stub}` in `_UI_STUBS` wird von `function showDetail(){real}` in `ui-views-person.js` durch Hoisting überschrieben (letzte Decl gewinnt). Lösung: Stub-Spy erst nach UI-Eval per Reassignment in `_UI_SUFFIX`-IIFE installieren — `var` und `function`-Bindings sind in sloppy-Mode neuzuweisbar.
+- **`const` aus erstem Eval leakt nicht in zweiten Eval:** `const AppState` ist block-scoped zum jeweiligen Eval. Lösung: am Ende des ersten Evals `window.AppState = AppState` schreiben, am Anfang des zweiten Evals `var AppState = window.AppState` lesen — beide Branches teilen sich denselben Object-Bezug.
+- **`CSS.escape`-Identity statt Real-Escape:** der reale `CSS.escape` würde non-ASCII (z.B. ü) backslash-escapen → der MiniDOM-Selektor-Match `dataset.name === val` würde gegen die nicht-escapeten Originale fehlschlagen. Im Test ist Identity korrekt; CSS-Parsing existiert dort gar nicht.
+- **JXA hat keinen Event-Loop-Pulse:** `Promise.reject().catch(fn)` queued `fn` als Microtask, der ohne `await` nie läuft. Im savePlaceObjects-Test sind synchron-rejizierende Thenables (`{then(_,fn){fn(err)}; catch(fn){fn(err)}}`) der saubere Workaround.
+- **`_uiReset` darf UI-installierte Listener nicht löschen:** click/change/input/DOMContentLoaded werden einmal beim UI-Load registriert; `_uiReset` zwischen Tests darf nur die test-spezifischen Listener (viewstate-change) leeren — sonst muss `_loadUI` pro Block neu laufen.
+- **`getElementById`-Tree-Walk-Fallback:** dynamisch via `document.createElement(input)` + `container.appendChild(input)` angelegte Elemente sind im DOM-Tree, aber nicht in `_idMap`. Ohne Tree-Walk-Fallback findet `getElementById` sie nicht (PLAC-Mode parts-Inputs).
+- **`renderTab` als Spy mit Original-Call, `applyPersonFilter` ohne:** Spy-Wrapper für renderTab ruft `_origRender()` — die echte renderTab läuft, ruft `applyPersonFilter()` (Spy, no-op). Bei `applyPersonFilter` rufen wir das Original **nicht**, da es `_applyPersonFilterDebounced` (nicht im Harness) braucht.
+
+#### Verifikation
+
+```
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style=
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable
+```
+
+---
+
+### Session 2026-06-07 — View-Robustheit P6: B7 showStartView Render-Reihenfolge (sw v890)
+
+Nutzerbericht: „Beim Erstaufruf der Personenliste gibt es immer noch einen Glitch — springt zur Top-Liste, danach funktioniert es scheinbar."
+
+#### Ursache (Async-Microtask-Lücke)
+
+`showStartView` führte vorher folgende Reihenfolge aus:
+
+```js
+async function showStartView() {
+  AppState.currentTab = 'persons';
+  showMain();                       // 1. sync: renderTab → _vsSetup mit scrollTop=0
+  const [savedProband, savedSel] = await Promise.all([
+    idbGet('proband_id'),           // 2. await → Kontrolle an Browser → PAINT
+    idbGet('last_tab_sel'),
+  ]);
+  // ...
+  if (startId) showTree(startId);   // 3. nach await: synchron
+  _desktopAutoSelect('persons');    // 4. _updatePersonListCurrent → scrollt zur Person → PAINT
+}
+```
+
+Zwischen Schritt 1 und Schritt 3 gibt das `await` die Kontrolle an den Browser ab. Der Browser nutzt diese Microtask-Pause für einen Paint — und zeigt die Personenliste mit `scrollTop=0` (Top-Items). Nach dem await scrollt `_desktopAutoSelect` → `showDetail` → `_updatePersonListCurrent` zur gespeicherten Auswahl. Der User sieht zwei Paints: Top-Items, dann Sprung.
+
+#### Fix
+
+`showMain()` nach dem `await` aufrufen:
+
+```js
+async function showStartView() {
+  AppState.currentTab = 'persons';
+  const [savedProband, savedSel] = await Promise.all([...]);   // 1. State zuerst laden
+  if (savedSel) UIState._lastTabSel = savedSel;
+  UIState._probandId = ...;
+  showMain();                       // 2. sync
+  const startId = getProbandId();
+  if (startId) showTree(startId);   // 3. sync
+  _desktopAutoSelect('persons');    // 4. sync
+}                                    // → ein Browser-Paint mit korrekter Position
+```
+
+Alle DOM-Manipulationen laufen jetzt synchron im selben Microtask nach dem await. Der Browser paint kommt erst am Ende → genau ein Paint mit der Liste an der richtigen Scroll-Position.
+
+#### Architektonische Einordnung
+
+B7 ist **weder** P5-A5-Skip-bedingt (anders als B3/B4/B5) **noch** eine fehlende `show*Detail`-Konsistenz (anders als B6). Es ist eine pure Async-Reihenfolge-Falle: synchroner Render vor await zeigt einen Zwischenzustand. Lehre: **State-Load (IDB) vor Initial-Render**, sodass keine Microtask-Lücke zwischen Render und State-Anwendung entsteht.
+
+Vorher v865 (P1-K7) hatte `showStartView` zwar schon `_desktopAutoSelect('persons')` ergänzt, aber den `showMain()`-Call vor dem await belassen. Die Microtask-Lücke war damals als unkritisch eingestuft (Desktop-Detail wird ja gefüllt). Mit dem heutigen Listen-Highlight-Verhalten (B3/B6) wird der Initial-Render-Zustand stärker sichtbar — was den Glitch jetzt erst zum Beanstandungs-Niveau hebt.
+
+#### Tests
+
+`test-unit.js` 296/296 grün; Preview-Verifikation per `showStartView`-Simulation; GEDCOM-Roundtrip `net_delta=0` unverändert.
+
+---
+
+### Session 2026-06-07 — View-Robustheit P6: B6 Place/Source-Listen-Sync (sw v889)
+
+Nutzerbericht: „Ich wähle in einer Ortsliste einen neuen Ort aus, Detail wechselt — in der Liste bleibt der alte Ort markiert. Erst beim nochmaligen Orte-Tab wechselt die Anzeige."
+
+#### Ursache
+
+`showDetail` (Person, ui-views-person.js:690-693) und `showFamilyDetail` (ui-views-family.js:386-389) hatten schon immer einen Listen-Sync-Block:
+```js
+if (document.body.classList.contains('desktop-mode')) {
+  if (AppState.currentTab === '...') _updateXListCurrent(id); else _updateXListCurrent(null);
+  ...
+}
+```
+
+`showPlaceDetail` und `showSourceDetail` hatten diesen Block **nie**. Folge: Full-Render-Pfad (User klickt anderen Ort in der Liste → entityId ändert sich → `_dcAlreadyShows` returnt false → `showPlaceDetail` läuft komplett) rendert Detail neu, aktualisiert aber `.current` in der placeList nicht. Erst beim nochmaligen Tab-Klick greift der B3-Skip-Pfad (P6) und synchronisiert die Liste.
+
+#### Fix
+
+Neue Helper [ui-views.js](ui-views.js):
+
+```js
+function _updatePlaceListCurrent(name) { ... data-name + .current + _scrollListToCurrent }
+function _updateSourceListCurrent(id)  { ... data-sid  + .current + _scrollListToCurrent }
+```
+
+Aufgerufen aus:
+- [ui-views-place.js:925](ui-views-place.js:925) — neu (B6 Hauptfix)
+- [ui-views-source.js:9](ui-views-source.js:9) — neu (B6 Hauptfix)
+- [ui-views.js](ui-views.js) `_dcAlreadyShows` Skip-Pfad — Dedup, ersetzt B3-Inline-Pattern
+- [ui-views.js](ui-views.js) `_mobileSelectionRestore` — Dedup, ersetzt vorher-Inline-Code
+
+#### Architektonische Einordnung
+
+B6 ist **keine** Folge der P5-A5-Skip-Optimierung (anders als B3/B4/B5). Es ist eine eigenständige, ältere Lücke: der Listen-Sync-Block fehlte schon vor P5 in `showPlaceDetail`/`showSourceDetail`. Wurde durch das B3-Inline-Pattern im Skip-Pfad zufällig kaschiert (Tab-Klick → Skip → Sync) und durch den Nutzerbericht „erst beim Tab-Re-Klick wird's korrekt" sichtbar.
+
+Lehre: bei jeder `show*Detail`-Funktion muss der Listen-Sync-Block analog zu `showDetail`/`showFamilyDetail` aufgerufen werden. Helper machen das aus „muss man dran denken" zu „ein Aufruf in jeder show*Detail".
+
+#### Tests
+
+`test-unit.js` 296/296 grün; isolierter Preview-Test pro Tab; GEDCOM-Roundtrip `net_delta=0` unverändert.
+
+---
+
+### Session 2026-06-07 — View-Robustheit P6: B5 Detail-Toolbar zentral (sw v888)
+
+Folge-Fix zu B3/B4 — dieselbe Bug-Klasse: P5-A5-Skip umging weitere Seiteneffekte der `show*Detail`-Funktionen. B5 betrifft die **Detail-Toolbar** (TopTitle + 8 Buttons), die im Skip-Pfad noch den Zustand der vorigen Entität anzeigte. Funktional kritisch, nicht nur kosmetisch — `storyBtn`-Klick rief nach Skip die falsche Action mit falscher Entity-ID auf.
+
+#### Bug-Szenario
+
+1. Person Maria öffnen → `detailTopTitle='Maria'`, `storyBtn.dataset.action='showStory'`, `storyBtn.dataset.id=I123`, `treeBtn.dataset.id=I123`, `probandBtn` sichtbar
+2. Familien-Tab → `showFamilyDetail(F1)` → TopTitle='Familie', `storyBtn.dataset.action='showFamilyStory'`, `storyBtn.dataset.fid=F1`, `treeBtn.dataset.id=husb(I100)`, `probandBtn` hidden
+3. Personen-Tab → `_dcAlreadyShows('persons', 'I123')` true → **Skip** → Personen-Detail-HTML aktiv, aber Toolbar zeigt noch Familien-State:
+   - TopTitle weiter „Familie"
+   - storyBtn-Klick → `showFamilyStory(F1)` statt `showStory(I123)` (funktional falsch verdrahtet)
+   - treeBtn-Klick → Baum von I100 statt I123
+   - probandBtn / probandSetBtn / detailMapBtn bleiben hidden
+
+#### Refactor
+
+Neue Funktion `_configureDetailToolbar(tab, entityId)` in [ui-views.js](ui-views.js) (~75 Z.) — konfiguriert die gesamte gemeinsame Toolbar für 4 Tab-Typen:
+
+| Tab | TopTitle | editBtn | treeBtn | timelineBtn | storyBtn | probandBtn | probandSetBtn | detailMapBtn |
+|---|---|---|---|---|---|---|---|---|
+| persons | `p.name` | sichtbar | sichtbar+`dataset.id=id` | sichtbar+`dataset.id=id` | `showStory`+id | sichtbar | sichtbar+id+`proband-active` | sichtbar |
+| families | 'Familie' | sichtbar | abh. von `husb\|wife` | hidden | `showFamilyStory`+fid | hidden | hidden | hidden |
+| sources | 'Quelle' | sichtbar | hidden | hidden | hidden | hidden | hidden | hidden |
+| places | '📍 Ort' | sichtbar | hidden | hidden | hidden | hidden | hidden | unverändert |
+
+Die 4 `show*Detail`-Funktionen rufen ihn statt vorher 8-20 Zeilen Inline-Setup. `_dcAlreadyShows` ruft ihn auch im Skip-Pfad zusätzlich zu B3-Listen-Sync und B4-body-Klassen, dazu `requestAnimationFrame(_updateDetailHistBtn)` (analog `showView('v-detail')` desktop-Branch).
+
+#### Geänderte Dateien
+
+- [ui-views.js](ui-views.js) — `_configureDetailToolbar` definiert + `_dcAlreadyShows` erweitert
+- [ui-views-person.js:695](ui-views-person.js:695) — 22 Z. Inline → 2 Z. (Helper + `_announceList`)
+- [ui-views-family.js:395](ui-views-family.js:395) — 13 Z. Inline → 1 Z.
+- [ui-views-source.js:10](ui-views-source.js:10) — 8 Z. Inline → 1 Z.
+- [ui-views-place.js:924](ui-views-place.js:924) — 7 Z. Inline → 1 Z.
+
+#### Architektonische Lehre
+
+`_activateDetailContainer` schaltet nur die `.dc-active`-Klasse. Aber `show*Detail` führt **drei Klassen von Seiteneffekten** durch, die alle im Skip-Pfad gebraucht werden:
+
+1. **Listen-Highlight + Scroll** (vorher B3, jetzt im Skip-Pfad)
+2. **body-Klassen + AppState._detailActive** (vorher B4)
+3. **Detail-Toolbar-State** (jetzt B5)
+
+A4/A5 (P5) hatten nur den innerHTML-Re-Render-Skip als Optimierungs-Ziel; die anderen Seiteneffekte wurden als „passieren halt auch" implizit angenommen. P6 macht aus dem impliziten Vertrag ein explizites Muster: alles was eine Detail-Ansicht „funktional aktiv" macht, läuft entweder durch `show*Detail` ODER durch den Skip-Pfad — beide Pfade müssen identische Seiteneffekt-Garantien geben.
+
+#### Tests
+
+`test-unit.js` 296/296 grün; isolierter Preview-Test pro Tab; GEDCOM-Roundtrip `net_delta=0` unverändert (UI-Refactor, kein Modell-Eingriff).
+
+---
+
+### Session 2026-06-07 — View-Robustheit P6: B4 has-detail im Skip-Pfad (sw v887)
+
+Folge-Fix zu v886, gleiche Bug-Klasse wie B3. Nutzerbericht: nach Tab-Wechsel zurück (z. B. Personen → Familien → Personen) erschien im Detail-Bereich kurzzeitig der `desktopPlaceholder` („Eintrag in der Liste auswählen"); der eigentliche Detail-Inhalt war erst beim Runterscrollen sichtbar.
+
+Ursache: `showDetail`/`showFamilyDetail`/etc. rufen am Ende `showView('v-detail')` auf — dort wird `body.has-detail = true` gesetzt (CSS-Schalter für `body.desktop-mode.has-detail #desktopPlaceholder { display: none }`). Im Skip-Pfad (`_dcAlreadyShows`, eingeführt P5-A5) entfällt dieser Aufruf, weil `_activateDetailContainer` nur den `.dc-active`-Container-Switch macht. Folge: `has-detail` blieb auf `false` aus dem vorherigen `showView('v-main')` in `bnavTab`, Placeholder mit voller Höhe stand oben im scrollbaren `#v-detail`, Detail darunter.
+
+Fix: `_dcAlreadyShows` (ui-views.js:564-571) setzt jetzt im Skip-Pfad direkt:
+- `document.body.classList.add('has-detail')`
+- `AppState._detailActive = true`
+
+Architektonisch dieselbe Klasse wie B3: A5-Optimierung hat `showDetail` durch `_activateDetailContainer` ersetzt, dabei wurden Seiteneffekte aus dem letzten `showView('v-detail')`-Aufruf nicht mitgezogen. B3 hat die Listen-Sync nachgezogen, B4 die body-Klasse/_detailActive.
+
+Verifiziert: Preview `_dcAlreadyShows('persons','I1')` → `has-detail: false → true`, `_detailActive: true`; `test-unit.js` 296/296 grün; 0 Console-Errors.
+
+---
+
+### Session 2026-06-07 — View-Robustheit P6: Tab-Wechsel-Konsistenz (sw v886)
+
+Drei Tab-Wechsel-Glitches nachgezogen, die das P0–P5-Refactoring strukturell offen gelassen hatte. Direkt aus Nutzerbericht „inkonsistentes Verhalten beim Tab-Wechsel" abgeleitet — alle drei Bugs sind Korrekturen je einer Annahme aus R1, P2-A1 und P5-A5. Volldetail: `VIEW-ROBUSTNESS.md` § P6.
+
+#### B1 — `showView` Multi-Active (ui-views.js:72-77)
+
+`showView` deaktivierte nur die *erste* `.view.active`-View (`querySelector`). Auf Desktop sind v-main + v-detail/v-tree per Design (ADR-009) gleichzeitig aktiv — `querySelector` liefert v-main als erstes DOM-Element, das wird mit sich selbst verglichen → kein Remove → v-tree bleibt sichtbar nach `bnavTab('places')`. Behebt: „Baum bleibt auch beim Wechsel in den Orte-Tab sichtbar".
+
+Fix: `querySelectorAll('.view.active').forEach(v => { if (v.id !== id) v.classList.remove('active'); })`. R1-Optimierung (1–2 DOM-Ops, Layout-Flash-Reduktion) bleibt erhalten — bei den typischen 2 aktiven Views statt N.
+
+#### B2 — `showTree`/`showDescTree` über ViewState (ui-views-tree.js:351, ui-desc-tree.js:78)
+
+P2-A1 (ADR-025) hatte alle 4 `show*Detail`-Funktionen auf `ViewState.setCurrent(tab, id)` umgestellt, aber `showTree`/`showDescTree` als Hauptansichten ausgespart. Sie setzten weiter direkt `AppState.currentPersonId = personId`. Folge: `UIState._lastTabSel.persons` (IDB-persistent) blieb stale nach Baum-Navigation → Tab-Wechsel auf „Personen" fokussierte die alte ID.
+
+Fix: Baum-Navigation als implizite Personen-Selektion modelliert — `ViewState.setCurrent('persons', personId)` ersetzt die direkte Zuweisung. ViewState nullt dabei exklusiv alle anderen `currentX` (gewollt: Familie/Quelle/Ort sind nicht mehr „aktiv" wenn man im Baum ist).
+
+#### B3 — `_dcAlreadyShows` Listen-Sync + `_vsReattach` via ViewState (ui-views.js:557-590, 630-635)
+
+P5-A5 hatte den Skip-Re-Render-Pfad eingebaut (`_dcAlreadyShows` → `_activateDetailContainer` ohne `innerHTML`-Reset wenn Container bereits korrekt steht und Tab nicht dirty). Die Listen-Sync-Aufrufe (`_updatePersonListCurrent` etc.) standen vorher in den `show*Detail`-Funktionen und wurden bei der A5-Umstellung nicht in den Skip-Pfad kopiert → linke Liste behielt `.current`-Klasse der zuvor aktiven Tab-Liste und scrollte nicht zur aktuellen Auswahl.
+
+Fix: `_dcAlreadyShows` ruft jetzt im Skip-Pfad `_updatePersonListCurrent` / `_updateFamilyListCurrent` / Source+Place-Highlight + `_scrollListToCurrent` für die jeweilige Liste. Zusätzlich `_vsReattach` in `switchTab` liest `ViewState.getCurrent(tab)` statt `AppState.currentPersonId`/`currentFamilyId` — Letztere werden durch `ViewState.setCurrent` in anderen Tabs exklusiv genullt, sodass `_vsReattach(_, _, null)` keinen Scroll-Restore mehr machen konnte.
+
+#### Warum trotz umfangreichen P0–P5-Refactorings nötig
+
+P0–P5 lösten die 4 vom Nutzer berichteten Symptome (Void-Artefakte, stale Listen, Selektions-Drift, leere Erstanwahl). Drei strukturelle Bereiche blieben offen:
+
+1. **Tab/View-Choreografie** — kein zentrales Invariant „welche `.view`-Elemente dürfen wann gleichzeitig `.active` sein" (B1).
+2. **Tree als impliziter Personen-Selektor** — `showTree` ist semantisch eine Personen-Selektion, im State-Modell aber nicht (B2).
+3. **Skip-Pfade** — A5-Optimierung modellierte den Skip als „nichts zu tun", übersah Liste-Highlight + Scroll als unabhängige Seiteneffekte (B3).
+
+#### Tests
+
+`test-unit.js` 296/296 grün; GEDCOM-Roundtrip `net_delta=0` stabil. Reine UI-Logik-Korrektur, keine Modell-Änderung.
+
+---
+
+### Session 2026-06-07 — View-Robustheit P5: Separate Detail-Container (sw v869)
+
+Abschluss der View-Robustheit P0–P5. ADR-025 und VIEW-ROBUSTNESS.md vollständig abgeschlossen.
+
+#### P5 — 5 separate Detail-Container + Skip-Re-Render (sw v869)
+
+- **A4** `_activateDetailContainer(cid, entityId)`: globaler `#detailContent` aufgelöst → 5 separate `div.detail-container` (`detailPerson`, `detailFamily`, `detailPlace`, `detailSource`, `detailMedia`). CSS: `.detail-container { display:none }` / `.dc-active { display:block }`. Scroll-Save/Restore via `data-saved-scroll` pro Container (Desktop).
+- **A5** `_dcAlreadyShows(tab, entityId)` + `_DC_TAB_MAP`: `_desktopAutoSelect` übersprigt Re-Render wenn Container bereits aktuell ist und Tab nicht dirty.
+- **Umgestellt:** alle 7 `show*Detail`-Funktionen (`showDetail`, `showFamilyDetail`, `showPlaceDetail`, `showHofDetail`, `showSourceDetail`, `showRepoDetail`, `showMediaDetail`) + `_injectJumpBar` + `switchPlacesSubTab`.
+- **`showView`:** `v-detail.scrollTop = 0` entfernt (übernommen von `_activateDetailContainer`).
+- **Browser-verifiziert:** 5 Container korrekt im DOM, `detailPerson` → `dc-active` + `viewInit=true` nach `showDetail`, Person-HTML bleibt beim Familien-Wechsel erhalten, A5-Skip greift korrekt. 0 Console-Errors.
+
+---
+
+### Session 2026-06-07 — View-Robustheit P1–P4: Selektions-Persistenz, ViewState, dirty-bit, Lifecycle (sw v865–v868)
+
+Vollständiger Abschluss der View-Robustheit P0–P4 (Details: `VIEW-ROBUSTNESS.md`). Behebt vier strukturelle Bugs (Void-Artefakte, stale Listen, fehlende IDB-Persistenz, leere Startansicht). Neue Architektur: `ViewState`-Helper + `ui-lifecycle.js`. ADR-025 in `ARCHITECTURE.md` ergänzt.
+
+#### P1 — Selektions-Persistenz & Erstanwahl (sw v865)
+
+- **K4** `_mobileSelectionRestore(tab)`: Mobile scrollt + highlightet beim Tab-Tipp zur letzten Auswahl (kein `showDetail` — Mobile-Konvention).
+- **K5** `_desktopAutoSelect`-Validierung: gespeicherte IDs gegen `AppState.db` validiert; verlorene ID (Merge/Delete) → Fallback auf `smallestPersonId` / `_firstPlaceName`.
+- **K6** `_lastTabSel` IDB-persistent: `_persistLastTabSel()` nach jeder Detailansicht schreibt `last_tab_sel` in IDB → überlebt iOS-Process-Kill.
+- **K7** `showStartView`: lädt `last_tab_sel` aus IDB + ruft `_desktopAutoSelect('persons')` → Desktop-Startansicht nicht mehr leer.
+- **R6** `showDetail` / `showFamilyDetail` / `showPlaceDetail` / `showSourceDetail`: fehlendes Entity → `showMain()` statt lautlosem `return`.
+
+#### P2 — Zentraler ViewState-Helper (sw v866, ADR-025)
+
+- **`ViewState` IIFE** in `ui-views.js`:
+  - `setCurrent(tab, id)`: schreibt `UIState._lastTabSel[tab]`, setzt `AppState.currentX` (exklusiver Fokus), ruft `_persistLastTabSel()`, dispatcht `viewstate-change` CustomEvent.
+  - `getCurrent(tab)`: liest `_lastTabSel[tab]` mit Existenzvalidierung gegen `AppState.db`.
+- Alle 4 `show*Detail`-Funktionen: 5-Zeiler (currentX-Assignments + `_lastTabSel` + persist) → einzeiliges `ViewState.setCurrent(tab, id)`.
+- `_desktopAutoSelect` + `_mobileSelectionRestore` → `ViewState.getCurrent` statt direktem `_lastTabSel`-Zugriff.
+- Keine direkten `_lastTabSel.X = …`-Schreibstellen mehr außerhalb von `ViewState.setCurrent`.
+
+#### P3 — Lifecycle & dirty-bit (sw v867)
+
+- **A2 (dirty-bit):** `markChanged()` setzt `UIState._dirty = {persons,families,sources,places: true}`; `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder erster Besuch).
+- **A3 (`ui-lifecycle.js`, neues File ~60 Z.):**
+  - `visibilitychange`: >60-s-Heuristik (`_lifecycleHiddenAt`) → alle Tabs dirty → safety re-render; scrollTop-Reset wenn Detail aktiv.
+  - `pageshow`: `e.persisted` (BFCache-Restore) → `location.reload()` — kein veralteter AppState.
+  - `pagehide`: `_persistLastTabSel()` — kein Datenverlust beim iOS-Kill.
+  - Ersetzt P0-K2-Handler in `ui-views.js`.
+
+#### P4 — Hygiene-Fixes (sw v868)
+
+- **R1** `showView`: direkter View-Swap (`prev.remove + new.add`, 2 DOM-Ops statt N) → weniger Layout-Flash auf iOS.
+- **R2** `switchTab` ruft `_vsTeardown(_vsP/_vsF)` für inaktive Listen → Scroll-Listener-Leak behoben.
+- **R3** `_navHistoryCap()` (max 50) nach jedem push in `_beforeDetailNavigate` → kein unbegrenztes `_navHistory`-Wachstum.
+- **R4** `_initDetailSwipe` bereits idempotent (`_swipeInit`-Flag) — kein Handlungsbedarf.
+- **R7** Alle 3× `setTimeout`-Magic in `ui-views.js` → `_afterLayout` (Fullscreen-resize, searchGlobal-focus, `_setListScroll`).
+- **SW** `ui-book/print/dedup.js` bereits in PRECACHE_OPTIONAL — kein Handlungsbedarf.
+
+---
+
+### Session 2026-06-01 — PLACE-HIST P3 + P4: Typ-Filter, Ort-Picker, Geocoding, GOV-Import (sw v818–v819+)
+
+Vollständiger Abschluss des PLACE-HIST-Ausbauplans (ADR-024). Alle Features browser-verifiziert (0 Console-Errors). Offline-Script `gov-enrich.py` mit Wikidata- und GOV-Text-Modus; Handbuch aktualisiert.
+
+#### P3 — Typisierte Event-Orte (sw v818)
+
+- **`feat(places)` sw v818:** Typ-Filter `<select>` im Orte-Tab (Alle / Dorf / Stadt / Pfarrei / Kirche / Friedhof / Hof); kombiniert mit Textsuche via `setPlaceTypeFilter()`. **Typ-Badge** in Listenzeilen (⛪/⚰/🏡/…) aus `PLACE_TYPE_ICON`-Map.
+- **Ort-Suchpicker** im Event-Formular: 📍-Button neben `ef-place`/`fev-place` → `modalPlacePicker` (Bottom-Sheet, Suchfeld, alle Event-Orte mit Typ-Icon). Auswahl setzt Input + hidden `placeId`. Suche inkl. `pname.lang`-Varianten (Sprachvarianten, nicht historische Ketten).
+- **Kirche↔Kirchenbuch** (light): Place-Detail für Church/Parish/Cemetery-Typen zeigt Sektion „Verknüpfte Kirchenbücher" — alle Repos + Quellen deren Titel den Ortsnamen enthält (keine Datenmodell-Änderung).
+- **`fix`:** Picker-Quelle auf `collectPlaces()` vereinheitlicht (war: placeObjects-Dict → kürzer als Ortsliste).
+- **`fix`:** Picker-Suche erweitert auf `pname.lang`-Varianten (Bsp.: „Lemberg" findet „Lviv").
+
+#### P4 — Geocoding & GOV-Import (sw v819+)
+
+- **`feat(places)` sw v819:** `geocoding.js` (neues Modul, PRECACHE_CRITICAL) — `geocodeSinglePlace(name)` + `batchGeocodePlaces(onProgress)` via Nominatim (OpenStreetMap), Rate-Limit 1 req/sec. Befüllt `lat/lon` + `type`; **`enclosedBy[]` bewusst nicht** (Nominatim = heutiger Verwaltungsstand, falsch für Genealogie 1700–1900). CSP `connect-src` um `nominatim.openstreetmap.org` + `gov.genealogy.net` erweitert.
+- **Geocoding-UI:** 📍-Button im Place-Detail (ohne Koordinaten) / ↻-Button (neu geocodieren); 🌐-Batch-Button im Orte-Tab → `modalBatchGeocode` mit Fortschrittsbalken.
+- **`fix`:** `enclosedBy[]` aus Nominatim-Geocoder entfernt (war fehlerhafter heutiger Verwaltungsbaum).
+- **`feat` GOV-Text-Parser (Browser):** `_parseGovText()` + `applyGovText()` in `ui-views-place.js`. GOV-Textzusammenfassung aus gov.genealogy.net direkt in `modalPlace` einfügen → Typ-Historie, Namen (`pnames[]`), `enclosedBy[]` mit historischen Datumsgrenzen. Unaufgelöste `object_XXXXX`-Eltern als Platzhalter (iterativ durch weiteres Einfügen auflösbar). placeObject wird on-the-fly angelegt wenn noch nicht vorhanden.
+- **`feat` gov-enrich.py:** Python-Script (kein pip nötig) in zwei Modi:
+  - **Wikidata-Modus** (Standard): `python3 gov-enrich.py placeObjects.json` — fragt Wikidata SPARQL je Ort (P31=Typ, P625=Koordinaten). `enclosedBy[]` nicht befüllt (P131 = heutiger Stand).
+  - **GOV-Text-Modus**: `python3 gov-enrich.py placeObjects.json --gov-text gov_texte.txt` — liest .txt mit mehreren GOV-Blöcken, löst `object_XXXXX`-Referenzen intern auf, schreibt `enclosedBy[]` mit echten Datumsgrenzen. GOV-HTML-Scraping entfernt (Bot-Schutz). Ausgabe importierbar via Orte-Tab ↑-Button.
+
+---
+
+### Session 2026-05-30 — QUICK-TPL Phasen B–E: Matching, neue Muster, Inline-Plausi, Custom-Builder (sw v765–v769)
+
+Ausbau der Eingabe-Templates (`ui-quicktpl.js`). Alle Phasen browser-/headless-verifiziert, Doku in `HANDBUCH.html` (Abschnitt „Eingabe-Templates").
+
+- **Phase B (sw v765)** `feat(quicktpl)`: **Personen-Matching (Dedup-aware).** `_qtFindMatches` (Nachname+Vorname normalisiert, Geschlecht-Tiebreaker, Geburtsjahr-Anzeige) zeigt Live-Treffer je Person; „verknüpfen statt neu anlegen" hängt die neue Quelle an die bestehende INDI an (`fams` gepusht, nicht überschrieben) statt ein Duplikat zu erzeugen. Undo-fest (alle beteiligten IDs im Snapshot), einseitige Heirat erlaubt.
+- **Phase C (sw v766)** `feat(quicktpl)`: **Neue Basismuster `baptism` (chr-Ereignis) + `burial` (death+buri).** Helfer `_qtResolvePerson`/`_qtAfterSave`/`_qtAddCitToEvent` aus `_qtSaveMarriage` extrahiert (DRY). `qt-f-base`-Select um beide Optionen erweitert.
+- **Phase D (sw v767)** `feat(quicktpl)`: **Inline-Plausi** (`_qtShowInlinePlausi`: `runValidation` nach jedem Speichern, gefiltert auf die betroffenen IDs, max. 5 Hinweise im Modal) + **„aus aktueller Quelle erstellen"** (`qtNewTemplateFromSource`, Button ⚡ im Quellen-Detail, öffnet Editor mit vorbelegter Quelle).
+- **Fix (sw v768)** `fix(quicktpl)`: **Quellenauswahl im Template-Editor vollständig** — Suche in Kürzel **und** Titel (vorher nur erstes vorhandenes Feld), Label „Kürzel — Titel", SID-Feld wird beim Leeren des Textfelds geleert, Init-Guard gegen doppelte Event-Listener, Limit 30→50.
+- **Phase E (sw v769)** `feat(quicktpl)`: **Frei konfigurierbare Templates (`base:'custom'`).** Das Template trägt sein eigenes Feld-Schema (`tpl.schema.fields[]`); Engine schema-getrieben via `_qtSchema`/`_qtBuildCustomSchema`. Rollen-Katalog `QT_ROLE_CATALOG` (Person/Vater/Mutter/Ehepartner mit fester FAMC/FAMS-Semantik); Feldtypen Name/Geschlecht/Datum+Ort (birth/chr/death/buri/marr)/Beruf (OCCU)/Wohnort (RESI)/Seite. Builder-UI im Editor (`_qtRenderFieldBuilder`: Rolle/Typ/Ziel/Label + ↑↓✕). `_qtSaveCustom` baut INDI + Eltern-FAMC + Ehe-FAMS inkl. Dedup-Matching und Zitat je Ereignis, Undo-fest; `_qtGenEvent` spiegelt das vollständige PersonEvent-Init. Vater-Nachname erbt main-Nachname (`_qtLinkSurnameDefault`, überschreibbar). Schema fließt durch JSON-Export/Import + IDB — kein GEDCOM-Delta.
+
+---
+
+### Session 2026-05-30 — QUICK-TPL Phase A: quellengebundene Eingabe-Templates (sw v759/v760)
+
+- **sw v759 (A1)** `feat(quicktpl)`: Datenmodell + Template-Verwaltung + Persistenz.
+  - **`ui-quicktpl.js`** (neu): `QT_BASE_PATTERNS` (Code-definierte Feld-Flüsse, Phase A = `marriage`); `AppState.quickTemplates`; `loadQuickTemplates`/`saveQuickTemplates` (IDB `quick_templates`); `exportQuickTemplates`/`importQuickTemplatesFile` (portable JSON-Config-Datei, Quelle der Wahrheit + IDB-Cache).
+  - **Manager-Modal** (`modalQtManager`): Liste + Erstellen/Bearbeiten/Löschen. Template = Name + Basismuster + **Kontext** (Quelle/Ort/QUAY/Seiten-Muster/URL-Muster `{v}`/Zeitraum). Quellen- + Orts-Autocomplete im Formular.
+  - Einstieg „⚭ Aus Quelle erfassen (Templates)" in modalAdd.
+- **sw v760 (A2)** `feat(quicktpl)`: Erfassungs-Engine.
+  - **`qtStartEntry`** → dynamisch gerendertes Formular aus dem Basismuster: **Kontext-Kopf** (📖 Quelle · 📍 Ort · QUAY · Zeitraum als Chips) + geordneter Feld-Fluss (Datum → Nachname ♂ → Vorname ♂ → Nachname ♀ → Vorname ♀ → Seite). Namens-Autocomplete über vorhandene Personen.
+  - **`qtSaveEntry`/`_qtSaveMarriage`**: erzeugt **FAM + 2 INDI + MARR**, voll verquellt — eine `citationObj` (sid + Seiten-Muster + QUAY + **URL-Deeplink als `media[0].file`**) am Heiratsereignis; Datum via `_normQuickDate`; Ort aus Kontext. Session-Modus (Felder leeren, Kontext bleibt, Zähler) wie QuickAdd.
+  - **Browser-verifiziert:** Template anlegen → persistiert (IDB) → Erfassung „Johann Decker ⚭ Maria Rust, fol. 88" → FAM+2 INDI, MARR `12 MAY 1801`, Zitat `@S99@`/`fol. 88`/Q3/Matrikula-URL.
+  - **Offen (Phase B+):** Personen-Matching (Dedup-aware), weitere Basismuster (baptism/burial/census), Inline-Plausi via Validator, „aus aktueller Quelle Template erstellen".
+
+---
+
+### Session 2026-05-30 — FEAT: INDI-Level-Quellen in Person-Detail (klickbar) (sw v756)
+
+- **sw v756** `feat(ui)`: Person-Detail zeigt jetzt eine **„Quellen"-Zeile** mit den INDI-Level-Quellen (`topSources`, gelten für die ganze Person) als §-Badges — inkl. klickbarem ↗-Link.
+  - **`topSourceCitsHtml(p)`** (ui-views.js): baut Pseudo-Zitate aus `topSources`/`topSourcePages`/`topSourceQUAY`; **URL ggf. aus `topSourceExtra`** (OBJE/FILE-Passthrough) extrahiert → über `citTagsHtml` als ↗ klickbar. Rückwärtskompatibel (URL noch in PAGE → ebenfalls ↗).
+  - **Hintergrund:** INDI-Level-Quellen wurden in der Person-Detail bisher gar nicht angezeigt (nur Event-Zitate). Nach der PAGE→OBJE/FILE-Migration lagen ihre URLs im Passthrough → unsichtbar. Befund: von 337 INDI-Level-URLs sind **121 echte Funde** (85 Online-OFB, 21 Matrikula, 15 Wigbold), nur 216 MyHeritage-Profile.
+  - **Browser-verifiziert** (preview): Person mit `1 SOUR/2 OBJE/3 FILE <ofb-url>` → „Quellen §1 ↗"-Zeile, `data-href` mit OFB-URL.
+
+---
+
+### Session 2026-05-30 — FIX: Zitat-Medien-URLs klickbar (↗ aus OBJE/FILE) (sw v755)
+
+- **sw v755** `fix(ui)`: `citTagsHtml` (ui-views.js) zeigt den ↗-Link jetzt auch, wenn die URL in einem **Zitat-Medium** (`citations[].media[].file`) steckt — nicht nur bei URL in `PAGE`.
+  - **Hintergrund:** Die UI rendert den klickbaren ↗ bisher nur, wenn `c.page` eine URL ist. Nach der PAGE→OBJE/FILE-Migration steht die Fundstellen-URL im strukturierten `media[]` → Link wurde nicht mehr angezeigt. Fix: zusätzlich `media[].file` auf URL prüfen (`linkHref = page-URL ?? media-URL`). Rückwärtskompatibel (Altdaten mit URL-in-PAGE weiter klickbar).
+  - **Browser-verifiziert** (preview): event-level `2 SOUR / 3 OBJE / 4 FILE <url>` → Parser strukturiert nach `cit.media[].file` (kein Passthrough), `citTagsHtml` rendert `src-badge-link` mit `data-href=<url>`.
+  - **Bekannte Grenze:** INDI-Level-Quellen (`1 SOUR`, topSources) haben kein Medien-Modell → dort gewanderte URLs (v.a. MyHeritage-Profil-Links) bleiben Passthrough/nicht klickbar; betrifft nicht die Fundstellen (event-level).
+
+---
+
+### Session 2026-05-30 — FIX: INDI-Level-Quellen-Dedup (MyHeritage N²-Verdopplung) (sw v754)
+
+- **sw v754** `fix(parser)`: INDI-Level-`1 SOUR @ref@`-Zitierungen werden jetzt **dedupliziert** (max. 1× pro Quelle/Person) — wie der GRAMPS-Parser es bereits tut.
+  - **Befund:** Ancestris-Dateien mit MyHeritage „Smart Matching" zitieren dieselbe Meta-Quelle (`@S500010–29@`) mehrfach auf INDI-Ebene. Das SID-gekeyte topSources-Modell (`topSourcePages`/`QUAY`/`Extra` pro SID) mischte alle Zitate unter einem Key; der Writer gab den gemischten Block **einmal pro topSources-Vorkommen** aus → **N²-Verdopplung** der `EVEN/ROLE/DATA/TEXT`-Blöcke. Auf „Unsere Familie neu.ged": **net_delta +36864 → −27, jetzt stabil**.
+  - **Fix (parser-only, kein Konsument berührt):** `gedcom-parser.js:35` `if (!cur.topSources.includes(_ns1))`; PAGE/QUAY keep-first. topSources bleibt Array eindeutiger SIDs (Modell-Invariante, die alle Konsumenten + GRAMPS bereits annehmen).
+  - **Regression:** demo + MeineDaten_ancestris weiter `net_delta=0` (kein Multi-Zitat → No-op). +2 Unit-Tests (test-unit.js: 103→105).
+
+---
+
+### Session 2026-05-30 — PAGE→Media/Note-Migration + QUICK-TPL-Konzept (sw v753)
+
+- **sw v753** `feat(data)`: Fundstellen-URLs aus `citation.page` lösbar (reine, getestete Funktion; opt-in, nicht auto beim Laden).
+  - **`_splitPageUrl(page)`** (gedcom.js, rein): trennt URL(s) vom menschenlesbaren Lokator → `{ page, urls[] }`; bereinigt angehängte Satzzeichen.
+  - **`_forEachCitation(root, fn)`**: host-unabhängiger Walk über alle Citation-Objekte (birth/death/…, events[], marr/engag, nameCitations, extraNames, childRelations) — erkennt Citation per Form (`page`+`sid`+`media`).
+  - **`migratePageUrls(db, {target,titl})`**: verschiebt URLs `page` → `media[]` (Default, GEDCOM-`OBJE/FILE`) oder `note`; Lokator („fol. 12r") bleibt in `page`; idempotent; gibt Report (für Vorschau).
+  - **16 Unit-Tests** (`test-unit.js`, jetzt 103): `_splitPageUrl`-Fälle + Migration (media/note/idempotent/Event-Host/ohne-URL).
+  - **Hintergrund/Review:** URL in `PAGE` ist gültig aber semantisch falsch (PAGE = Lokator); GEDCOM-konformer Träger für Deeplinks ist `OBJE/FILE` (Digitalisat) bzw. `NOTE` — beides round-trip-sicher + strict-export-fest. Writer schreibt `citations[].media[]` bereits.
+- **QUICK-TPL-Konzept** (Doku, ROADMAP): schema-getriebener Erfassungs-Motor; portable JSON-Config-Datei + IDB-Cache (nicht in GED); Deeplinks via `citations[].media[]`.
+
+---
+
+### Session 2026-05-30 — T0-MODULE Phase 2: ES-Modul Validator-Cluster (sw v752)
+
+- **sw v752** `refactor(arch)`: zweiter ES-Modul-Cluster nach demselben Brücken-Pattern (ADR-020).
+  - **`gedcom-validator.js`** → ES-Modul: `export` auf `runValidation`, `VAL_RULES`, `VAL_CONFIG_DEFAULTS`.
+  - **`validator.bridge.js`** (neu, `<script type="module">`): legt die 3 Symbole auf `window` für die klassischen Konsumenten (ui-views-val.js, ui-views-tasks.js, ui-event-delegation.js).
+  - **`index.html`**: `<script src="gedcom-validator.js">` → Modul-Brücke. **`sw.js`**: `validator.bridge.js` in `PRECACHE_CRITICAL`.
+  - **`test-unit.js`**: `_stripMod()` + `_readSrc()` strippen `export` der Validator-Datei vor flachem `eval`/`vm` (87 Tests weiter grün — sichern `runValidation` + alle 25 Regeln ab).
+  - **Verifiziert:** beide Headless-Suiten grün; Browser (preview): `window.runValidation` (function), `VAL_RULES` (array[25]), echter Validierungslauf feuert `DEATH_BEFORE_BIRTH`/`MISSING_SEX` (Modul liest `parseGedDate`/`gedDatePartToISO` zur Laufzeit), `parseGRAMPS` weiter intakt.
+  - **Re-Scoping (ADR-020):** ursprüngliche „Phase 2 = GRAMPS-Konsumenten migrieren" verworfen — gemessen: Konsumenten sind tief eingebettet (`idbGet` aus storage-file.js von 13 Dateien genutzt), Lazy-Geladene als klassische Skripte injiziert → Kaskade. Brücke schrumpft erst nach Kern-Migration (Phase 3). Strategie: zuerst alle sauberen Leaf-Cluster (GRAMPS ✓, Validator ✓).
+  - **Betriebs-Hinweis:** ESM-Umstellung erfordert `CACHE_NAME`-Bump — sonst lädt ein alter SW die gecachte index.html mit der Datei als klassischem `<script>` → `SyntaxError`.
+
+---
+
+### Session 2026-05-30 — T0-MODULE Phase 1: ES-Modul-Pilot GRAMPS-Cluster (sw v751)
+
+- **sw v751** `refactor(arch)`: Inkrementelle ES-Modul-Migration gestartet — GRAMPS-Cluster als Pilot (ADR-020).
+  - **`gramps-parser.js` / `gramps-writer.js`** → echte ES-Module: `export` auf `parseGRAMPS`, `writeGRAMPS`, `_grampsParseXMLText`, `_grampsBuildXMLText`.
+  - **`gramps.bridge.js`** (neu, `<script type="module">`): importiert die Public-API + `Object.assign(window, …)` → klassische Konsumenten (storage-file, onedrive, compare-engine, ui-debug, debug-gramps) laufen unverändert global weiter.
+  - **`index.html`**: zwei klassische `<script>`-Tags durch eine Modul-Brücke ersetzt.
+  - **`sw.js`**: `gramps.bridge.js` in `PRECACHE_CRITICAL`.
+  - **`test-roundtrip.js`**: `_stripMod()` entfernt `export`/`import` vor flachem `eval`/`vm` (kein Modul-Loader im Harness). `test-unit.js` unberührt.
+  - **Verifiziert:** beide Headless-Suiten grün; Browser (preview): Boot fehlerfrei, `window.parseGRAMPS`/`writeGRAMPS` gesetzt, End-to-End Parse→Build stabil, Modul liest `AppState` (global-lexical) + `citationObj` (window) zur Laufzeit, Repo-Typ „Archive" erhalten.
+  - **Schlüsselbefund (ADR-020):** Kern (`gedcom.js`) muss NICHT zuerst migriert werden — ES-Module lesen klassische Globals; deferred Modul-Load erhält Reihenfolge. Phasen 2–4 (Konsumenten → Kern → UI) im Backlog.
+
+---
+
+### Session 2026-05-30 — T0-UNIT: 87 Unit-Tests für Kern-Logik (kein sw-Bump)
+
+- `test(core)`: **`test-unit.js`** — abhängigkeitsfreies Unit-Test-Harness (JXA/Node, `vm`/`eval`, CI-Exit-Code), 87 Tests:
+  - **(a) Parser-Edge-Cases:** CONC/CONT-Notes, leeres BIRT-Tag mit Sub-DATE, Nur-Nachname → leerer Vorname, unbekanntes `_CUSTOM` → `_passthrough[]`, lv>4-Zeile bricht Passthrough nicht ab (ADR-012).
+  - **(b) Validator:** alle **25 Regeln** je 1 Positiv-/Negativfall (13 Personen- + 12 Familien-Regeln); konstruiert minimale `db`-Fixtures, prüft `runValidation()`-Resultate per Regel-Code.
+  - **(c) BFS-Anonymisierung** (`_buildLivingSet`, DSGVO-kritisch): kürzlich geboren→lebend, vor 100 J.→tot, mit Sterbedatum→tot, Ehepartner/Kind einer Lebenden ohne Daten→lebend (BFS), **toter Vorfahr bleibt tot trotz lebendem Kind**, Person ohne Daten→konservativ lebend.
+  - **(d) Datums-Helfer:** `normMonth` (Zahl/Name/dt./en./ungültig), `buildGedDate` (ABT/BET/FROM + Leerfälle), `readDatePartFromFields`/`buildGedDateFromFields` über konfigurierbaren `document`-Stub.
+  - Kein Produktionscode geändert → kein sw-Bump (test-unit.js nicht im SW-Cache).
+
+---
+
+### Session 2026-05-30 — T0-TEST-2: GRAMPS-Roundtrip automatisiert + Repo-`<type>`-Bug (sw v750)
+
+- **sw v750** `test(interop)` + `fix(gramps)`: GRAMPS-Roundtrip headless automatisiert; dabei echten Roundtrip-Bug gefunden+behoben.
+  - **`test-roundtrip.js`** um GRAMPS-Pfad erweitert (Routing per `.gramps`-Endung):
+    - **Abhängigkeitsfreier Mini-DOMParser** (`_makeMiniDOMParser`) — implementiert die von `gramps-parser.js` genutzte DOM-Teilmenge (getAttribute, localName/tagName, children/childNodes, textContent, attributes, nodeType, getElementsByTagName(NS), querySelector, documentElement). Kein npm, kein `linkedom`.
+    - **`_gunzip(path)`** env-abhängig: Node `zlib.gunzipSync`, JXA `gzip -dc` in Temp-Datei (umgeht stdout-Limit bei 5,7 MB); nicht-gzip Dateien als Rohtext.
+    - **Assertion:** `xml1===xml2` (Stabilität, analog GEDCOM `out1===out2`) + Kern-Record-Counts (person/family/source/repository) gegen Original (`grampsCounts()` per Regex → unabhängig vom Mini-DOMParser). note/citation/placeobj/event/object dürfen abweichen (Dedup/Regeneration, analog PEDI-Delta) → nur Warnung.
+  - **Test-Seams** (Produktionscode, verhaltensneutral):
+    - `gramps-writer.js`: Body → synchrone **`_grampsBuildXMLText(db)`** (gibt XML-String zurück); `writeGRAMPS(db)` ist dünner gzip/Blob-Wrapper darum.
+    - `gramps-parser.js`: Teil nach Dekompression → synchrone **`_grampsParseXMLText(xmlText)`**; `parseGRAMPS(file)` dekomprimiert + delegiert.
+  - **`fix(gramps)` — Repo-`<type>`-Duplikation:** `_REPO_MODELLED` enthielt `'type'` nicht → `<type>Library</type>` landete in `r._extra` **und** wurde vom Writer hartcodiert erneut ausgegeben → wuchs +1 pro Roundtrip (Instabilität). Behoben: `'type'` zu `_REPO_MODELLED` hinzugefügt, Parser liest `r.rtype` (statt zu verwerfen), Writer schreibt `r.rtype || 'Library'` (erhält jetzt auch Nicht-Library-Typen wie Archive/Collection). Vom In-Browser-Feldvergleich (60034 Checks) übersehen, weil dieser `repo._extra` nicht prüfte.
+  - **Ergebnis:** `✓ gramps:Unsere Familie.gramps  stable  2894 Pers` · GEDCOM-Tests unverändert grün.
+
+---
+
+### Session 2026-05-29 — F6 STRICT GEDCOM: Strict GEDCOM 5.5.1 Export (sw v749)
+
+- **sw v749** `feat(interop)`: F6 STRICT GEDCOM — opt-in Export ohne alle `_`-prefixed Vendor-Tags, als Menü-Button (analog zu GED7/GRAMPS):
+  - **`_strictGed`-Flag** in `gedcom-writer.js` (analog zu `_ged7`); neuer dritter Parameter `writeGEDCOM(updateHeadDate, forceGed7, forceStrict)`
+  - **`_ptLines(arr)`** Hilfsfunktion filtert `_`-Tags (`/^[0-9]+ _[A-Z]/`) aus allen Passthrough- und Extra-Arrays (10+ Stellen: `_passthrough[]`, `_extra[]`, `c.extra[]`, `rc.extra[]`, `addrExtra[]`, `noteRefExtras`, `topSourceExtra`, `frelSourExtra`, `mrelSourExtra`, `dataExtra`, `rec._lines`)
+  - **Tag-Mapping:** `_UID` → `1 REFN <uuid>` + `2 TYPE UID`; `_RUFNAME` → `2 NICK`; `_TRAN` PLAC/NAME → `NOTE [lang] value`; `_FREL`/`_MREL` in INDI/FAMC → `PEDI` (adopted gewinnt bei Konflikt + `NOTE Stammbaum: _FREL=… _MREL=…`); `_FREL`/`_MREL` in FAM/CHIL → weggelassen (PEDI steht korrekt im INDI-FAMC)
+  - **Weggelassen:** `_GRAMPS_ID`, `_STAT`, `_TASK`/`_RLOG`-Blöcke, `_SCBK`, `_PRIM`, `_DATE` an Medien
+  - **Menü-Button** `strictExportBtn` (index.html): sichtbar wenn Datei geladen; `menuExportStrict`-Action → `exportGEDCOM(true, false, true)`; Suffix `_strict.ged`; immer Download
+  - **`_odUpdateUI()`** (onedrive-auth.js): `strictExportBtn` sichtbar wenn `AppState.db` gesetzt
+  - **Strict-Roundtrip-Test** (test-roundtrip.js): `runStrictTest()` prüft kein `_`-Tag im Output + Stabilität (out1===out2); läuft nach normalem Roundtrip-Test
+  - **ADR-019** (ARCHITECTURE.md): vollständige Dokumentation der Tag-Behandlung
+
+---
+
+### Session 2026-05-29 — ONBOARDING: Spotlight-Intro nach Demo-Load (sw v748)
+
+- **sw v748** `feat(ux)`: ONBOARDING — 4-Schritte-Spotlight-Overlay nach erstem Demo-Load:
+  - **`ui-onboarding.js`**: `showOnboarding()` — 4 Schritte (Personenliste, Baum-Button, FAB, eigene Datei laden); Spotlight-Overlay mit `#onboarding-overlay`, `#onboarding-box`; `data-ob-step` als Fortschrittsanzeige
+  - Einmalig pro Gerät: Flag `stammbaum_onboarding_done` in localStorage
+  - Trigger: nach `_finishLoad()` wenn Demo-Datei geladen + Flag noch nicht gesetzt
+
+---
+
+### Session 2026-05-29 — LAZY-LOAD: 119 KB aus Cold-Start entfernt (sw v747)
+
+- **sw v747** `feat(perf)`: LAZY-LOAD — 5 Dateien on-demand statt beim Start:
+  - **`lazy-loader.js`**: `_lazyScript(url)` / `_lazyScripts(urls)` — dynamisches `<script>`-Laden mit Promise; Deduplication via `_lazyLoaded` Set
+  - **Lazy-Entry-Points** (ui-event-delegation.js): `menuBook`, `menuPrint`, `generateBook` → laden `ui-book.js` + `ui-print.js` (37 KB); `menuDedup` → `ui-dedup.js` (24 KB); `menuImportCompare` → `ui-import-compare.js` + `compare-engine.js` (57 KB)
+  - `index.html`: 5 `<script>`-Tags entfernt; `lazy-loader.js` eingefügt
+  - `sw.js`: lazy Module in `PRECACHE_OPTIONAL` (kein Startup-Block bei Fehler)
+  - Ergebnis: −119 KB Cold-Start-Last; gemessen 321ms → Roundtrip-Test unverändert
+
+---
+
+### Session 2026-05-29 — T0-TEST: Automatisierter GEDCOM-Roundtrip-Test (sw v746)
+
+- **sw v746** `feat(test)`: T0-TEST — `test-roundtrip.js` — GEDCOM-Roundtrip direkt via osascript ohne Browser:
+  - Läuft via JavaScriptCore (macOS built-in): `osascript -l JavaScript test-roundtrip.js datei.ged`
+  - Node.js-Pfad: `vm.runInContext` — alle drei Skripte (`gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`) in isoliertem Kontext mit Browser-Stubs
+  - JXA-Pfad (osascript): `eval(_combined)` — Funktionen im globalen Scope; `window=this`-Trick
+  - `runRoundtrip()`: Parse → Write (out1) → Parse → Write (out2); prüft `out1 === out2` + `normDelta === 0`; Snapshot-Vergleich (Update via `--update`); farbige Ausgabe
+  - Ergebnis: 2811 Personen, net_delta=0, stable in ~330ms bestätigt
+
+---
+
+### Session 2026-05-29 — CSS-PURGE: 21 tote Klassen entfernt (sw v745)
+
+- **sw v745** `refactor(css)`: CSS-PURGE — systematischer Scan aller 796 CSS-Klassen:
+  - Entfernt: 17 Utility-Klassen (`d-block`, `d-inline-flex`, `flex-shrink-0`, `ai-fe`, `jc-c`, `jc-sb`, `w-54`, `w-72`, `ta-c`, `ta-l`, `bg-s2`, `br-sm`, `br-md`, `wb-all`, `max-h-280`, `va-mid`, `lh-17`) + `src-tag-x`, `tpl-btn`, `btn-gold-text`, `c-red`
+  - Leaflet-Overrides + dynamische Klassen (`tl-pc${idx}` etc.) korrekt behalten
+  - `styles.css`: 3416 → 3385 Zeilen (−31)
+
+---
+
+### Session 2026-05-28 — T0-XSS: innerHTML-Sicherheitsaudit (sw v744)
+
+- **sw v744** `fix(security)`: T0-XSS — vollständiger Audit aller 166 `innerHTML`-Assignments:
+  - Kein echter XSS-Vektor gefunden; alle Pfade verwenden `esc()` oder schreiben nur statisches HTML
+  - Einzige Inkonsistenz behoben: `ui-forms.js` `_appendDataEvenRow` — `value=`-Attribute von `.replace(/"/g,'&quot;')` auf `esc()` umgestellt (`evens`, `date`, `plac`)
+  - Sicherheits-Bewertung: +0.2 → 7.7/10
+
+---
+
+### Session 2026-05-28 — T0-SW: Service Worker Install-Robustness (sw v743)
+
+- **sw v743** `fix(sw)`: T0-SW — PRECACHE_CRITICAL + PRECACHE_OPTIONAL Split:
+  - **`PRECACHE_CRITICAL`** (Promise.all, atomar): alle JS/HTML/CSS-Kern-Assets — Install schlägt fehl wenn eines fehlt
+  - **`PRECACHE_OPTIONAL`** (Promise.allSettled, fehlertolerant): 8 Fonts-woff2, `leaflet.js/css`, `debug-gramps.js`, `Anna.png` — Einzelfehler bricht SW-Install nicht mehr ab
+  - Behebt: fehlende `gedcom-validator.js` + `timeline-hist-events.js` offline (in PRECACHE ergänzt, v742)
+
+---
+
+### Session 2026-05-28 — ARCHITECTURE + PRECACHE-Fix (sw v742)
+
+- **sw v742** `docs+fix`: ARCHITECTURE.md vollständige Überarbeitung + PRECACHE-Bugfix:
+  - ARCHITECTURE.md: Übersicht auf ~52 Dateien aktuell; ADRs kondensiert; Bekannte Einschränkungen bereinigt
+  - `fix(sw)`: `gedcom-validator.js` + `timeline-hist-events.js` in PRECACHE ergänzt (fehlten → offline nicht verfügbar)
+
+---
+
+### Session 2026-05-27 — ASSO-EDIT: Assoziationen editierbar (sw v734)
+
+- **sw v734** `feat(asso)`: ASSO-EDIT — Assoziationen in der Personen-Detailansicht vollständig editierbar:
+  - **`modalAsso`** (index.html): neues Bottom-Sheet mit Rollen-Select (Godparent / Witness / Informant / Friend / Associate / Eigene Rolle) + Notiz-Textfeld + Hidden-Fields für anchor-pid, target-pid, edit-idx
+  - **Person-Picker**: neuer `'asso'`-Modus in `renderRelPicker()` und `relPickerSelect()` (ui-views-family.js); filtert nur die Ankerperson heraus
+  - **Neue Funktionen** (ui-views-person.js): `showAddAssoFlow(pid)`, `showAssoRoleStep(anchorPid, assoPid, editIdx)`, `assoRoleChange()`, `saveAsso()`, `deleteAsso(pid, idx)`
+  - **Assoziationen-Section** komplett überarbeitet: jeder gespeicherte Eintrag mit ✎ (Bearbeiten) + × (Entfernen); Notiz unterhalb des Personen-Chips; abgeleitete Patenkinder bleiben read-only (`asso-chip--derived`); `+ Hinzufügen`-Button im Section-Header
+  - **`ui-event-delegation.js`**: neue Actions `showAddAssoFlow`, `editAsso`, `deleteAsso`, `saveAsso`, `assoRoleChange`
+  - Roundtrip unverändert stabil (ASSO-Writer war bereits korrekt)
+
+---
+
+### Session 2026-05-27 — GEDCOM-7-4: GED7-UI-Elemente (sw v733)
+
+- **sw v733** `feat(ged7)`: GEDCOM-7-4 — Darstellung GED7-spezifischer Felder in der Personen-Detailansicht:
+  - **`datePhrase`** kursiv: `_dpHtml(obj)` → `<em class="date-phrase">` unterhalb der strukturierten Datumszeile in allen Event-Reihen (BIRT, CHR, DEAT, BURI, Array-Events)
+  - **`noEvents`** als ✗-Badges: alle Tags in `p.noEvents` als `<span class="no-ev-badge">✗ Ereignis</span>` in einer `fact-row--no-ev`-Zeile
+  - **`exids[]` Panel**: externer ID-Block neben `refns[]`; Label `EXID (Typ)` oder `EXID`; read-only
+  - **`aliaNames[]`**: Text-Aliase als plain `fact-row` (ohne @xref@-Verlinkung)
+  - **`nameTrans[]`**: read-only Namensübersetzungs-Chips mit `tran-chip` + `tran-lang`-Stil
+  - **Übersetzungs-Editor für Orte** (ui-views-place.js): in `showPlaceDetail()` inline-Editor für `extraPlaces[].trans[]`; Funktionen `addPlaceTrans()` / `deletePlaceTrans(idx)` via `AppState.currentPlaceName`; Actions in ui-event-delegation.js
+  - **`styles.css`**: neue Klassen `.date-phrase`, `.fact-row--no-ev`, `.no-ev-badge`, `.tran-chip`, `.tran-lang`, `.tran-add-row`
+
+---
+
+### Session 2026-05-27 — GEDCOM-7-3: Cross-Transfer-Adapter (sw v732)
+
+- **sw v732** `feat(ged7)`: GEDCOM-7-3 — GED5/GED7-Adapter für Tag-Namensräume und Format-Downgrade:
+  - **`_writePlacTrans()`** (gedcom-writer.js): unified für GED5 (`2 _TRAN`) und GED7 (`2 TRAN`) — Tag-Auswahl via `_ged7 ? 'TRAN' : '_TRAN'`; wird in `eventBlock()` und allen Array-Event-Pfaden aufgerufen (kein `if (_ged7)`-Guard mehr)
+  - **`nameTrans[]` in GED5**: Writer gibt `2 _TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` in GED5-Modus aus (vorher nur GED7); Parser erkennt `_TRAN` und `TRAN` symmetrisch unter PLAC und NAME
+  - **GED5-Downgrade-Block**: wenn `!_ged7` → `p.exids[]` → `1 REFN` + `2 TYPE`; `p.noEvents[]` → `1 NOTE Kein bekanntes Ereignis: TAG`
+  - **GRAMPS-Adapter** (gramps-writer.js): `noEvents` → `<attribute type="No EVENT" value="Y"/>`; `exids[]` → `<url href="..." type="..."/>`; `datePhrase` → `<datestr val="..."/>` als Fallback wenn kein strukturiertes Datum parsbar
+  - **GED7-Exportmenü**: `grampsExportBtn` in modalMenu (index.html) — sichtbar nur wenn `db.gedVersion === '7.0'`; `menuExportGramps`-Action; `_odUpdateUI()` aktualisiert Sichtbarkeit und Button-Label
+
+---
+
+### Session 2026-05-26 — A11Y: Accessibility-Grundhärtung WCAG 2.1 AA (sw v724)
+
+- **sw v724** `feat(a11y)`: Vollständige Accessibility-Grundhärtung (7 Items):
+  - **A11Y-1 Skip-Link + Landmarks:** `<a class="skip-link" href="#v-main">` im `<body>` (Tab-Fokus macht ihn sichtbar); `aria-hidden="true"` auf dekorative Elemente (`.ornament`, `.ub-icon`, `.ph-icon`); `aria-label` auf Media-View-Toggle
+  - **A11Y-2 ARIA-Live Navigation:** `_announceList()` in `showDetail()` (Personenname) + `switchTab()` (Tab-Label via `_TAB_LABELS`); bestehende `#list-announce` + `#toast` (beide `role=status aria-live=polite`) bleiben Fundament
+  - **A11Y-3 Baum-Kacheln:** alle `.tree-card`-Divs erhalten `tabindex="0"`, `role="button"`, `keydown`-Handler für Enter/Space (löst Click aus); `aria-label` mit Name + Geschlecht + Jahr war bereits vorhanden
+  - **A11Y-4 Formular-Labels:** `label[for="pf-given/pf-surname"]`; `aria-describedby="pf-name-err"` auf beide Namensfelder; `#pf-name-err` erhält `aria-live="assertive"`
+  - **A11Y-5 `:focus-visible`:** Global 2px gold outline (`var(--gold)`), `outline-offset: 2px`; `.tree-card:focus-visible` zusätzlich mit `box-shadow`; Eingabefelder behalten eigenen Fokus-Stil
+  - **A11Y-6 `aria-invalid`:** `aria-invalid="true/false"` in `_checkNameBlur()` + `savePerson()`-Validierung; `aria-invalid` wird bei Formular-Reset gelöscht
+  - **A11Y-7 `prefers-reduced-motion`:** `@media (prefers-reduced-motion: reduce)` — alle `transition-duration` + `animation-duration` auf 0.01ms; `animation-iteration-count: 1`
+
+---
+
+### Session 2026-05-26 — Baum: Geschwisterzähler + Preview-Infrastruktur (sw v722–v723)
+
+- **sw v722–v723** `fix(tree)` + `chore(dev)`:
+  - **Geschwisterzähler** im Peek-Stapel-Modus verschoben: Badge lag oben-rechts auf oberstem Geschwister (`.tree-half-badge--sib`, `top:3px; right:4px`) und überlagerte CSS-`::after` Geschlechtssymbol (`top:2px; right:4px`). Fix: Badge jetzt auf Fokusperson unten-links (`.tree-half-badge--sib-count`, `bottom:3px; left:4px`); Bedingung `!useHorizSibs && nSibs > 1`
+  - **`serve.py`** erweitert um `NoCacheHandler`: sendet `Cache-Control: no-store, no-cache, must-revalidate` für `.js`/`.css` — verhindert Browser-Caching von Entwicklungsdateien
+  - **`.claude/launch.json`**: zweite Konfiguration `stammbaum-fresh` (autoPort) — bei laufendem `stammbaum`-Server erhält `fresh` einen anderen Port → frischer Browser-Cache-Namespace für zuverlässige Preview-Verifikation
+
+---
+
+### Session 2026-05-25 — T0-LINTER + T0-TYPES: .editorconfig + JSDoc-Typen (sw v698)
+
+- **sw v698** `refactor(types)`: T0-TYPES + T0-LINTER-Ersatz:
+  - **`.editorconfig`** (NEU): 2-Space, LF, UTF-8, `trim_trailing_whitespace`, `insert_final_newline`; löst T0-LINTER ab (ESLint gestrichen — Multi-File-Globalnamespace macht `no-undef` wartungsintensiv, Code ist bereits clean)
+  - **JSDoc `@typedef`** in `gedcom.js` (12 Typen): `Citation`, `MediaRef`, `SpecialEvent`, `PersonEvent`, `Task`, `RlogEntry`, `Person` (31 Felder), `FamilyEvent`, `Family` (25 Felder), `Source`, `Repo`, `AppDb`; direkt vor den Getter-Funktionen eingefügt
+  - **`@param`/`@returns`** auf den 8 Gettern/Settern (`getPerson`/`getFamily`/`getSource`/`getRepo` → `T|null`; Setter mit `Partial<T>`)
+  - **`@param`/`@returns`** auf Entry-Points: `parseGEDCOM(text,errors,onProgress)→AppDb`, `writeGEDCOM(updateHeadDate)→string`, `parseGRAMPS(file)→Promise<AppDb>`
+  - VS Code und IntelliJ nutzen `@typedef` nativ: Autocomplete auf `p.`, `f.`, `s.` in allen Dateien; Tippfehler wie `f.chil` statt `f.children` werden sofort unterstrichen
+
+---
+
+### Session 2026-05-25 — T0-REFACT-3 Phase B: ui-views.js aufgeteilt (sw v697)
+
+- **sw v697** `refactor(views)`: T0-REFACT-3 Phase B — `ui-views.js` (1.471 Z.) in vier Dateien aufgeteilt:
+  - **`ui-views.js`** (691 Z.) — PROBAND, Basis-Navigation, Virtual Scroll, `showMain()`, Tab-Switching, `renderTab()`, `updateChangedIndicator()`, Shared View Helpers (Autocomplete, `factRow`, `relRow`, `evGeoLink` etc.)
+  - **`ui-views-nav.js`** (249 Z., NEU) — History-Navigation: `_historyItemLabel`, `_showHistoryPicker`, `_closeHistoryPicker`, `_navToHistoryItem`, `_captureCurrentNavState`, `_beforeDetailNavigate`, `goBack`, `goForward`, `openDetailHistory`, `_updateNavBtns`, `_persistNavState`, `_restoreNavState`, `_clearNavState`
+  - **`ui-views-undo.js`** (59 Z., NEU) — Undo/Redo: `pushUndo`, `applyUndo`, `applyRedo`, `_applyUndoStack`
+  - **`ui-event-delegation.js`** (471 Z., NEU) — `_sortedChildren`, `_CLICK_MAP` (alle ~100 Einträge), `document.addEventListener` für click/change/input/blur, `_personCompleteness`, `_buildObjeRefMap`; muss letztes `<script>` in index.html sein
+  - `index.html`: `ui-views-nav.js` + `ui-views-undo.js` nach `ui-views.js`; `ui-event-delegation.js` als letztes Script; `sw.js` PRECACHE aktualisiert
+
+---
+
+### Session 2026-05-25 — T0-REFACT-3 Phase A: ui-views-tasks.js aufgeteilt (sw v696)
+
+- **sw v696** `refactor(tasks)`: T0-REFACT-3 Phase A — `ui-views-tasks.js` (1.143 Z.) in drei Dateien aufgeteilt:
+  - **`ui-views-tasks.js`** (642 Z.) — Aufgaben-CRUD, Badge, Personen/Familien-Detailabschnitt, globale Aufgabenliste, MD-Export, Click-Handler
+  - **`ui-views-rlog.js`** (353 Z., NEU) — Forschungsprotokoll (RLOG): `_rlogSectionHtml`, `_famRlogSectionHtml`, `_renderRlogView`, `exportRlogMd`, `showAddRlogForm`, `showAddFamRlogForm`, `showEditRlogForm`, `showEditFamRlogForm`, `_saveRlog`, `_deleteRlogEntry`, `_deleteFamRlogEntry`, `switchRlogFilter`, `_famDisplayName`
+  - **`ui-views-val.js`** (162 Z., NEU) — Validierungspanel + VAL-Config: `_renderValidationPanel`, `_handleRunValidation`, `_handlePromoteToTask`, `openValConfig`, `saveValConfig`, `resetValConfig`, Startup-Badge
+  - `index.html`: zwei neue `<script>`-Tags in korrekter Reihenfolge nach `ui-views-tasks.js`; `sw.js` PRECACHE um beide neuen Dateien erweitert
+
+---
+
+### Session 2026-05-25 — T0-DEBUG + T0-STORAGE: localStorage → IDB-Migration (sw v694–v695)
+
+- **sw v694** `refactor(debug)`: T0-DEBUG — `debug-gramps.js` (591 Z., ~28 KB) aus statischem `<script src>` in `index.html` entfernt; `debug-activate.js` lädt die Datei jetzt dynamisch via `document.createElement('script')` nur wenn `?debug=1` oder `#debug` gesetzt ist; Browser parst `debug-gramps.js` damit nur noch im echten Debug-Betrieb; Datei verbleibt in sw.js PRECACHE für Offline-Verfügbarkeit
+
+- **sw v695** `refactor(storage)`: T0-STORAGE Phase 1+2+4 — localStorage → IDB für drei Schlüssel-Gruppen:
+  - **Phase 1 (`dedup_ignored`)** `ui-dedup.js`: async IIFE lädt Ignore-Set beim Modulstart aus IDB (mit einmaliger localStorage-Migration + `localStorage.removeItem`); `_dedupLoadIgnored()` auf leeres-Set-Fallback reduziert; `_dedupSaveIgnored()` schreibt via `idbPut` statt `localStorage.setItem`
+  - **Phase 2 (`od_file_id`/`od_file_name`)** `onedrive.js`: Modulvariablen `_odCurFileId`/`_odCurFileName` (Sync-Cache); async IIFE initialisiert aus IDB mit einmaliger localStorage-Migration; alle 11 `localStorage.getItem/setItem`-Stellen in `odOpenFilePicker`, `odLoadFile`, `odSaveFile`, `_odSaveGramps`, `odAutoLoadFromOneDrive` ersetzt; `onedrive-auth.js` Logout: `localStorage.removeItem` durch `idbDel` + Cache-Reset ersetzt; `storage.js` window.load-Handler: `localStorage.getItem('od_file_id')` → `await idbGet('od_file_id')`; `_showStartupChoice()`: `_odCurFileName`-Cache; `ui-views.js`: beide `localStorage.getItem('od_file_id')`-Checks → `_odCurFileId` (replace_all)
+  - **Phase 4 (`stammbaum_filename` Schreibpfad)** `storage-file.js`: GRAMPS-Ladepfad schreibt Dateinamen jetzt via `idbPut` statt `localStorage.setItem` (GEDCOM-Pfad hatte das bereits seit v5)
+  - **Offen (Phase 3)**: `stammbaum_extraplaces_*` + `stammbaum_hofobjects` in `ui-forms.js` (4 Calls) — async Init in `_autoLoad()` erforderlich; Quota-Risiko gering; Defer auf nächsten Sprint
+
+---
+
+### Session 2026-05-24 — DUP-SEARCH: Suchfeld in Duplikate-Liste (sw v683)
+
+- **sw v683** `feat(dedup)`: DUP-SEARCH — Suchfeld (`<input type="search" id="dedup-search">`) im Duplikate-Modal oberhalb der Statuszeile; filtert `_dedupPairs` live nach Name (pA/pB) oder ID; `_dedupSearchQuery`-State + `dedupSearchChange()`; `_renderDedupList()` auf Filterlogik umgestellt: `reduce()` mit `origIdx` sichert korrekte `data-pair`-Referenzen auch in gefilterter Ansicht; Statuszeile zeigt `N von M Paaren` bei aktiver Suche; Reset beim Öffnen des Modals; `_dedupSearchQuery` als Modul-Variable ergänzt
+
+---
+
+### Session 2026-05-23 — IMPORT-CMP: Datei-Vergleichs- & Merge-Assistent (sw v673–v682)
+
+- **sw v673** `feat(import-compare)`: IMPORT-CMP — Datei-Vergleichs- & Merge-Assistent; `compare-engine.js` + `ui-import-compare.js` neu; `_cmpState` mit `db/filename/matches/matchConfirm/selections/importSourceId`; `cmpLoadFile()` (GEDCOM + GRAMPS); `cmpMatchPersons()` via `_dedupScorePair`; Status-Gruppen matched/uncertain/new; `cmpComputePersonDiff()` → `{additions[], conflicts[], identical}`; `cmpApplyPatch()` mit Import-Quelle; `_cmpApplyField()` für alle Feldtypen (events, notes, event-subfields, scalars); `_cmpDoImportNew()` klont Person in Basis-db; Sheet-Modal mit 2-Panel-Layout (Liste links, Diff rechts); Score-Badge + Reasons-Tooltip; Merge-Bestätigungs-Footer; undo-Integration via `pushUndo`
+
+- **sw v674** `feat(import-compare)`: Auswahl A/B/A+B für Konflikte; `'both'`-Entscheidung schreibt Importwert als Notiz; Einzel-Person-Übernahme-Button (`__import_new`) für neue + abgelehnte unsichere Matches; Vorauswahl aller Additions auf `true` + Konflikte auf `'base'` bei erstem Öffnen via `cmpInitSelections()`
+
+- **sw v675** `feat(import-compare)`: Diff-Indikatoren in der Übersichts-Liste (`+N` blau für Ergänzungen, `⚡N` orange für Konflikte, `=` grau für identisch); `= ausbl.`-Toggle blendet identische Personen aus (`_cmpHideIdentical`); CSS-only Scroll-Fix — `.sheet { overflow:hidden }` + `.sheet-body { display:flex; flex-direction:column }` + `.cmp-layout { flex:1; min-height:0 }` damit Liste und Diff-Panel unabhängig scrollen
+
+- **sw v676** `feat(import-compare)`: Forschungseinträge (📋) als Alternative zu Ergänzungen — `'rlog'`-Entscheidungswert; 3-Wege-Buttons `[✓][📋][✗]` pro Ergänzungs-Feld (`.cmp-fa-group`); Konflikte um 4. Radio-Option `📋 Forschungseintrag` erweitert; `_cmpCreateRlogEntry()` legt `_rlog`-Eintrag mit `result:'pending'` + Kontext-Query an; `cmpApplyPatch()` interceptet `'rlog'`-Decisions vor `_cmpApplyField()`; `_cmpState.rlogCreated{}` zählt angelegte Einträge; `📋N`-Indikator in der Übersichts-Liste; „alle 📋"-Bulk-Button in Sektions-Header
+
+- **sw v677** `feat(import-compare)`: Vollständige Neue-Person-Ansicht — alle Felder der Import-Person sichtbar (Basisfelder, 4 Standard-Events, freie Events mit value+addr+date+place+note, Notizen); `_cmpNewPersonRows()` als eigenständiger Builder; Kontext bei Ergänzungen: OCCU zeigt Beruf + Ort, RESI zeigt Adresse (`ev.addr` aus `2 ADDR`); `cmpComputePersonDiff()` ergänzt um `ev.addr` in der Zusammenfassung
+
+- **sw v678** `fix(import-compare)`: CSS-only Scroll-Fix (JS-Ansatz via `body.style.overflow` funktionierte nicht wegen `.sheet`-eigenem overflow); leere Ergänzungswerte: RESI-Adresse in `ev.addr` statt `ev.value`; `evLabel` ohne Datum (Datum erscheint bereits im Wert-String)
+
+- **sw v679** `feat(import-compare)`: „≠ Andere Person"-Button auch bei sicheren Matches (Score ≥ 75); Diff-Header jedes gematchten Eintrags erhält `cmp-reject-match-btn`; `cmpRejectMatch`-Handler setzt `match.status='new'` + `match.baseId=null` + Selections-Reset → Person wird als Neue behandelt
+
+- **sw v680** `fix(import-compare)`: Abbrechen + Neu laden = echte Neubewertung ohne vorherige Auswahlen; `cmpInitAllSelections()` aus `_cmpRunMatching()` entfernt (nur noch lazy bei erstem Öffnen eines Eintrags via `cmpInitSelections()`); vollständiger State-Reset in `_cmpRunMatching()` + `showImportCompare()`
+
+- **sw v681** `feat(import-compare)`: Familienverknüpfungen bei neu importierten Personen; `_cmpDoImportNew()` löscht `famc`/`fams` vor dem Einfügen + gibt `newId` zurück; `cmpApplyPatch()` sammelt `importedMap{cmpId→newId}`; neue Hilfsfunktionen: `_toBaseId()` (importedMap + matches), `_cmpFindOrCreateFamily()` (sucht vorhandene oder legt neue Familie an), `_cmpReconnectFamilies()` (rekonstruiert famc + fams für alle importierten Personen, überträgt Kinder)
+
+- **sw v682** `fix(import-compare)`: Fehler beim Speichern nach Import — `_cmpFindOrCreateFamily()` erstellte Familie mit `chil:[]` statt `children:[]` (GEDCOM-Writer erwartet `children`); vollständige Familienstruktur analog `gedcom-parser.js` (alle Pflichtfelder: `childRelations{}`, `marr/engag/div/divf` via `_cmpEmptyFamEv()`, `events[]`, `_tasks[]`, `_rlog[]`, `refns[]`, `noteRefExtras{}` etc.)
+
+---
+
+### Session 2026-05-23 — DEDUP-ENH: Duplikat-Erkennung ausgebaut (sw v670–v672)
+
+- **sw v670** `feat(dedup)`: Zeilenweise Feldauswahl im Merge-Modal — `[data-sel-field]`/`[data-sel-side]` Attribute auf `<tr>`/`<td>`; Click-Handler setzt `_dedupSelections[field] = 'A'|'B'`; `.selected`-Highlight; `_dedupMergePersons()` berücksichtigt `_dedupSelections` via `_pick(field, aVal, bVal)` für alle 7 selektierbaren Felder (`surname/given/sex/birth.date/birth.place/death.date/death.place`)
+
+- **sw v671** `feat(dedup)`: Forschungseintrag-Button im Merge-Modal — `dedupCreateRlog()` legt bei beiden Personen einen `_rlog`-Eintrag an (`result:'pending'`, Score + Reasons + Geburtsinfos als Note); kehrt zur Paar-Liste zurück ohne Merge; `_refreshRlogSection()` aufgerufen wenn verfügbar
+
+- **sw v672** `feat(dedup)`: DEDUP-SCORE — Eltern + Partner im Duplikat-Scoring; `_dedupScorePair()` in `gedcom.js` um `parentScore` (gemeinsame Nachnamen in Elternfamilien, Levenshtein) und `partnerScore` (Nachname des ersten Partners) erweitert; Gesamt-Score auf 100 normalisiert (Gewichtung: Name 40/10, Geschlecht 5, Geburt 20/5, Tod 10/5, Eltern 10, Partner 5)
+
+---
+
+### Session 2026-05-23 — PRINT-OUT: Druckausgaben (sw v669)
+
+- **sw v669** `feat(print-out)`: PRINT-OUT — `ui-print.js` neu; Ahnenliste als Kekule-Tabelle (nummerierte Vorfahren-Reihen, direkt klickbarer HTML-Download); Familienbogen mit Eltern + Kinder + Ereignisübersicht; `@media print` CSS; Button im Personen-Detail-Menü; keine externen Abhängigkeiten
+
+---
+
+### Session 2026-05-22/23 — TL-MULTI Follow-up: Farbkodierung (sw v666–v668)
+
+- **sw v666** `fix(timeline)`: TL-MULTI Farbkodierung für alle Personen-Chips; Dot-Indikator (farbiger Punkt) pro Lane in der Filterleiste; Personen-Tooltip zeigt Name + Lebensdaten beim Hover auf Person-Bar-Pill
+
+- **sw v667** `fix(timeline)`: Undatierte Chips (Beruf `OCCU`, Kinder `CHIL`) erhalten Farb-Klasse der zugehörigen Person auch ohne Datum-Kontext
+
+- **sw v668** `fix(timeline)`: Undatierte Chips aller Swim-Lanes (nicht nur Beruf/Kinder) erhalten korrekte Personenfarbe — vollständige Farbzuweisung für alle Event-Typen ohne Datum
+
+---
+
+### Session 2026-05-22 — TL-MULTI: Zeitleiste Mehrpersonen-Modus (sw v665)
+
+- **sw v665** `feat(timeline)`: TL-MULTI — Mehrpersonen-Modus für die Swim-Lane-Zeitleiste; 2–5 Personen gleichzeitig auf gemeinsamer Zeitachse; ⊕-Button in der Filterleiste öffnet `modalRelPicker` im Modus `'tlmulti'`; farbige Chips (`tl-pc0`–`tl-pc4`: Gold/Rot/Grün/Blau/Lila) und Lebensspannen-Balken pro Person; Person-Bar (`#tlPersonBar`) mit farbigen Pills + ✕-Button zum Entfernen; primäre Person nicht entfernbar; Max. 5 Personen (Toast bei Überschreitung); Querformat only (Portrait: nur erste Person + Info-Toast); Single-Person-Mode unverändert (keine Farb-Klassen, Age-Anzeige aktiv); neue State-Variable `UIState._tlPersonIds[]`; neue globale Funktionen `_tlAddPerson()` / `_tlRemovePerson()`; `renderRelPicker()` + `relPickerSelect()` in `ui-views-family.js` um `tlmulti`-Branch erweitert; 3 neue `_CLICK_MAP`-Einträge in `ui-views.js`
+
+---
+
+### Session 2026-05-22 — ROUNDTRIP-CAUS-SOUR: 3 SOUR unter 2 CAUS (Instabilität) (sw v664)
+
+- **sw v664** `fix(roundtrip)`: ROUNDTRIP-CAUS-SOUR — Instabilität (`out1≠out2`) in `MeineDaten.ged` (6 Vorkommen): Originaldatei enthält `3 SOUR @Sxx@` als Quellenbeleg für `2 CAUS`-Tag in DEAT/RESI/anderen INDI-Events; `2 CAUS` setzt `_ptDepth=2; _ptTarget=obj._extra` → `3 SOUR @Sxx@` via Passthrough in `obj._extra` gespeichert; Writer gibt `_extra` am Ende von `eventBlock` aus (nach `2 SOUR`-Zitierungen) → in Runde 2 erscheint `3 SOUR` im Kontext `lv2tag='SOUR'`, wo die Bedingung `tag !== 'SOUR'` im lv=3-Zitierungshandler den Eintrag silently dropped; Fix: Bedingung `tag !== 'SOUR'` aus lv=3-Zitierungshandler in `_parseINDILine` und `_parseFAMLine` entfernt → `3 SOUR @ref@` landet nun in `c.extra` und wird via `_writeSourCits` stabil nach `2 SOUR` ausgegeben; alle 6 Testvokommen stabil; alle Testdateien `out1===out2 ✓`, net_delta=0
+
+---
+
+### Session 2026-05-21 — ROUNDTRIP-FAM-OBJE: FAM DIV/DIVF OBJE FILE lv=4 Handler (sw v663)
+
+- **sw v663** `fix(roundtrip)`: ROUNDTRIP-FAM-OBJE — `_parseFAMLine` lv=4 Handler für `OBJE → FILE` Sub-Tags deckte nur `MARR`/`ENGA` ab; `DIV`/`DIVF`-Events hatten keinen lv=4-Handler, wodurch `4 FORM` (und lv=5+ Sub-Tags) unter `DIV/DIVF → 2 OBJE → 3 FILE` still gedroppt wurden; Fix: Condition um `DIV`/`DIVF` erweitert, `_oa`-Selektor auf alle vier Event-Typen ausgedehnt; analoges Muster zum v662-INDI-Fix (gleicher Anti-Pattern: Named-Field ohne `_ptDepth`); kein net_delta-Effekt auf `MeineDaten.ged` (keine DIV/DIVF-OBJE vorhanden), aber defensive Korrektur für andere GEDCOM-Quellen
+
+---
+
+### Session 2026-05-21 — ROUNDTRIP-LV5: 5 TYPE PHOTO in INDI-Event-OBJE + ROUNDTRIP-NOTE (sw v661–v662)
+
+- **sw v662** `fix(roundtrip)`: ROUNDTRIP-LV5 — `_parseINDILine` lv=4 OBJE/FILE/FORM-Handler setzte kein `_ptDepth=4`, wodurch `5 TYPE PHOTO` (und andere lv=5-Sub-Tags) unter `2 OBJE` in INDI-Array-Events (`EVEN`, generisch) still gedroppt wurden; Fix: `_ptDepth=4; _ptTarget=_em4._extra` in beiden Zweigen (FORM und else); behebt net_delta=-1 auf `MeineDaten.ged` (1 Instanz: `1 EVEN → 2 OBJE → 3 FILE → 4 FORM → 5 TYPE PHOTO`)
+
+### Session 2026-05-21 — ROUNDTRIP-NOTE: 2 SOUR unter 1 NOTE @ref@ erhalten (sw v661)
+
+- **sw v661** `fix(roundtrip)`: ROUNDTRIP-NOTE — Ancestris schreibt `2 SOUR @ref@` direkt unter `1 NOTE @xref@` auf INDI/FAM (non-standard Extension für Quellenbelege an Notizreferenzen); bisher: Parser hatte keinen Handler für `x.lv1tag==='NOTE'` auf lv=2 → 137 `2 SOUR`-Zeilen + 3 lv=3-Sub-Tags (`3 QUAY`, `3 PAGE`) still dropped; Fix: neues `noteRefExtras{}` Map auf INDI/FAM (parallel zu `noteRefs[]`, keyed by `@ref@`); `x.lastNoteRef` im Kontext-Objekt trackt aktiven NOTE-Ref; lv=2-Handler speichert Verbatim-Zeile in `noteRefExtras[ref]`; `_ptDepth=2; _ptTarget=noteRefExtras[ref]` für lv=3-Sub-Tags; Writer gibt `noteRefExtras[ref]`-Zeilen direkt nach `1 NOTE`-Zeile aus; net_delta -141 → ~0 auf `MeineDaten.ged` (2795 Pers.)
+
+---
+
+### Session 2026-05-20 — WW-PARSER: Web Worker für GEDCOM-Parse (sw v649)
+
+- **sw v649** `feat(perf)`: WW-PARSER — `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback (alle 5% der Zeilen, 0–95%) via `importScripts('gedcom-parser.js')`; `_processLoadedText()` in `storage-file.js` nutzt `new Worker('gedcom-worker.js')` wenn `Worker` verfügbar; progress-Nachrichten aktualisieren `#loadingBar` (schmaler `--gold-lt`-Balken unter dem Spinner) + Prozent-Text im Overlay; `_finishLoad(db, text, filename)` als gemeinsamer Post-Parse-Pfad (Worker + Sync-Fallback); Sync-Fallback bleibt erhalten wenn `typeof Worker === 'undefined'`; Worker-`onerror` → Sync-Fallback; `updateLoadingProgress(pct|null)` in `ui-forms.js`, `hideLoadingOverlay` setzt Bar zurück; `gedcom-worker.js` in SW-PRECACHE aufgenommen
+
+---
+
+### Session 2026-05-20 — STORY-PRINT: Abschnittstitel + Print-CSS (sw v646–v647)
+
+- **sw v646** `feat(story)`: STORY-PRINT — „Lebenslauf" + „Familie"-Titel als `<h2 class="story-section-title">` in `_sectionEvents()`/`_sectionFamilies()`; `*{print-color-adjust:exact}` global; `@media print` mit `@page{margin:2.5cm 2cm;size:A4}`, `page-break-inside:avoid` auf allen Sections, Box-Shadow-Entfernung; SVG-Partnerabstand 10→28px, ⚭ font-size 9→11 bold; `.story-reli` Trennlinie
+- **sw v647** `fix(story)`: Print-CSS präziser — `page-break-inside:avoid` nur auf kompakten Sections (family/epoch/death/note/reli), nicht global; Karte auf `max-height:200px`, SVG-Diagramm auf `max-height:180px` in `@media print` → verhindert Leerseiten durch zu aggressive Seitenumbrüche
+
+---
+
+### Session 2026-05-20 — STORY-OPT-5/6 + STORY-DIAGRAM (sw v642–v645)
+
+- **sw v642–v643** `feat(story)`: STORY-OPT-5 — „Im August 2021" statt „Am August 2021" (`_MONTH_YEAR_RE` Regex-Guard in `_atDate()`); Verbindungsformulierungen für Berufsstationen: `_mergeCareerSentence()` mit `zunächst/danach/zuletzt`; modernes Story-Design (Header-Goldlinie, `◆`-Bullets, Familien-Cards mit goldenem Rand, Callout-Epoche, Lebenszeit in Kapitälchen)
+- **sw v644** `feat(story)`: STORY-OPT-6 — Lebensdatum-Übersetzung in `_sectionHeader()` (Geburts-/Sterbejahr sichtbar unter dem Namen); Geburtsatz-Variation (`kam … zur Welt` bei reinem Jahreseintrag); natürliche Kinderliste mit Geburtsjahren in `_childSentence()`; Epochen-Kontext (`ctx`-Feld) aus `_STORY_EPOCHS` in `_sectionEpoch()`; Epochen-Jahresanzeige ohne Wiederholung bei `from===to`
+- **sw v645** `feat(story)`: STORY-DIAGRAM — Inline-SVG Ahnentafel nach der Karte: 4 Großeltern-Slots → Eltern → Proband (gold) ⚭ Partner → Kinder (bis 4 + +N-Pill); `_sectionDiagram()` + `_dgCard()`-Helfer in `ui-story.js`; eigenständig ohne DOM-Abhängigkeit; CSS-Var-Fallbacks für HTML-Export; Klick-Navigation via `showDetail()`
+
+---
+
+### Session 2026-05-19 — TEST-AUTO: Standalone GEDCOM Roundtrip Tester
+
+- **test.html** `tooling`: Standalone-Testseite — lädt nur `gedcom.js` + `gedcom-parser.js` + `gedcom-writer.js` (kein UI, kein Leaflet, kein OneDrive); Drag-Drop für beliebig viele `.ged`-Dateien; parse→write→parse→write pro Datei; Ergebnistabelle mit Personen/Familien/Quellen, net_delta, Stabil ✓/✗, Zeit in ms; aufklappbarer Diff bei Instabilität (erste 20 abweichende Zeilen); kein SW-Eintrag (Dev-Tool)
+
+---
+
+### Session 2026-05-19 — REFACT-1: parseGEDCOM() in Sub-Parser aufgeteilt (sw v627)
+
+- **sw v627** `refact(parser)`: REFACT-1 — monolithische ~977-Zeilen-Hauptschleife in `gedcom-parser.js` in 5 Sub-Parser aufgeteilt: `_parseINDILine(cur, x, lv, tag, val)` (~290 Z.), `_parseFAMLine(cur, x, lv, tag, val)` (~170 Z.), `_parseSOURLine(cur, x, lv, tag, val)` (~80 Z.), `_parseNOTELine(cur, x, lv, tag, val)` (~15 Z.), `_parseREPOLine(cur, x, lv, tag, val)` (~15 Z.); gemeinsamer Kontext-Objekt `x` (14 Felder: `lv1tag`, `lv2tag`, `lv3tag`, `evIdx`, `inMap`, `mapParent`, `_curCit`, `lastSourVal`, `_curNoteIsInline`, `_curExtraNameIdx`, `_ptDepth`, `_ptTarget`, `_smEntry`, `_curTask`, `_curAsso`) per Parameter übergeben; Hauptfunktion `parseGEDCOM()` auf ~200 Z. geschrumpft; Dispatch-Switch in Hauptloop; Lv1/2/3-Tag-Tracking + Passthrough-Guard verbleiben in Hauptloop; Roundtrip net_delta=0, gleicher Input/Output; Voraussetzung für WW-PARSER + TEST-AUTO
+
+---
+
+### Session 2026-05-18 — REL-CALC: Beziehungsrechner ausgebaut (sw v626)
+
+- **sw v626** `feat(rel)`: REL-CALC — Beziehungsrechner vollständig: gemeinsamer Vorfahre mit Geburtsjahr in Verwandtschaft-Zeile (`rel-anc-hint`) und im Pfad-Modal (`rel-path-ancestor`); freier Zweipersonen-Vergleich via „🔗 zu …"-Button in jedem Person-Detail; `showRelCalcPicker(anchorId)` öffnet vorhandenen `modalRelPicker` mit `_relMode='relcalc'`; `relPickerSelect()` leitet in `showRelPath(idA, selectedId)` um; `showRelPath(idA, targetId?)` mit optionalem zweiten Parameter (Standard: Proband); `_relAncestorHint()` Helper; Verwandtschaft-Sektion erscheint immer wenn >1 Person geladen; `showRelCalcPicker` in `_CLICK_MAP`; CSS `.rel-path-ancestor` + `.rel-anc-hint`
+
+---
+
+### Session 2026-05-18 — Medien-Manager: Detailansicht, Performance, Sortierung (sw v609–v625)
+
+- **sw v609–v620** `feat(media)`: `showMediaDetail()` — Detailansicht im rechten Panel (analog Hof/Person/Quelle); globale Felder FILE/FORM/MEDI mit „Speichern (alle Ref.)"; Referenzliste mit ↗-Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; MEDI-Select + FORMAT+MEDI in einer Zeile; Inline-Suchpanel `_mdShowLinkPanel()` für + Person/Familie/Quelle; Filter-Leiste sticky via `.list-search-header`; GEDCOM: `_DATE` statt `NOTE Aufnahmedatum:`, lv=4 MEDI-Parser, `_mediaFormStr()` leitet FORM aus Dateiendung ab
+- **sw v621** `feat(media)`: `_mdDeleteRef()` — × Button pro Referenzzeile; spliced aus person/family/family_media/source-Array; Redirect auf verbleibende Refs oder `goBack()`; `mediaDetailDeleteRef` im `_CLICK_MAP`
+- **sw v622** `fix(media)` `docs`: × statt 🗑 (konsistent mit App); Suchpanel zeigt Lebensdaten (* Geburt † Tod) bei Personen, Heiratsdatum bei Familien; `.md-link-info` flex-column; ROADMAP + HANDBUCH Kap. 7/8/18 aktualisiert; Titelblatt auf sw v622
+- **sw v623** `perf(media)`: IntersectionObserver + `_thumbCache` (Map filePath→src) — Kacheln laden erst beim Einscrolle in Viewport (rootMargin 300px); Cache überlebt Filterwechsel, cleared bei `showMediaSection()`; `_applyThumbSrc()` extrahiert; `data-thumb-id`/`data-file` auf Thumb-Divs
+- **sw v624** `feat(media)` `fix(media)`: Sort-Button `⇅` in Filter-Bar — 3 Zustände Kontext/Datei↑/Datei↓; `cycleMediaSort()` + `_CLICK_MAP`-Eintrag; `display:flex` auf `.media-filter-bar` überschrieb `[hidden]` → `.media-filter-bar[hidden]{display:none}` ergänzt
+- **sw v625** `fix(media)`: Medienliste nach Tab-Rückkehr aktuell — `renderTab()` erkennt aktiven Sub-Tab (toggle-media/toggle-repos/sources) und ruft `showMediaSection()`/`renderRepoList()`/`renderSourceList()` entsprechend auf; vorher wurde bei sources-Tab immer nur `renderSourceList()` gerufen
+
+---
+
+### Session 2026-05-17 — Diagramm-Topbars + Proband-Navigation (sw v591–v595)
+
+- **sw v591** `feat(topbar)`: Zeitleiste als vollwertiges Diagramm — einheitliche Topbar-Struktur für alle vier Diagramme (Sanduhr, Fächer, Nachkommen, Zeitleiste): `[⌂ Proband] [⤢ Vollbild] | [Diagramm-Wechsel] [☰]`; Sanduhr: `⤢` vor Separator verschoben; Zeitleiste: `⌂ tlProbandBtn` + `⤢ tlFsBtn` vor Separator; `⧖ ◑ ⇩` danach; `tlShowProband()` Action neu
+- **sw v592** `fix(topbar)`: `showFamilyDetail()` blendet `timelineBtn`/`storyBtn`/`probandBtn` explizit aus — blieben bisher von Personen-Ansicht sichtbar
+- **sw v593–v595** `feat(proband)`: zwei Proband-Buttons in Person-Detail-Topbar — `⌂` (plain, `detailShowProband`, navigiert zum Probanden wie in Diagrammen) + `⌂` mit CSS-Rahmen (`.proband-set-btn`, `toggleProband`, setzt/hebt Proband) direkt vor `✎` Bearbeiten; `.proband-set-btn` Rahmen verschwindet im aktiven Zustand (goldene Füllung); Familie-Topbar blendet beide aus
+
+---
+
+### Session 2026-05-16 — SAFARI-SWIPE + TASK-EXPORT-MD + Menü-Reihenfolge (sw v573–v575)
+
+- **sw v573** `feat(nav)`: SAFARI-SWIPE — `history.pushState({app:true},'')` beim App-Start in `DOMContentLoaded` (ui-views.js); `popstate`-Listener: Re-Anker sofort pushen + `goBack()` aufrufen; verhindert State-Verlust durch Safari-Wischgeste nach rechts im Browser-Modus (iPhone/iPad)
+- **sw v574** `feat(tasks)`: TASK-EXPORT-MD — `exportTasksMd()` in `ui-views-tasks.js`; Button „↓ MD" in `tasks-validate-bar`; pro Person: Name, Geschlecht, Geburt/Tod, Elternfamilie, eigene Ehen; pro Familie: Gatten mit Lebensdaten, Heirat, Kinderzahl; nach Kategorie sortiert; aktiver Filter (offen/erledigt/alle) übernommen; Dateiname `aufgaben_[Datei]_[YYYY-MM-DD].md`
+- **sw v575** `fix(menu)`: Menü-Reihenfolge — „Datei schließen" ans Ende des Datei-Abschnitts (war nach Hilfe); „Einstellungen" hinter Trennstrich vor „Hilfe & Anleitung" (war im Datei-Abschnitt)
+
+---
+
+### Session 2026-05-16 — Story Mode (sw v549–v560)
+
+- **sw v549–v552** `feat(story)`: `ui-story.js` neu — View `#v-story`; 📖-Button in Detail-Topbar; `showStory(pid)` / `printStory()` / `downloadStory()`; Nav-System (type:'story' in `_navHistory`, Back/Fwd/Verlauf-Buttons); `body.story-active` für Desktop-Layout (Detailansicht überlagern)
+- **sw v549–v552** `feat(story)`: Fließtext aus GEDCOM — `_sectionEarlyLife()` (Geburt, Taufe, Eltern), `_sectionEvents()` (chronologisch), `_sectionFamilies()` (Ehen + Kinder), `_sectionDeath()` (Tod + Begräbnis), `_sectionHeader()` (Name, Lebensdaten); pronomen-aware (`_pronoun(p)`: Er/Sie/Name)
+- **sw v549–v552** `feat(story)`: 18 Event-Typ-Templates in `_EV_TPL` (OCCU, RESI, EDUC, MILI, EMIG, IMMI, NATU, CONF, FCOM, GRAD, RELI, TITL, CENS, RETI, PROP, WILL, PROB, ADOP, ORDN, BAPM); generischer Fallback `ev.eventType || EVENT_LABELS[ev.type]`
+- **sw v549–v552** `feat(story)`: Hero-Foto + Galerie (max. 5) async via IDB → OneDrive; Event-Fotos via `data-ev-files`; Print-CSS; HTML-Download als standalone-Datei
+- **sw v553–v556** `fix(story)`: Desktop-Layout — `body.story-active #v-detail { display:none }`; `#v-story.active { display:flex }` statt globalem `#v-story`
+- **sw v557–v559** `fix(story)`: `_atPlace()` kombiniert `ev.addr` + `ev.place` wie Timeline; `_fmtDate()` übersetzt GEDCOM-Qualifier (FROM/TO→von/bis, BET/AND→zwischen/und, BEF→vor, AFT→nach, ABT→um); `_shortPlace()` identisch mit Timeline; `_eventSentence` — `ev.eventType` vor `EVENT_LABELS`
+- **sw v560** `feat(story)`: Leaflet-OSM-Karte ersetzt SVG-Schematik — `_initStoryMap()`; CircleMarker farbkodiert (grün=Geburt/Taufe, rot=Tod/Begräbnis, blau=Heirat); gestrichelte Polyline; `fitBounds()` auf alle Geo-Punkte
+
+---
+
+### Session 2026-05-16 — SAFARI-SWIPE dokumentiert
+
+- **ROADMAP**: `SAFARI-SWIPE` als offenes Problem in T1 — Safari-Zurück-Swipe setzt App auf leere Seite zurück; Lösungsansatz `history.pushState` + `popstate`-Handler
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Refactoring + Fixes (sw v537, v540)
+
+- **sw v537** `refactor(timeline)`: `_HIST_EVENTS` (71 Einträge) aus `ui-timeline.js` in eigene Datei `timeline-hist-events.js` ausgelagert; `index.html` lädt die neue Datei vor `ui-timeline.js`; Ereignisliste kann damit unabhängig gepflegt werden
+- **sw v540** `fix(timeline)`: undatierte Chips (Beruf ohne Datum, Kinder ohne Datum) vertikal zentriert — `top: 4px` durch `(lH - chipH) / 2 + stacki * 22` ersetzt, identische Logik wie datierte Chips
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Tooltip + Lanes + Fixes (sw v525–v536)
+
+- **sw v525–v536** `feat/fix(timeline)`: Mouseover-Tooltip mit Vollinformation (Jahr, Altersangabe, Ort, Beschreibung) auf allen Chips; `pointer-events: none` auf hist-Events für Tooltip-Durchlass; leere Kirche/Sonstiges-Lanes ausgeblendet; PROP-Ereignisse → Sonstiges-Lane; EVEN-Beschäftigung/Beruf → Beruf-Lane; historische Ereignisse bis 2024 (71 Einträge); Chip-Breite 140px, vertikale Zentrierung via `offsetHeight`; Basisraster volle Breite; Lanehöhen proportional skaliert; horizontales Scrollen voll ausgenutzt; `refactor(layout)`: `_afterLayout()`-Utility ersetzt alle `setTimeout(0)`-Delays; Fächer-Button navigiert korrekt nach Vollbild-Exit; Sanduhr/Fächer/Nachkommen nach Vollbild-Toggle neu rendern
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Topbar + Vollbild + Navigation (sw v518–v524)
+
+- **sw v518** `feat(timeline)`: Baum-gleichwertiger Topbar mit Titel + Vollbild-Button (`⤢`/`⤡`); `toggleTimelineFullscreen()` + `body.timeline-fullscreen`
+- **sw v519** `feat(timeline)`: Baumnavigation vollständig in Timeline-Topbar — Sanduhr `⧖`, Fächer `✿`, Nachkommen `⇩`, Person-Button `⌂`
+- **sw v520** `feat(timeline)`: `⌂` navigiert zur Sanduhr der aktuellen Timeline-Person
+- **sw v521** `fix(tree)`: Sanduhr/Fächer/Nachkommen nach Vollbild-Toggle neu rendern
+- **sw v522** `fix(timeline)`: direkte Navigation zu Sanduhr/Fächer/Nachkommen aus Timeline
+- **sw v523** `fix(nav)`: `tree-fullscreen` + `timeline-fullscreen` beim View-Wechsel bereinigt
+- **sw v524** `fix(fullscreen)`: Vollbild zwischen Views übertragen; Exit kalibriert `#v-main`; Diagramm beim Vollbild-Exit neu rendern; Exit ohne `showView`-Seiteneffekte
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Horizontal + Swim-Lane (sw v506–v517)
+
+- **sw v506** `fix(timeline)`: CSP-Konformität + Topbar-Layout (`#v-timeline` `always-flex`-Bug behoben)
+- **sw v507–v516** `fix(timeline)`: `_shortPlace()` findet erstes nicht-leeres PLAC-Segment; RESI-Adresse wenn PLAC fehlt; `addr` erste Zeile als Ort; `eventType` als Label; Ortsdarstellung — `_shortPlace` nur beim Aufbau, `addr+place` kombiniert; Timeline-Button `⊙` → `⟷`; `⟷`-Button in Baum-Topbar; horizontale Variante gesteuert über Viewport (Breite > Höhe ∧ ≥ 500px)
+- **sw v517** `feat(timeline)`: Swim-Lane-Layout für Horizontalansicht — 5 Lanes (Leben / Wohnorte / Beruf / Familie / Kirche/Sonstiges / Geschichte); `_swimLane()` klassifiziert Events; `_resolveSwimOverlaps()` verhindert Kollisionen; `_SL_LANES`, `_SL_CHIP_W=140`, `_SL_MIN_PX_Y`; Lanehöhen proportional auf verfügbare Höhe skaliert; Jahres-Skala via `yearToX()`; CSP-konform (CSSOM statt Inline-Style)
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Grundgerüst vertikal (sw v501–v505)
+
+- **sw v501** `feat(timeline)`: View-Container `#v-timeline`; ⊙-Button in Detail-Topbar; `showTimeline(pid)` in `UIState._navHistory`; `showView('v-timeline')`
+- **sw v502** `feat(timeline)`: `_buildPersonEvents()` — Sonder-Ereignisse (BIRT/CHR/DEAT/BURI) + `p.events[]` + Heiraten + Kinder aus allen `p.fams`
+- **sw v503** `feat(timeline)`: `_HIST_EVENTS` — 65 Einträge 1315–2002, Kategorien: war/disease/political/religion/natural
+- **sw v504** `feat(timeline)`: Rendering geclustert-proportional — Dekaden-Blöcke; leer=36px, belegt=max(N×58, 90)px; `_decOffset()` für Lebensspanne-Balken (gold-dim)
+- **sw v505** `feat(timeline)`: Filter-Toggles (Krieg/Seuche/Politik/Religion/Natur) in Topbar; Altersanzeige je Event; Nav-System in `_navHistory`-Stack; Resize-Listener für Orientierungswechsel
+
+---
+
+### Session 2026-05-16 — ALIA + Mobile-Karte-Fix (sw v499–v500)
+
+- **sw v499** `feat(alia)`: `p.alia[]` — Parser liest `1 ALIA @xref@`; Writer schreibt symmetrisch; Personen-Detail zeigt verlinkte Alias-Personen als Warn-Row mit `≈`-Label + `border-left`; Edit-Formular: Alias hinzufügen/entfernen symmetrisch (beide Seiten synchron); Label auf „Selbe Person?"
+- **sw v500** `fix(map)`: Orte/Höfe/Karte-Toggle auf Mobile bei Karte-Modus ausgeblendet (verhinderte Rückkehr zur Hauptnavigation)
+
+---
+
+### Session 2026-05-16 — MAP-MIGR: Migrationswege auf Karte (sw v498)
+
+- **sw v498** `feat(map)`: MAP-MIGR — dritter Karten-Modus „Migrationen"; `_renderMigrModus()` zeichnet für jede Person mit ≥ 2 Geo-Events eine Linie Geburt → RESI → Tod; aufeinanderfolgende Duplikat-Koordinaten dedupliziert; Endpunkt-Marker (gefüllter Kreis) am Zielort; Tooltip mit Name, Lebensjahren, Herkunft → Ziel; Klick öffnet Exploration-Panel; Epochen-Farben via `_MIGR_EPOCHS` / `_migrColor()`: vor 1700 lila · 1700–99 blau · 1800–49 teal · 1850–99 amber · 1900–49 orange · 1950+ grau; Farb-Legende (`#map-migr-legend`) erscheint/verschwindet beim Moduswechsel; Dots als CSS-Klassen `.map-migr-e0`–`.map-migr-e5` statt Inline-Styles (CSP `style-src 'self'`)
+
+---
+
+### Session 2026-05-16 — VAL-FAM + VAL-CONFIG + Bugfixes (sw v496–v497)
+
+- **sw v496** `feat(tasks/validation)`: VAL-FAM — `f._tasks[]` auf Familien-Objekten; GEDCOM-Roundtrip via `1 _TASK` unter FAM (Parser + Writer); `_famTasksSectionHtml()` in `showFamilyDetail()`; globale Task-Liste zeigt Personen- und Familien-Tasks gemischt nach Kategorie mit klickbarem Familien-Header
+- **sw v496** `feat(tasks/validation)`: VAL-CONFIG — `VAL_RULES` + `VAL_CONFIG_DEFAULTS` in `gedcom-validator.js`; `runValidation(db, config)` mit konfigurierbaren Schwellenwerten (maxAge, staStAera, minMotherAge, maxMotherAge, maxFatherAge) und deaktivierbaren Regeln; Config in IDB (`val_config`); `modalValConfig` mit Checkboxen pro Regel + Zahlenfeldern; ⚙-Button in validate-bar; `openValConfig()` / `saveValConfig()` / `resetValConfig()`
+- **sw v496** `feat(validator)`: `familyId`-Feld in Validierungsbefunden; `val-fam-link` im Panel verlinkt auf Familien-Detail; Familien-Regeln (F1–F4) mit `familyId` annotiert
+- **sw v497** `fix(tasks)`: sticky header — filter-bar + validate-bar in `.tasks-sticky-header`-Wrapper (`position:sticky; top:var(--topbar-h)`); `#tab-tasks` erhält `padding-bottom` (letzte Task war hinter Bottom-Nav abgeschnitten); Befund-Dedup — bereits promovierte Tasks werden beim erneuten Prüfen herausgefiltert (Text-Abgleich mit `p._tasks[]`)
+
+---
+
+### Session 2026-05-15c — Nachkommen-Baum: Ehepartner/Geschwister (sw v466–v470)
+
+- **sw v466** `feat(desc-tree)`: Ehepartner-Karte + ⚭-Button rechts neben Proband; Geschwister-Stapel links (PEEK-Überlapp); `SLOT = W + MGAP + W + HGAP`
+- **sw v467** `fix(desc-tree)`: Ehepartner/Geschwister nur am Startpunkt — `renderNode` rendert Ehepartner nur wenn `isRoot`; `SLOT` zurück auf `W + HGAP`; `½`-Badge für Kinder aus Nebenehe des direkten Elternteils (`isHalf`-Flag in `_descLayout`)
+- **sw v468** `fix(desc-tree)`: alle Ehepartner in Reihe (`rootSpouseIds[]` aus allen `fams`); Geschwister horizontal gestapelt statt vertikaler PEEK-Stapel — variable Überlappung, kein Konflikt mit Kind-Verbindungslinien; ⚭-Button nur noch zwischen Proband und erstem Ehepartner
+- **sw v469** `fix(desc-tree)`: Klick-Navigation analog Sanduhr — alle Nicht-Proband-Karten (Kinder, Ehepartner, Geschwister) → `showDescTree()`; nur Proband → `showDetail()`
+- **sw v470** `fix(desc-tree)`: Ehepartner-Überlappung bei schmalem Baum — `spouseStep = min(W+HGAP, f(treeSpan))`; Geschwister-Schritt auf `W+HGAP` gedeckelt (kein zu weites Spreizen)
+
+---
+
+### Session 2026-05-15b — Validierungsengine + Aufgaben-Navigation + Nachkommen-Baum (sw v462–v465)
+
+- **sw v462** `feat(tree)`: Nachkommen-Baum (top-down SVG) — `ui-desc-tree.js` neu; Toggle-Button `⇩` neben Fächer-Button in Baum-Topbar; Gen-Buttons 2–7 (`#descGenBtns`); T-Linien-Layout; `▼`-Badge wenn Tiefe abgeschnitten; `body.desc-tree-mode`; `_navTreeFn()` in `ui-views-tree.js` für modusabhängige Tastaturnavigation; Auto-Fit + Scroll-Zentrierung
+- **sw v463** `feat(validator)`: Validierungsengine `gedcom-validator.js` — `runValidation(db)` gibt reines RAM-Ergebnis zurück (keine GEDCOM-Speicherung); 11 Regeln (P1–P7 Person, F1–F4 Familie); Befunde manuell via „+" als `_task` übernehmbar; `_renderValidationPanel()` in `ui-views-tasks.js`
+- **sw v464** `feat(nav)`: Aufgaben als eigener Bottom-Nav-Tab — `bnavTasks()`, `#bnav-tasks` ersetzt `#bnav-home` (Proband); Proband-Wechsel über `menuProband` im ☰-Menü; `menuValidate` startet Prüfung direkt aus Menü; `tab-tasks` im DOM; `renderTab()` ruft `renderTasksView()`
+- **sw v465** `feat(tasks)`: „✓ Daten prüfen"-Button direkt im Aufgaben-Tab (`.tasks-validate-bar`) — kein Menü-Umweg nötig
+
+---
+
+### Session 2026-05-15a — GEDCOM-ObjePtBug: toter Code entfernt (sw v445–v447)
+
+- **sw v445–v447** `refactor(writer)`: `_newPhotoIds`/`_deletedPhotoIds` (nie befüllte Sets) + zugehörige Writer-Blöcke entfernt; Passthrough-if/else vereinfacht auf einfaches `for`-Loop; Inline-OBJE-Löschung via `p.media[]`-Splice war bereits korrekt; Linked-OBJE-Management (`@Mxx@`) als optionales zukünftiges Feature dokumentiert
+
+---
+
+### Session 2026-05-14e — GRAMPS Attribute anzeigen (sw v444)
+
+- **sw v444** `feat(gramps)`: `p._grampsAttrs[]`/`f._grampsAttrs[]` in Personen- und Familien-Detailansicht als fact-rows ausgegeben (type als Label, value als Wert, optionale Note); bisher geparst aber nie angezeigt
+
+---
+
+### Session 2026-05-14d — GRAMPS Speichern + Roundtrip-Test + GEDCOM-Fixes (sw v424–v443)
+
+- **sw v424** `fix(gramps)`: `topTarget.citations` crash beim Laden behoben
+- **sw v425** `fix(gramps)`: GRAMPS-Badge als fixes globales Element — in allen Views sichtbar (nicht mehr View-lokal)
+- **sw v426** `fix`: `extraPlaces` per-Datei in localStorage — kein Überlauf mehr zwischen verschiedenen Dateien
+- **sw v427** `feat`: Menüoption „Sichern (Original)" entfernt; verbleibende `updateBackupBtn`-Aufrufe bereinigt
+- **sw v428** `feat`: einheitliches Dateihandling für GED + GRAMPS — `openFilePicker()` erkennt Dateiformat, setzt `_isGramps`; `saveToFile()` delegiert an GEDCOM oder GRAMPS-Export
+- **sw v429** `fix`: GRAMPS-Speichern nutzt Originalnamen ohne Zeitstempel (statt generiertem Dateinamen)
+- **sw v430** `feat`: GRAMPS direktes Speichern via File Handle — `saveToFileHandleBinary()` für gzip-Blob; `_fileHandle`/`_canDirectSave` auch für `.gramps` gesetzt; `exportGRAMPS(asSave=true)` nutzt direkten Speicherpfad auf Chrome Desktop
+- **sw v431** `fix`: GRAMPS-Roundtrip-Bugs + Deep-Roundtrip-Test — `_xmlEl` Textknoten-Escaping (`&`, `<`, `>`); `<tags>`-Sektion aus `db.tags` im Writer rekonstruiert; `_fileHandle/_canDirectSave` nach `_loadGRAMPS` wiederhergestellt; `_grampsDeepRoundtrip()` prüft alle Entitäten vollständig
+- **sw v432** `feat`: GRAMPS Roundtrip-Test als Debug-Button — `runGrampsRoundtripTest()` in `debug-gramps.js`; Ergebnis im Modal
+- **sw v433–v439** `fix`: Roundtrip-Test-Stabilisierung — `debug-gramps.js` in SW PRECACHE; synchrones Laden von `ui-debug.js` + `debug-gramps.js`; Modal öffnet immer (auch bei Fehler); korrekte Lade-Reihenfolge
+- **sw v440** `feat`: Medien-Detailcheck im GRAMPS Roundtrip-Test — vergleicht `handle`, `path`, `desc`, `mime`, `date` aller Media-Objekte
+- **sw v441** `fix`: nicht-referenzierte GRAMPS-Objekte im Roundtrip erhalten — `_unreferencedObjs` via `db._grampsObjMeta` im Writer ergänzt wenn kein `objRef` existiert
+- **sw v442** `fix(roundtrip)`: REPO `NOTE @xref@` + `SOUR CALN MEDI` Roundtrip-Verlust — REPO `_passthrough[]` für unbekannte lv=1-Tags (inkl. `1 NOTE @xref@`); `repoCallNumExtra[]` für `3 MEDI` unter `2 CALN`; Writer für beide aktualisiert
+- **sw v443** `feat`: SOUR `NOTE @xref@` strukturiert parsen und in UI anzeigen — `1 NOTE @xref@` landet in `s.noteRefs[]` (nicht mehr in `_passthrough`); Post-Processing löst auf `s.noteText`; Writer schreibt `1 NOTE @xref@` aus `s.noteRefs`; Quellen-Detail zeigt `.note-ref-text` (read-only, visuell abgetrennt)
+
+---
+
+### Session 2026-05-14c — GRAMPS P1: Roundtrip-Passthrough vollständig + P1b + Badge/Tags (sw v415–v423)
+
+- **sw v415** `fix(gramps)`: GRAMPS P1 — NoteType (`type`-Attribut auf `<note>`); PlaceObjects `grampId`; Original Media-Handles (`_grampsHandle`) statt neu generierter IDs
+- **sw v416** `fix(gramps)`: GRAMPS P1 — EventHandles (`_grampsEvHlink`); Event-Passthrough `_extra[]` für `<objref>`, `<change>` via `_xmlEl`; `priv`-Attribut; Writer gibt Original-Handle + `_extra` aus
+- **sw v417** `fix(gramps)`: GRAMPS P1 — CitHandles (`_grampsCitHandle`) + Citation-`_extra` für `<noteref>/<objref>/<attribute>/<change>`; Notes als eigene Entität mit `grampId` + `_extra`; alle 5 Call-Sites + Note-XML aktualisiert
+- **sw v418** `fix(gramps)`: GRAMPS P1 — PlacePassthrough: `_PLACE_MODELLED`-Set; `plExtra[]` für nicht-modellierte Kinder; Writer gibt `_extra` nach `<placeref>` aus — **GRAMPS Roundtrip 60034 Checks ✓**
+- **sw v419** `fix(cross-mode)`: GEDCOM Cross-Mode — Note-XREF (`_noteXref`-Lookup, 6 Stellen); `_grampsEvPriv` → `1 RESN confidential` in `eventBlock` + `p/f.events`
+- **sw v420** `feat(gramps)`: Source/Repo/Person/Family `priv`-Attribut + `_extra`-Passthrough via `_xmlEl`-Pattern; `_SRC/REPO/PERSON/FAMILY_MODELLED`-Sets
+- **sw v421** `fix(gedcom)`: Citation-Note via `pushCont()` — verhindert Verlust bei Zeilenumbrüchen und Texten >248 Zeichen
+- **sw v422** `feat(gramps)`: Media `priv` + `_extra` Passthrough — `objMap[h]` + `db._grampsObjMeta` als Single Source of Truth; `_objHandle()` liest daraus; Writer gibt `priv` + `_extra` nach `<file/>` aus
+- **sw v423** `feat(gramps)`: GRAMPS-Badge in Topbar (`#grampsBadge`, lila Pill); `updateTopbarTitle(filename, isGramps)` schaltet `hidden`; Tags-System — `tagMap` aus `<tags>`-Sektion; `p._grampsTags[]/f._grampsTags[]` mit `{name,color}`; Personen-/Familien-Detail zeigt `.gramps-tag`-Badges mit inline `background-color`; `db.tags{}` im Parser-Return
+
+---
+
 ## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — ABGESCHLOSSEN
 
 ---

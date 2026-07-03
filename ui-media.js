@@ -70,8 +70,10 @@ function openEditMediaDialog(type, entityId, idx) {
   else if (type === 'source')       m = getSource(entityId)?.media?.[idx];
   if (!m) return;
 
-  document.getElementById('em-title').value = m.title || '';
+  document.getElementById('em-title').value = m.title || m.titl || '';
   document.getElementById('em-file').value  = m.file  || '';
+  document.getElementById('em-note').value  = m.note  || '';
+  document.getElementById('em-date').value  = m.date  || '';
   document.getElementById('em-prim-check').checked = !!(m.prim && m.prim !== '');
   document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
 
@@ -82,6 +84,30 @@ function openEditMediaDialog(type, entityId, idx) {
   const preview  = document.getElementById('em-preview');
   thumbBar.textContent = icon;
   preview.innerHTML = `<div class="fs-huge">${icon}</div>`;
+
+  // Kontext-Zeile: referenzierendes Objekt + Navigations-Button
+  const refInfo = document.getElementById('em-ref-info');
+  if (refInfo) {
+    let label = '', icon = '';
+    if (type === 'person') {
+      const p = getPerson(entityId);
+      label = p?.name || entityId; icon = '👤';
+    } else if (type === 'family' || type === 'family_media') {
+      const f = getFamily(entityId);
+      const husb = f?.husb ? getPerson(f.husb) : null;
+      const wife = f?.wife ? getPerson(f.wife) : null;
+      label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || entityId;
+      icon = '⚭';
+    } else if (type === 'source') {
+      const s = getSource(entityId);
+      label = s?.abbr || s?.title || entityId; icon = '📖';
+    }
+    refInfo.innerHTML = label
+      ? `<span class="em-ref-label">${icon} ${esc(label)}</span>
+         <button class="btn btn-outline-sm" data-action="mediaEditGoTo"
+           data-type="${esc(type)}" data-id="${esc(entityId)}" title="Zum Eintrag navigieren">→</button>`
+      : '';
+  }
 
   openModal('modalEditMedia');
 
@@ -95,7 +121,7 @@ function openEditMediaDialog(type, entityId, idx) {
       _odGetSourceFileUrl(entityId, idx).then(url => {
         if (!url) return;
         if (isImg) { _setEditMediaPreview(url); }
-        else { if (preview) preview.innerHTML = `<a href="${url}" target="_blank" class="fs-huge no-underline">${icon}</a>`; }
+        else { if (preview) preview.innerHTML = `<a href="${/^https?:\/\//i.test(url) ? url : '#'}" target="_blank" class="fs-huge no-underline">${icon}</a>`; }
       }).catch(() => {});
     }
   } else {
@@ -129,13 +155,13 @@ function _setEditMediaPreview(src) {
 
 function _getFamMarrObjeEntries(f) {
   // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; Feld ist titl (nicht title)
-  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '' }));
+  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '', medi: m.medi || '', note: m.note || '', date: m.date || '', prim: m.prim || '' }));
 }
 
-function _updateFamMarrObjeAt(f, targetIdx, { title, file, form }) {
+function _updateFamMarrObjeAt(f, targetIdx, { title, file, form, note, date }) {
   const media = f.marr?.media;
   if (!media || targetIdx >= media.length) return;
-  media[targetIdx] = { ...media[targetIdx], titl: title, file, form };
+  media[targetIdx] = { ...media[targetIdx], titl: title, file, form, note, date };
 }
 
 async function openSourceMediaView(srcId, idx) {
@@ -174,6 +200,8 @@ function _invalidateThumbCache(entityPrefix) {
 function confirmEditMedia() {
   const title   = document.getElementById('em-title').value.trim();
   const file    = document.getElementById('em-file').value.trim();
+  const note    = document.getElementById('em-note').value.trim();
+  const date    = document.getElementById('em-date').value.trim();
   const setPrim = document.getElementById('em-prim-check').checked;
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
@@ -181,7 +209,7 @@ function confirmEditMedia() {
   if (_editMediaType === 'person') {
     const p = getPerson(_editMediaId);
     if (!p?.media) return;
-    p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
+    p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(p.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
@@ -191,7 +219,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'family') {
     const f = getFamily(_editMediaId);
     if (!f) return;
-    _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
+    _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title, note, date });
     const moved = _applyPrimAndReorder(f.marr?.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_fam_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
@@ -201,7 +229,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'family_media') {
     const f = getFamily(_editMediaId);
     if (!f?.media) return;
-    f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
+    f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(f.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_fam_media_' + _editMediaId);
     AppState.changed = true;
@@ -210,7 +238,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'source') {
     const s = getSource(_editMediaId);
     if (!s?.media) return;
-    s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
+    s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(s.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_src_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
@@ -245,14 +273,20 @@ async function _asyncLoadMediaThumb(thumbId, filePath) {
 }
 
 
-function _onCamCapture(b64) {
-  const ts   = new Date();
-  const name = 'foto_' + ts.getFullYear()
-    + String(ts.getMonth() + 1).padStart(2, '0')
-    + String(ts.getDate()).padStart(2, '0') + '_'
-    + String(ts.getHours()).padStart(2, '0')
-    + String(ts.getMinutes()).padStart(2, '0')
-    + String(ts.getSeconds()).padStart(2, '0') + '.jpg';
+// originalName: Originalname der Datei (Galerie) oder null (Kamera → Zeitstempel)
+function _onCamCapture(b64, originalName = null) {
+  let name;
+  if (originalName) {
+    name = originalName;
+  } else {
+    const ts = new Date();
+    name = 'foto_' + ts.getFullYear()
+      + String(ts.getMonth() + 1).padStart(2, '0')
+      + String(ts.getDate()).padStart(2, '0') + '_'
+      + String(ts.getHours()).padStart(2, '0')
+      + String(ts.getMinutes()).padStart(2, '0')
+      + String(ts.getSeconds()).padStart(2, '0') + '.jpg';
+  }
   // Ordner-Pfad: _addMediaDefaultFolderPath (aus IDB) oder Verzeichnis-Anteil aus am-file
   const cur = document.getElementById('am-file').value;
   let base = _addMediaDefaultFolderPath;
@@ -391,6 +425,12 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function showMediaBrowser() {
+  UIState._mediaCtxFilter = 'all';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Quellen';
   const allSrcs = Object.values(AppState.db.sources || {});
@@ -447,6 +487,12 @@ function showMediaBrowser() {
 }
 
 function showPersonMediaBrowser() {
+  UIState._mediaCtxFilter = 'person';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showPersonMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Personen';
 
@@ -509,6 +555,12 @@ function showPersonMediaBrowser() {
 }
 
 function showFamilyMediaBrowser() {
+  UIState._mediaCtxFilter = 'family';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showFamilyMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Familien';
 
@@ -581,5 +633,630 @@ function showFamilyMediaBrowser() {
 function _removeFamMarrObjeAt(f, targetIdx) {
   // Legacy: war für _extra-basierte Speicherung; jetzt über f.marr.media.splice()
   if (f?.marr?.media) f.marr.media.splice(targetIdx, 1);
+}
+
+// ─────────────────────────────────────
+//  MEDIA-MGR — Kachel- / Listenansicht (Sub-Tab "Medien" im Quellen-Tab)
+// ─────────────────────────────────────
+
+const _IMG_EXTS  = new Set(['jpg','jpeg','png','gif','bmp','webp','tif','tiff']);
+const _CTX_ICON  = { person: '👤', family: '⚭', source: '📖' };
+let   _mediaAllItems = [];
+const _thumbCache = new Map(); // filePath → src; lebt über Filterwechsel, cleared bei showMediaSection()
+let   _mediaObserver = null;
+
+function _collectAllMedia() {
+  const items = [];
+  const db = AppState.db;
+
+  const sortedPersons = Object.values(db.individuals || {})
+    .sort((a, b) => (a.surname || '').localeCompare(b.surname || '', 'de')
+                 || (a.given  || '').localeCompare(b.given  || '', 'de'));
+  for (const p of sortedPersons) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      const m = p.media[i];
+      if (!m.file && !m.title) continue;
+      const key = p.id.replace(/[^a-zA-Z0-9]/g, '');
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'person', ctxId: p.id, ctxLabel: p.name || p.id,
+        mediaType: 'person', idx: i,
+        thumbId: 'mt-p-' + key + '-' + i });
+    }
+  }
+
+  const sortedFams = Object.values(db.families || {}).sort((a, b) => {
+    const na = a.husb ? (db.individuals[a.husb]?.surname || '') : '';
+    const nb = b.husb ? (db.individuals[b.husb]?.surname || '') : '';
+    return na.localeCompare(nb, 'de');
+  });
+  for (const f of sortedFams) {
+    const husb  = f.husb ? db.individuals[f.husb] : null;
+    const wife  = f.wife ? db.individuals[f.wife] : null;
+    const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+    const key   = f.id.replace(/[^a-zA-Z0-9]/g, '');
+    for (let i = 0; i < (f.marr?.media || []).length; i++) {
+      const m = f.marr.media[i];
+      if (!m.file && !m.titl && !m.title) continue;
+      items.push({ file: m.file, title: m.titl || m.title || m.file,
+        ctx: 'family', ctxId: f.id, ctxLabel: label,
+        mediaType: 'family', idx: i,
+        thumbId: 'mt-fm-' + key + '-' + i });
+    }
+    for (let i = 0; i < (f.media || []).length; i++) {
+      const m = f.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'family', ctxId: f.id, ctxLabel: label,
+        mediaType: 'family_media', idx: i,
+        thumbId: 'mt-f-' + key + '-' + i });
+    }
+  }
+
+  for (const s of Object.values(db.sources || {})) {
+    for (let i = 0; i < (s.media || []).length; i++) {
+      const m = s.media[i];
+      if (!m.file && !m.title) continue;
+      const key = s.id.replace(/[^a-zA-Z0-9]/g, '');
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'source', ctxId: s.id, ctxLabel: s.abbr || s.title || s.id,
+        mediaType: 'source', idx: i,
+        thumbId: 'mt-s-' + key + '-' + i });
+    }
+  }
+
+  return items;
+}
+
+function _applyThumbSrc(el, src) {
+  const img = document.createElement('img');
+  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠'; if (el.contains(img)) el.removeChild(img); };
+  img.src = src;
+  el.textContent = '';
+  el.appendChild(img);
+}
+
+async function _loadMediaTileThumb(tileId, filePath) {
+  const el = document.getElementById(tileId);
+  if (!el) return;
+  if (_thumbCache.has(filePath)) { _applyThumbSrc(el, _thumbCache.get(filePath)); return; }
+  const src = filePath
+    ? (await _odGetMediaUrlByPath(filePath).catch(() => null)
+    || await idbGet('img:' + filePath).catch(() => null))
+    : null;
+  if (!src) { el.classList.add('broken'); el.textContent = '⚠'; return; }
+  _thumbCache.set(filePath, src);
+  _applyThumbSrc(el, src);
+}
+
+function _setupMediaObserver(container) {
+  if (_mediaObserver) _mediaObserver.disconnect();
+  _mediaObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      _mediaObserver.unobserve(entry.target);
+      const { thumbId, file } = entry.target.dataset;
+      if (thumbId && file) _loadMediaTileThumb(thumbId, file);
+    }
+  }, { rootMargin: '300px' });
+  container.querySelectorAll('[data-thumb-id]').forEach(el => _mediaObserver.observe(el));
+}
+
+function cycleMediaSort() {
+  const modes = ['ctx', 'file-asc', 'file-desc'];
+  const labels = { ctx: '⇅ Kontext', 'file-asc': '⇅ Datei ↑', 'file-desc': '⇅ Datei ↓' };
+  const cur = UIState._mediaSortMode || 'ctx';
+  UIState._mediaSortMode = modes[(modes.indexOf(cur) + 1) % modes.length];
+  const btn = document.getElementById('mediaSortBtn');
+  if (btn) btn.textContent = labels[UIState._mediaSortMode];
+  _renderMedia();
+}
+
+function _renderMedia() {
+  const ctx      = UIState._mediaCtxFilter;
+  const sort     = UIState._mediaSortMode || 'ctx';
+  const isList   = UIState._mediaViewMode === 'list';
+  let filtered   = ctx === 'all' ? _mediaAllItems.slice() : _mediaAllItems.filter(m => m.ctx === ctx);
+
+  if (sort === 'file-asc')
+    filtered.sort((a, b) => (a.file || '').split('/').pop().localeCompare((b.file || '').split('/').pop(), 'de', { sensitivity: 'base' }));
+  else if (sort === 'file-desc')
+    filtered.sort((a, b) => (b.file || '').split('/').pop().localeCompare((a.file || '').split('/').pop(), 'de', { sensitivity: 'base' }));
+
+  // Filter-Chips + Sort-Button sync
+  document.querySelectorAll('.media-ctx-chip').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.ctx === ctx));
+  const sortLabels = { ctx: '⇅ Kontext', 'file-asc': '⇅ Datei ↑', 'file-desc': '⇅ Datei ↓' };
+  const sortBtn = document.getElementById('mediaSortBtn');
+  if (sortBtn) sortBtn.textContent = sortLabels[sort];
+
+  // View-Toggle-Icon: zeigt Ziel-Modus (was ein Klick bewirken würde)
+  const tog = document.getElementById('mediaViewToggle');
+  if (tog) tog.textContent = isList ? '⊞' : '☰';
+
+  const container = document.getElementById('mediaGrid');
+  if (!container) return;
+
+  if (!filtered.length) {
+    container.className = 'media-grid';
+    container.innerHTML = '<div class="media-empty">Keine Medien vorhanden</div>';
+    return;
+  }
+
+  if (isList) {
+    container.className = 'media-list';
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
+      const ext   = (file || '').split('.').pop().toLowerCase();
+      const icon  = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const tid   = thumbId + 'l';
+      const isImg = _IMG_EXTS.has(ext);
+      return `<div class="media-tile-row" data-action="mediaNavCtx"
+          data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
+        <div class="media-tile-thumb-sm" id="${esc(tid)}"${isImg ? ` data-thumb-id="${esc(tid)}" data-file="${esc(file)}"` : ''}>${icon}</div>
+        <div class="media-tile-info">
+          <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
+          <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
+        </div>
+        <span class="p-arrow">›</span>
+      </div>`;
+    }).join('');
+  } else {
+    container.className = 'media-grid';
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
+      const ext   = (file || '').split('.').pop().toLowerCase();
+      const icon  = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const isImg = _IMG_EXTS.has(ext);
+      return `<div class="media-tile" data-action="mediaNavCtx"
+          data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
+        <div class="media-tile-thumb" id="${esc(thumbId)}"${isImg ? ` data-thumb-id="${esc(thumbId)}" data-file="${esc(file)}"` : ''}>${icon}</div>
+        <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
+        <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
+      </div>`;
+    }).join('');
+  }
+  _setupMediaObserver(container);
+}
+
+function showMediaSection() {
+  _thumbCache.clear();
+  _mediaAllItems = _collectAllMedia();
+  _renderMedia();
+}
+
+function filterMedia(ctx) {
+  UIState._mediaCtxFilter = ctx || 'all';
+  _renderMedia();
+}
+
+function toggleMediaView() {
+  UIState._mediaViewMode = UIState._mediaViewMode === 'grid' ? 'list' : 'grid';
+  _renderMedia();
+}
+
+// ─── Medien-Detailansicht (rechter Panel, analog Hof-Detail) ──────────────────
+
+let _mdType  = null; // 'person' | 'family' | 'family_media' | 'source'
+let _mdId    = null; // ctxId
+let _mdIdx   = null; // index im media-Array
+
+function _getMdEntry(type, id, idx) {
+  if      (type === 'person')       return getPerson(id)?.media?.[idx]    || null;
+  else if (type === 'family')       return _getFamMarrObjeEntries(getFamily(id))[idx] || null;
+  else if (type === 'family_media') return getFamily(id)?.media?.[idx]   || null;
+  else if (type === 'source')       return getSource(id)?.media?.[idx]   || null;
+  return null;
+}
+
+function _mdEntityLabel(type, id) {
+  if (type === 'person') {
+    const p = getPerson(id); return { icon: '👤', label: p?.name || id };
+  }
+  if (type === 'family' || type === 'family_media') {
+    const f = getFamily(id);
+    const husb = f?.husb ? getPerson(f.husb) : null;
+    const wife = f?.wife ? getPerson(f.wife) : null;
+    const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
+    return { icon: '⚭', label };
+  }
+  if (type === 'source') {
+    const s = getSource(id); return { icon: '📖', label: s?.abbr || s?.title || id };
+  }
+  return { icon: '📎', label: id };
+}
+
+function _mdFindAllRefs(filePath) {
+  // Returns all entities referencing the same file path
+  const db  = AppState.db;
+  const refs = [];
+  if (!filePath) return refs;
+  const fp  = filePath.trim().toLowerCase();
+  for (const p of Object.values(db.individuals || {})) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      if ((p.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'person', id: p.id, idx: i, label: p.name || p.id, icon: '👤' });
+    }
+  }
+  for (const f of Object.values(db.families || {})) {
+    const marrMediaList = _getFamMarrObjeEntries(f);
+    for (let i = 0; i < marrMediaList.length; i++) {
+      if ((marrMediaList[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'family', id: f.id, idx: i, label: _mdEntityLabel('family', f.id).label, icon: '⚭' });
+    }
+    for (let i = 0; i < (f.media || []).length; i++) {
+      if ((f.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'family_media', id: f.id, idx: i, label: _mdEntityLabel('family', f.id).label, icon: '⚭' });
+    }
+  }
+  for (const s of Object.values(db.sources || {})) {
+    for (let i = 0; i < (s.media || []).length; i++) {
+      if ((s.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'source', id: s.id, idx: i, label: s.abbr || s.title || s.id, icon: '📖' });
+    }
+  }
+  return refs;
+}
+
+function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
+  const m = _getMdEntry(mediaType, ctxId, idx);
+  if (!m) return;
+  if (pushHistory) _beforeDetailNavigate();
+
+  _mdType = mediaType;
+  _mdId   = ctxId;
+  _mdIdx  = idx;
+
+  AppState.currentPersonId = null;
+  AppState.currentFamilyId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
+
+  document.getElementById('detailTopTitle').textContent = 'Medium';
+  document.getElementById('editBtn').style.display      = 'none';
+  document.getElementById('treeBtn').hidden              = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
+
+  const file  = m.file  || '';
+  const ext   = file.split('.').pop().toLowerCase();
+  const isImg = _IMG_EXTS.has(ext);
+  const fileIcon = isImg ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+
+  // 1. Preview placeholder (image loads async into this)
+  let html = `<div class="md-preview-hero fade-up" id="md-preview-wrap">
+    <div class="md-preview-icon">${fileIcon}</div>
+  </div>`;
+
+  // 2. Global fields: FILE + FORM + MEDI — changes update ALL references
+  const _MEDI_OPTS = ['','audio','book','card','electronic','fiche','film','magazine','manuscript','map','newspaper','photo','tombstone','video'];
+  const _MEDI_LABELS = {'':'—','audio':'Audio','book':'Buch','card':'Karte','electronic':'Elektronisch','fiche':'Microfiche','film':'Microfilm','magazine':'Zeitschrift','manuscript':'Manuskript','map':'Landkarte','newspaper':'Zeitung','photo':'Foto','tombstone':'Grabstein','video':'Video'};
+  const curMedi = (m.medi || '').toLowerCase();
+  const mediOpts = _MEDI_OPTS.map(v => `<option value="${v}"${v === curMedi ? ' selected' : ''}>${_MEDI_LABELS[v]}</option>`).join('');
+
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Datei (alle Referenzen)</div>
+    </div>
+    <label class="form-label">Datei / Pfad</label>
+    <input class="form-input mb-3" id="md-file" type="text" value="${esc(file)}">
+    <div class="form-row-2col mb-3">
+      <div>
+        <label class="form-label">Format (FORM)</label>
+        <input class="form-input" id="md-form" type="text" value="${esc(m.form || '')}" placeholder="jpg, png, pdf…">
+      </div>
+      <div>
+        <label class="form-label">Medientyp (MEDI)</label>
+        <select class="form-select" id="md-medi">${mediOpts}</select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-save" data-action="saveMediaGlobal">Speichern (alle Ref.)</button>
+    </div>
+  </div>`;
+
+  // 3. References list
+  const refs = _mdFindAllRefs(file);
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Referenzen (${refs.length})</div>
+    </div>`;
+  if (!refs.length) {
+    html += `<div class="empty empty-pad">Keine Referenzen gefunden</div>`;
+  } else {
+    for (const r of refs) {
+      const isCurrentRef = r.type === mediaType && r.id === ctxId && r.idx === idx;
+      const activeCls = isCurrentRef ? ' rel-row-active' : '';
+      const typeLabel = r.type === 'family' ? 'Hochzeit-OBJE' : r.type === 'family_media' ? 'Familie-OBJE' : r.type;
+      html += `<div class="rel-row${activeCls}" data-action="mediaDetailGoRef"
+          data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}">
+        <div class="rel-avatar">${r.icon}</div>
+        <div class="rel-info">
+          <div class="rel-name">${esc(r.label)}</div>
+          <div class="rel-role">${typeLabel}</div>
+        </div>
+        <button class="md-nav-btn" data-action="mediaDetailNavEntity"
+          data-type="${esc(r.type)}" data-id="${esc(r.id)}" title="Zum Eintrag">↗</button>
+        <button class="md-nav-btn md-del-btn" data-action="mediaDetailDeleteRef"
+          data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}"
+          title="Referenz löschen">×</button>
+      </div>`;
+    }
+  }
+  html += `<div class="section-btn-row mt-2">
+    <button type="button" class="section-add" data-action="mediaDetailLinkPerson">+ Person</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkFamily">+ Familie</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkSource">+ Quelle</button>
+  </div>
+  <div id="md-link-panel"></div>
+  </div>`;
+
+  // 4. Per-reference fields — specific to selected entity
+  const { icon: refIcon, label: refLabel } = _mdEntityLabel(mediaType, ctxId);
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">${refIcon} ${esc(refLabel)}</div>
+    </div>
+    <label class="form-label">Titel</label>
+    <input class="form-input mb-3" id="md-title" type="text" value="${esc(m.title || m.titl || '')}">
+    <label class="form-label">Aufnahmedatum</label>
+    <input class="form-input mb-3" id="md-date" type="text" value="${esc(m.date || '')}">
+    <label class="form-label">Notiz</label>
+    <textarea class="form-input mb-3" id="md-note" rows="4">${esc(m.note || '')}</textarea>
+    <label class="form-label form-check-row">
+      <input type="checkbox" id="md-prim"${m.prim && m.prim !== '' ? ' checked' : ''}> Bevorzugtes Medium (_PRIM)
+    </label>
+    <div class="btn-row mt-3">
+      <button type="button" class="btn btn-save" data-action="saveMediaDetail">Speichern</button>
+    </div>
+  </div>`;
+
+  document.getElementById('detailMedia').innerHTML = html;
+  _activateDetailContainer('detailMedia', ctxId + ':' + idx);
+  showView('v-detail');
+
+  // Load preview async
+  if (isImg) {
+    _odGetMediaUrlByPath(file).then(url => {
+      if (!url) return idbGet('img:' + file).then(s => s && _mdSetPreview(s)).catch(() => {});
+      _mdSetPreview(url);
+    }).catch(() => {
+      idbGet('img:' + file).then(s => { if (s) _mdSetPreview(s); }).catch(() => {});
+    });
+  }
+}
+
+function _mdSetPreview(src) {
+  const wrap = document.getElementById('md-preview-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = src;
+  img.className = 'md-preview-img';
+  img.addEventListener('click', () => showLightbox(src));
+  wrap.appendChild(img);
+}
+
+// Save per-reference fields (TITL, DATE, NOTE, _PRIM) for currently selected ref
+function saveMediaDetail() {
+  const title = document.getElementById('md-title')?.value.trim() || '';
+  const date  = document.getElementById('md-date')?.value.trim()  || '';
+  const note  = document.getElementById('md-note')?.value.trim()  || '';
+  const prim  = document.getElementById('md-prim')?.checked ? 'Y' : '';
+
+  if (_mdType === 'person') {
+    const p = getPerson(_mdId);
+    if (!p || !p.media?.[_mdIdx]) return;
+    p.media[_mdIdx] = { ...p.media[_mdIdx], title, date, note, prim };
+  } else if (_mdType === 'family') {
+    const f = getFamily(_mdId);
+    if (!f || !f.marr?.media?.[_mdIdx]) return;
+    f.marr.media[_mdIdx] = { ...f.marr.media[_mdIdx], titl: title, date, note, prim };
+  } else if (_mdType === 'family_media') {
+    const f = getFamily(_mdId);
+    if (!f || !f.media?.[_mdIdx]) return;
+    f.media[_mdIdx] = { ...f.media[_mdIdx], title, date, note, prim };
+  } else if (_mdType === 'source') {
+    const s = getSource(_mdId);
+    if (!s || !s.media?.[_mdIdx]) return;
+    s.media[_mdIdx] = { ...s.media[_mdIdx], title, date, note, prim };
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Referenz gespeichert', 'success');
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
+}
+
+// Save global fields (FILE, FORM) — updates every entity that references this file
+function saveMediaGlobal() {
+  const newFile = document.getElementById('md-file')?.value.trim() || '';
+  const newForm = document.getElementById('md-form')?.value.trim() || '';
+  const newMedi = document.getElementById('md-medi')?.value || '';
+  const oldFile = (_getMdEntry(_mdType, _mdId, _mdIdx)?.file || '').trim();
+  const db = AppState.db;
+  let count = 0;
+
+  const _updateEntry = entry => {
+    if ((entry.file || '').trim() !== oldFile && oldFile !== '') return;
+    entry.file = newFile; entry.form = newForm; entry.medi = newMedi;
+    count++;
+  };
+
+  for (const p of Object.values(db.individuals || {}))
+    for (const e of (p.media || [])) _updateEntry(e);
+  for (const f of Object.values(db.families || {})) {
+    for (const e of (f.marr?.media || [])) _updateEntry(e);
+    for (const e of (f.media || []))       _updateEntry(e);
+  }
+  for (const s of Object.values(db.sources || {}))
+    for (const e of (s.media || [])) _updateEntry(e);
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast(`Datei in ${count} Referenz${count !== 1 ? 'en' : ''} aktualisiert`, 'success');
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
+}
+
+// ─── Link-Panel: Person / Familie / Quelle zuordnen ──────────────────────────
+
+let _mdLinkPanelType = null;
+
+function _mdShowLinkPanel(type) {
+  _mdLinkPanelType = type;
+  const panel = document.getElementById('md-link-panel');
+  if (!panel) return;
+  const titles = { person: 'Person zuordnen', family: 'Familie zuordnen', source: 'Quelle zuordnen' };
+  panel.innerHTML = `
+    <div class="md-link-section">
+      <div class="md-link-head">
+        <span class="md-link-title">${titles[type] || 'Zuordnen'}</span>
+        <button class="md-link-cancel" data-action="mediaDetailLinkCancel">✕</button>
+      </div>
+      <input class="form-input md-link-search" id="md-link-q" placeholder="Suchen…"
+        autocomplete="off" data-input="mdFilterLinkPanel">
+      <div class="md-link-list" id="md-link-list"></div>
+    </div>`;
+  _mdRenderLinkList('');
+  panel.querySelector('#md-link-q')?.focus();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _mdRenderLinkList(q) {
+  const list = document.getElementById('md-link-list');
+  if (!list) return;
+  const db  = AppState.db;
+  const lq  = q.trim().toLowerCase();
+
+  let rows = '';
+  if (_mdLinkPanelType === 'person') {
+    const persons = Object.values(db.individuals || {})
+      .filter(p => !lq || (p.name || '').toLowerCase().includes(lq)
+                        || (p.given || '').toLowerCase().includes(lq)
+                        || (p.surname || '').toLowerCase().includes(lq))
+      .sort((a, b) => (a.surname || '').localeCompare(b.surname || '', 'de')
+                   || (a.given  || '').localeCompare(b.given  || '', 'de'))
+      .slice(0, 80);
+    if (!persons.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = persons.map(p => {
+      let life = '';
+      if (p.birth?.date) life += '* ' + p.birth.date;
+      if (p.death?.date) life += (life ? '  † ' : '† ') + p.death.date;
+      return `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="person" data-id="${esc(p.id)}">
+      <span class="md-link-icon">👤</span>
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(p.name || p.id)}</span>
+        ${life ? `<span class="md-link-sub">${esc(life)}</span>` : ''}
+      </div>
+    </div>`;
+    }).join('');
+
+  } else if (_mdLinkPanelType === 'family') {
+    const fams = Object.values(db.families || {}).map(f => {
+      const husb = f.husb ? db.individuals[f.husb] : null;
+      const wife = f.wife ? db.individuals[f.wife] : null;
+      const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+      return { f, label };
+    }).filter(({ label }) => !lq || label.toLowerCase().includes(lq))
+      .sort((a, b) => a.label.localeCompare(b.label, 'de'))
+      .slice(0, 80);
+    if (!fams.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = fams.map(({ f, label }) => {
+      const marrDate = f.marr?.date ? '⚭ ' + f.marr.date : '';
+      return `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="family" data-id="${esc(f.id)}">
+      <span class="md-link-icon">⚭</span>
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(label)}</span>
+        ${marrDate ? `<span class="md-link-sub">${esc(marrDate)}</span>` : ''}
+      </div>
+    </div>`;
+    }).join('');
+
+  } else if (_mdLinkPanelType === 'source') {
+    const sources = Object.values(db.sources || {})
+      .filter(s => !lq || (s.abbr || '').toLowerCase().includes(lq)
+                        || (s.title || '').toLowerCase().includes(lq))
+      .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de'))
+      .slice(0, 80);
+    if (!sources.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = sources.map(s => `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="source" data-id="${esc(s.id)}">
+      <span class="md-link-icon">📖</span>
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(s.abbr || s.title || s.id)}</span>
+        ${s.abbr && s.title ? `<span class="md-link-sub">${esc(s.title)}</span>` : ''}
+      </div>
+    </div>`).join('');
+  }
+
+  list.innerHTML = rows;
+}
+
+function _mdFilterLinkPanel(q) { _mdRenderLinkList(q); }
+
+function _mdDeleteRef(type, entityId, idx) {
+  if (!confirm('Medienzuordnung löschen?')) return;
+
+  if (type === 'person') {
+    const p = getPerson(entityId);
+    if (!p?.media) return;
+    p.media.splice(idx, 1);
+  } else if (type === 'family') {
+    const f = getFamily(entityId);
+    if (!f?.marr?.media) return;
+    f.marr.media.splice(idx, 1);
+  } else if (type === 'family_media') {
+    const f = getFamily(entityId);
+    if (!f?.media) return;
+    f.media.splice(idx, 1);
+  } else if (type === 'source') {
+    const s = getSource(entityId);
+    if (!s?.media) return;
+    s.media.splice(idx, 1);
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Referenz gelöscht', 'success');
+
+  // If we deleted the currently viewed ref, shift idx or switch to first remaining ref
+  if (type === _mdType && entityId === _mdId) {
+    // same entity — idx was removed, try previous slot
+    const newIdx = Math.max(0, idx - 1);
+    const stillExists = _getMdEntry(_mdType, _mdId, newIdx);
+    if (stillExists) { showMediaDetail(_mdType, _mdId, newIdx, false); return; }
+  }
+  // stay on current ref if it still exists (different entity deleted, or idx adjusted)
+  const current = _getMdEntry(_mdType, _mdId, _mdIdx);
+  if (current) { showMediaDetail(_mdType, _mdId, _mdIdx, false); return; }
+  // current ref gone (splice shifted it away) — go back
+  goBack();
+}
+
+function _mdAddRef(type, entityId) {
+  const src = _getMdEntry(_mdType, _mdId, _mdIdx);
+  if (!src) return;
+  const newEntry = { file: src.file || '', form: src.form || '', medi: src.medi || '',
+    title: '', titleIsLv2: false, date: '', note: '', scbk: '', prim: '', _extra: [] };
+
+  if (type === 'person') {
+    const p = getPerson(entityId);
+    if (!p) return;
+    p.media.push(newEntry);
+  } else if (type === 'family') {
+    const f = getFamily(entityId);
+    if (!f) return;
+    if (!f.marr) f.marr = { date: null, place: null, lati: null, long: null, sources: [], media: [] };
+    if (!f.marr.media) f.marr.media = [];
+    f.marr.media.push({ ...newEntry, titl: '', title: undefined });
+  } else if (type === 'source') {
+    const s = getSource(entityId);
+    if (!s) return;
+    s.media.push(newEntry);
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Referenz hinzugefügt', 'success');
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
 }
 

@@ -115,15 +115,76 @@ async function odImportFromDefaultFolder() {
   await odImportPhotosFromFolder(folder.id || folder.folderId, folder.name || folder.folderName);
 }
 
+// Baut FolderStack aus parentReference auf — letzter Eintrag erhält echte ID,
+// Zwischenebenen nutzen 'root' als Fallback für ← Zurück.
+// parentRef = { path: '/drive/root:/Privat/Ahnen', id: ahnen_id }
+// → [{ id:'root', name:'OneDrive' }, { id:'root', name:'Privat' }, { id:ahnen_id, name:'Ahnen' }]
+function _odBuildStack(parentRef) {
+  const path = parentRef?.path || '';
+  const id   = parentRef?.id   || 'root';
+  if (!/\/drive\/root:.+/.test(path)) return [{ id: 'root', name: 'OneDrive' }];
+  const segs  = path.replace(/.*\/drive\/root:\//, '').split('/').filter(Boolean).map(decodeURIComponent);
+  const stack = [{ id: 'root', name: 'OneDrive' }];
+  for (let i = 0; i < segs.length; i++) {
+    stack.push({ id: i === segs.length - 1 ? id : 'root', name: segs[i] });
+  }
+  return stack;
+}
+
+// Zum Eltern-Ordner eines bekannten Ordners navigieren (Ordner-Auswahl-Dialoge)
+async function _odNavigateToParentOf(folderId) {
+  const token = await _odGetToken().catch(() => null);
+  if (!token) { _odFolderStack = []; await _odShowFolder('root', 'OneDrive'); return; }
+  try {
+    const res = await fetch(
+      `${OD_GRAPH}/me/drive/items/${folderId}?$select=id,name,parentReference`,
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    if (!res.ok) throw new Error('Ordner nicht gefunden');
+    const data       = await res.json();
+    const parentPath = data.parentReference?.path || '';
+    const parentId   = data.parentReference?.id;
+    const parentIsRoot = !/\/drive\/root:.+/.test(parentPath);
+    if (parentId && !parentIsRoot) {
+      // Parent-Ordner anzeigen; Stack = Vorfahren des Parents (ohne Parent selbst)
+      const parentName = decodeURIComponent(parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive');
+      const grandParentPath = parentPath.replace(/\/[^/]*$/, ''); // letztes Segment entfernen
+      _odFolderStack = _odBuildStack({ path: grandParentPath, id: null });
+      await _odShowFolder(parentId, parentName);
+    } else {
+      // Parent ist Root → Ordner selbst anzeigen, Root im Stack für ← Zurück
+      _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+      await _odShowFolder(data.id || folderId, data.name || 'Ordner');
+    }
+  } catch(e) {
+    console.warn('[OD] Navigate to parent:', e);
+    _odFolderStack = [];
+    await _odShowFolder('root', 'OneDrive');
+  }
+}
+
 async function odImportPhotos() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odFolderStack = [];
   await _odGetBasePath(); // Basis-Pfad vorladen
   const folder = await idbGet('od_photo_folder').catch(() => null)
               || await idbGet('od_default_folder').catch(() => null);
   const folderId = folder?.id || folder?.folderId;
-  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
-  else await _odShowFolder('root', 'OneDrive');
+  if (folderId) {
+    await _odNavigateToParentOf(folderId);
+  } else {
+    // Vorbelegung: "Pictures" im OneDrive-Root suchen
+    const token = await _odGetToken().catch(() => null);
+    if (token) {
+      try {
+        const res = await fetch(`${OD_GRAPH}/me/drive/root:/Pictures?$select=id,name`,
+          { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) { const item = await res.json(); if (item.id) { await _odShowFolder(item.id, item.name); return; } }
+      } catch(e) {}
+    }
+    await _odShowFolder('root', 'OneDrive');
+  }
 }
 
 async function _odShowFolder(folderId, folderName) {
@@ -141,7 +202,7 @@ async function _odShowFolder(folderId, folderName) {
     const _isPickMode = _odPickMode || _odEditPickMode;
     const files   = _isPickMode ? items.filter(f => !f.folder) : [];
     const title   = document.querySelector('#modalOneDrive .sheet-title');
-    if (title) title.textContent = _isPickMode ? 'Datei auswählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
+    if (title) title.textContent = _isPickMode ? 'Datei auswählen' : _odBasePathMode ? 'GED-Ordner wählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : _odConfigScanMode ? 'Konfig-Ordner wählen' : 'Fotos importieren';
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
@@ -155,9 +216,15 @@ async function _odShowFolder(folderId, folderName) {
       }
     }
     if (!_odPickMode && folderId !== 'root') {
-      if (_odDocScanMode) {
+      if (_odBasePathMode) {
+        html += `<div class="list-item od-action-item" data-action="odScanBasePathFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
+          📁 Diesen Ordner als GED-Ordner setzen</div>`;
+      } else if (_odDocScanMode) {
         html += `<div class="list-item od-action-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
+      } else if (_odConfigScanMode) {
+        html += `<div class="list-item od-action-item" data-action="odScanConfigFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
+          ⚙ Diesen Ordner als Konfig-Ordner nutzen</div>`;
       } else {
         html += `<div class="list-item od-action-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📥 Fotos aus diesem Ordner laden</div>`;
@@ -339,20 +406,21 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     if (missing) msg += ` · ${missing} nicht gefunden`;
     showToast(msg);
     _odUpdateUI();
+    openSettings();
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
 // Dokumente-Ordner scannen (Dateiname → fileId, für Quellenmedien aus GEDCOM-Pfad)
 async function odSetupDocFolder() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odDocScanMode = true;
-  _odPickMode    = false;
   _odFolderStack = [];
   await _odGetBasePath(); // Basis-Pfad vorladen
   const folder = await idbGet('od_docs_folder').catch(() => null)
               || await idbGet('od_doc_folder').catch(() => null);
   const folderId = folder?.id || folder?.folderId;
-  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
+  if (folderId) await _odNavigateToParentOf(folderId);
   else await _odShowFolder('root', 'OneDrive');
 }
 
@@ -380,17 +448,85 @@ async function odScanDocFolder(folderId, folderName) {
     Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
     if (AppState.currentSourceId) showSourceDetail(AppState.currentSourceId, false);
     showToast(`✓ ${Object.keys(docMap).length} Dateien indiziert — "${folderName}"`);
+    openSettings();
   } catch(e) { showToast('OneDrive: ' + e.message); }
+}
+
+// Konfig-Ordner wählen (für App-Datendateien: orte.json, templates.json)
+async function odSetupConfigFolder() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
+  _odConfigScanMode = true;
+  _odFolderStack = [];
+  closeModal('modalSettings');
+  const basePath = await _odGetBasePath();
+  const folder = await idbGet('od_config_folder').catch(() => null);
+  if (folder?.id) {
+    // bereits konfiguriert → Parent anzeigen
+    await _odNavigateToParentOf(folder.id);
+  } else if (basePath) {
+    // Vorbelegung: "Config"-Unterordner im GED-Ordner suchen
+    const token = await _odGetToken().catch(() => null);
+    if (token) {
+      try {
+        const encoded = (basePath + '/Config').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name`, { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) {
+          const item = await res.json();
+          if (item.id) { await _odNavigateToParentOf(item.id); return; }
+        }
+      } catch(e) { /* Config-Ordner existiert noch nicht → GED-Ordner zeigen */ }
+    }
+    // GED-Ordner als Startpunkt — Stack aus parentReference aufbauen
+    const encoded = basePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    const token2 = await _odGetToken().catch(() => null);
+    if (token2) {
+      try {
+        const res2 = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`, { headers: { Authorization: 'Bearer ' + token2 } });
+        if (res2.ok) {
+          const data2 = await res2.json();
+          if (data2.id) {
+            _odFolderStack = _odBuildStack(data2.parentReference);
+            await _odShowFolder(data2.id, data2.name || basePath.split('/').pop());
+            return;
+          }
+        }
+      } catch(e) {}
+    }
+    await _odShowFolder('root', 'OneDrive');
+  } else {
+    await _odShowFolder('root', 'OneDrive');
+  }
+}
+
+async function odScanConfigFolder(folderId, folderName) {
+  closeModal('modalOneDrive');
+  _odConfigScanMode = false;
+  const fullPath = [..._odFolderStack.map(f => f.name), folderName]
+    .filter(n => n !== 'OneDrive').join('/');
+  const relPath = _odToRelPath(fullPath, _odCurrentBasePath || await _odGetBasePath());
+  await idbPut('od_config_folder', { id: folderId, name: folderName, relPath }).catch(() => {});
+  showToast(`✓ Konfig-Ordner: ${relPath || folderName}`);
+  openSettings();
 }
 
 let _odPickMode               = false;
 let _odEditPickMode           = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode            = false; // true wenn Dokumente-Ordner gewählt wird
+let _odBasePathMode           = false; // true wenn GED-Startpfad gewählt wird
+let _odConfigScanMode         = false; // true wenn Konfig-Ordner gewählt wird
 let _odPickStartedFromSubfolder = false; // true wenn Picker aus konfiguriertem Unterordner gestartet
 let _odPickStartFolderId      = '';    // ID des konfigurierten Start-Ordners (für Parent-Navigation)
 
+// Alle Modus-Flags auf false zurücksetzen
+function _odResetModes() {
+  _odPickMode = false; _odEditPickMode = false; _odDocScanMode = false;
+  _odBasePathMode = false; _odConfigScanMode = false;
+}
+
 async function odPickFileForEditMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odEditPickMode = true;
   _odFolderStack = [];
   closeModal('modalEditMedia');
@@ -433,6 +569,7 @@ async function _clearIdbPhotoKeys(prefix, upTo) {
 
 async function odPickFileForMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odPickMode = true;
   _odFolderStack = [];
   closeModal('modalAddMedia');
@@ -471,7 +608,8 @@ function _odPickCancel() {
 }
 
 function _odCancelOrClose() {
-  if (_odPickMode)     { _odPickMode = false;     closeModal('modalOneDrive'); openModal('modalAddMedia'); }
-  else if (_odEditPickMode) { _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
+  if (_odPickMode)         { _odPickMode = false;     closeModal('modalOneDrive'); openModal('modalAddMedia'); }
+  else if (_odEditPickMode){ _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
+  else if (_odBasePathMode){ _odBasePathMode = false; closeModal('modalOneDrive'); openSettings(); }
   else { _odDocScanMode = false; closeModal('modalOneDrive'); }
 }

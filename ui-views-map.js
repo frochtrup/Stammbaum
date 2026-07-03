@@ -6,9 +6,37 @@
 let _leafletMap       = null;   // Leaflet-Instanz
 let _mapMarkerLayer   = null;   // L.LayerGroup für Marker
 let _mapLineLayer     = null;   // L.LayerGroup für Biografie-Linie
-let _mapMode          = 'orte'; // 'orte' | 'person'
+let _mapMode          = 'orte'; // 'orte' | 'person' | 'migr'
 let _mapPersonId      = null;   // aktive Person im Biografie-Modus
 let _placePersonIndex = null;   // cache: placeName → [{personId, role, date}]
+
+// Animations-State (MAP-ANIM)
+let _animTimer           = null;
+let _animRunning         = false;
+let _animLines           = [];    // Migr-Modus: [{p, pts, color, latLngs, year}]
+let _animPersonEvs       = [];    // Person-Modus: Geo-Events der aktuellen Person
+let _animCurrentPersonId = null;  // Person-Modus: ID der animierten Person
+let _animIdx             = 0;
+let _animSpeed           = 600;   // ms pro Schritt
+let _animLoop            = false;
+
+// Epochen-Farben für Migrations-Modus (nach Geburtsjahr)
+const _MIGR_EPOCHS = [
+  { label: 'vor 1700',  from:    0, to: 1699, color: '#9b7aaa' },
+  { label: '1700–1799', from: 1700, to: 1799, color: '#5b9bd5' },
+  { label: '1800–1849', from: 1800, to: 1849, color: '#4aaa8a' },
+  { label: '1850–1899', from: 1850, to: 1899, color: '#e8a33a' },
+  { label: '1900–1949', from: 1900, to: 1949, color: '#e07050' },
+  { label: '1950+',     from: 1950, to: 9999, color: '#a0a8b0' },
+];
+
+function _migrColor(birthYear) {
+  if (!birthYear) return '#777';
+  for (const e of _MIGR_EPOCHS) {
+    if (birthYear >= e.from && birthYear <= e.to) return e.color;
+  }
+  return '#777';
+}
 
 // ─────────────────────────────────────
 //  PLACE-PERSON-INDEX
@@ -82,6 +110,17 @@ function _updateMapOfflineBanner() {
 // ─────────────────────────────────────
 function initOrRefreshPlaceMap() {
   _ensureMap();
+  // Speed-/Loop-Listener einmalig binden
+  const speedSel = document.getElementById('map-anim-speed');
+  if (speedSel && !speedSel._animBound) {
+    speedSel.addEventListener('change', e => { _animSpeed = parseInt(e.target.value, 10); });
+    speedSel._animBound = true;
+  }
+  const loopChk = document.getElementById('map-anim-loop');
+  if (loopChk && !loopChk._animBound) {
+    loopChk.addEventListener('change', e => { _animLoop = e.target.checked; });
+    loopChk._animBound = true;
+  }
   setTimeout(() => {
     if (!_leafletMap) return;
     _leafletMap.invalidateSize();
@@ -93,18 +132,32 @@ function initOrRefreshPlaceMap() {
 }
 
 function _renderMap() {
-  if (_mapMode === 'orte') _renderOrteModus();
-  else                     _renderPersonModus(_mapPersonId);
+  if      (_mapMode === 'orte')   _renderOrteModus();
+  else if (_mapMode === 'migr')   _renderMigrModus();
+  else                            _renderPersonModus(_mapPersonId);
 }
 
 // ─────────────────────────────────────
 //  MODUS-WECHSEL
 // ─────────────────────────────────────
 function switchMapMode(mode) {
+  clearTimeout(_animTimer);
+  _animRunning = false;
+  // Person-Modus: zuletzt aktive App-Person als Fallback wenn noch keine Karten-Person gewählt
+  if (mode === 'person' && !_mapPersonId && AppState.currentPersonId) {
+    _mapPersonId = AppState.currentPersonId;
+    const p   = AppState.db.individuals[_mapPersonId];
+    const btn = document.getElementById('map-person-btn');
+    if (btn && p) btn.textContent = p.name || _mapPersonId;
+  }
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
+  document.getElementById('map-mode-migr')  ?.classList.toggle('active', mode === 'migr');
   document.getElementById('map-person-picker').style.display = mode === 'person' ? 'block' : 'none';
+  document.getElementById('map-migr-legend') .style.display  = mode === 'migr'   ? 'flex'  : 'none';
+  document.getElementById('map-anim-bar')    ?.style.setProperty('display',
+    (mode === 'migr' || mode === 'person') ? 'flex' : 'none');
   document.getElementById('map-explore-panel').style.display = 'none';
   _renderMap();
 }
@@ -150,15 +203,15 @@ function _renderOrteModus() {
     bounds.push([lat, lng]);
   }
 
-  // Höfe mit Koordinaten als eigene Marker-Ebene
-  for (const hm of Object.values(AppState.db.hofObjects || {})) {
-    const lat = parseFloat(hm.lat);
-    const lng = parseFloat(hm.long);
+  // Höfe als eigene Marker-Ebene — Koordinaten primär aus dem Farm-placeObject
+  // (ADR-026, geräteübergreifend), hofObjects-Sidecar als Fallback (via hofMeta).
+  for (const hof of buildHofIndex().values()) {
+    const meta = hofMeta(hof);
+    const lat = parseFloat(meta.lat);
+    const lng = parseFloat(meta.long);
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) continue;
 
-    const hofIndex = buildHofIndex();
-    const hof      = hofIndex.get(hm.addr);
-    const count    = hof ? new Set(hof.entries.map(e => e.pid)).size : 0;
+    const count = new Set(hof.entries.map(e => e.pid)).size;
 
     const marker = L.marker([lat, lng], {
       icon: L.divIcon({
@@ -170,10 +223,10 @@ function _renderOrteModus() {
     });
 
     marker.on('click', () => {
-      if (hof) _showExplorationPanel(hm.addr, (hof.entries || []).map(e => ({ personId: e.pid, role: 'Wohnort', date: e.date })));
+      _showExplorationPanel(hof.addr, (hof.entries || []).map(e => ({ personId: e.pid, role: 'Wohnort', date: e.date })));
     });
     marker.bindTooltip(
-      `${_mesc(compactPlace(hm.addr))}${count ? ' · ' + count + ' Person' + (count !== 1 ? 'en' : '') : ''}`,
+      `${_mesc(compactPlace(hof.addr))}${count ? ' · ' + count + ' Person' + (count !== 1 ? 'en' : '') : ''}`,
       { direction: 'top', offset: [0, -6] }
     );
     marker.addTo(_mapMarkerLayer);
@@ -186,6 +239,159 @@ function _renderOrteModus() {
   }
   _leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
 }
+
+// ─────────────────────────────────────
+//  MODUS 3: MIGRATIONSWEGE
+// ─────────────────────────────────────
+function _buildMigrLines() {
+  const lines = [];
+  for (const p of Object.values(AppState.db.individuals)) {
+    const evs = _personGeoEvents(p);
+    if (evs.length < 2) continue;
+    const pts = [evs[0]];
+    for (let i = 1; i < evs.length; i++) {
+      const prev = pts[pts.length - 1];
+      if (evs[i].lat !== prev.lat || evs[i].lng !== prev.lng) pts.push(evs[i]);
+    }
+    if (pts.length < 2) continue;
+    const byStr = p.birth?.date?.match(/\b(\d{4})\b/)?.[1];
+    const year  = byStr ? parseInt(byStr, 10) : 9999;
+    const color = _migrColor(byStr ? year : null);
+    lines.push({ p, pts, color, latLngs: pts.map(e => [e.lat, e.lng]), year });
+  }
+  return lines.sort((a, b) => a.year - b.year);
+}
+
+function _addMigrLine({ p, pts, color, latLngs }, animate) {
+  const line = L.polyline(latLngs, { color, weight: 1.5, opacity: animate ? 0 : 0.5 });
+  const from  = compactPlace(pts[0].place);
+  const to    = compactPlace(pts[pts.length - 1].place);
+  const years = _mapPersonYears(p);
+  line.bindTooltip(
+    `<b>${_mesc(p.name || p.id)}</b>${years ? ' ' + years : ''}<br>${_mesc(from)} → ${_mesc(to)}`,
+    { sticky: true }
+  );
+  line.on('click', () =>
+    _showExplorationPanel(pts[0].place, [{ personId: p.id, role: pts[0].role, date: pts[0].date }])
+  );
+  line.addTo(_mapLineLayer);
+
+  if (animate) {
+    requestAnimationFrame(() => {
+      const svgPath = line._path;
+      if (!svgPath) return;
+      const len = svgPath.getTotalLength?.() ?? 300;
+      svgPath.style.strokeDasharray  = len;
+      svgPath.style.strokeDashoffset = len;
+      svgPath.style.opacity = '0.5';
+      svgPath.style.transition = `stroke-dashoffset ${Math.min(_animSpeed * 0.8, 800)}ms ease, opacity 0.15s`;
+      requestAnimationFrame(() => { svgPath.style.strokeDashoffset = '0'; });
+    });
+  }
+
+  L.circleMarker([pts[pts.length - 1].lat, pts[pts.length - 1].lng], {
+    radius: 3.5, fillColor: color, color: '#1a140a',
+    weight: 1, opacity: 1, fillOpacity: 0.9,
+  }).addTo(_mapMarkerLayer);
+}
+
+function _renderMigrModus() {
+  _mapMarkerLayer.clearLayers();
+  _mapLineLayer.clearLayers();
+  document.getElementById('map-explore-panel').style.display = 'none';
+
+  _animLines = _buildMigrLines();
+  if (!_animLines.length) {
+    showToast('Keine Personen mit Migrations-Koordinaten gefunden');
+    return;
+  }
+
+  const bounds = [];
+  for (const item of _animLines) {
+    _addMigrLine(item, false);
+    item.latLngs.forEach(ll => bounds.push(ll));
+  }
+  _leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+  _updateAnimBtn();
+}
+
+// ─────────────────────────────────────
+//  ANIMATIONS-STEUERUNG (MAP-ANIM)
+// ─────────────────────────────────────
+function _animStep() {
+  const isMigr  = _mapMode === 'migr';
+  const maxIdx  = isMigr ? _animLines.length : _animPersonEvs.length;
+
+  if (_animIdx >= maxIdx) {
+    if (_animLoop) {
+      _animIdx = 0;
+      _mapLineLayer.clearLayers();
+      _mapMarkerLayer.clearLayers();
+    } else {
+      _animRunning = false;
+      _updateAnimBtn();
+      return;
+    }
+  }
+
+  if (isMigr) _addMigrLine(_animLines[_animIdx++], true);
+  else        _addPersonStep(_animPersonEvs, _animIdx++, true);
+
+  _animTimer = setTimeout(_animStep, _animSpeed);
+}
+
+function _startMigrAnim() {
+  _mapLineLayer.clearLayers();
+  _mapMarkerLayer.clearLayers();
+  _animIdx = 0;
+  _animRunning = true;
+  _updateAnimBtn();
+  _animStep();
+}
+
+function _startPersonAnim() {
+  _mapLineLayer.clearLayers();
+  _mapMarkerLayer.clearLayers();
+  _animIdx = 0;
+  _animRunning = true;
+  _updateAnimBtn();
+  _animStep();
+}
+
+function _pauseMigrAnim() {
+  clearTimeout(_animTimer);
+  _animRunning = false;
+  _updateAnimBtn();
+}
+
+function _stopMigrAnim() {
+  clearTimeout(_animTimer);
+  _animRunning = false;
+  _animIdx = 0;
+  if (_mapMode === 'migr') _renderMigrModus();
+  else                     _renderPersonModus(_animCurrentPersonId);
+}
+
+function _updateAnimBtn() {
+  const btn = document.getElementById('map-anim-play');
+  if (btn) btn.textContent = _animRunning ? '⏸' : '▶';
+}
+
+function toggleMigrAnim() {
+  const maxIdx = _mapMode === 'migr' ? _animLines.length : _animPersonEvs.length;
+  if (_animRunning) {
+    _pauseMigrAnim();
+  } else if (_animIdx > 0 && _animIdx < maxIdx) {
+    _animRunning = true;
+    _updateAnimBtn();
+    _animStep();
+  } else {
+    if (_mapMode === 'migr') _startMigrAnim();
+    else                     _startPersonAnim();
+  }
+}
+
+function stopMigrAnim() { _stopMigrAnim(); }
 
 // ─────────────────────────────────────
 //  EXPLORATION-PANEL
@@ -269,6 +475,42 @@ function _mapPersonYears(p) {
 // ─────────────────────────────────────
 //  MODUS 2: PERSONENBIOGRAFIE
 // ─────────────────────────────────────
+function _addPersonStep(evs, idx, animate) {
+  const ev = evs[idx];
+  const p  = AppState.db.individuals[_animCurrentPersonId];
+
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="map-bio-marker">${idx + 1}</div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11],
+  });
+  const marker = L.marker([ev.lat, ev.lng], { icon });
+  marker.bindTooltip(
+    `<b>${idx + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
+    { direction: 'top', offset: [0, -12] }
+  );
+  if (p) marker.on('click', () => _showPersonEventsAtPlace(p, ev.place, evs));
+  marker.addTo(_mapMarkerLayer);
+
+  if (idx > 0) {
+    const prev = evs[idx - 1];
+    const seg  = L.polyline([[prev.lat, prev.lng], [ev.lat, ev.lng]], {
+      color: '#c8a84a', weight: 2,
+      opacity:   animate ? 0 : 0.55,
+      dashArray: '6, 5',
+    });
+    seg.addTo(_mapLineLayer);
+    if (animate) {
+      requestAnimationFrame(() => {
+        const sp = seg._path;
+        if (!sp) return;
+        sp.style.transition = `opacity ${Math.min(_animSpeed * 0.8, 800)}ms ease`;
+        requestAnimationFrame(() => { sp.style.opacity = '0.55'; });
+      });
+    }
+  }
+}
+
 function _renderPersonModus(personId) {
   _mapMarkerLayer.clearLayers();
   _mapLineLayer.clearLayers();
@@ -284,40 +526,13 @@ function _renderPersonModus(personId) {
     return;
   }
 
-  const bounds  = [];
-  const latLngs = [];
+  _animPersonEvs       = evs;
+  _animCurrentPersonId = personId;
 
-  evs.forEach((ev, i) => {
-    latLngs.push([ev.lat, ev.lng]);
-    bounds.push([ev.lat, ev.lng]);
-
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-bio-marker">${i + 1}</div>`,
-      iconSize:   [22, 22],
-      iconAnchor: [11, 11],
-    });
-
-    const marker = L.marker([ev.lat, ev.lng], { icon });
-    marker.bindTooltip(
-      `<b>${i + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
-      { direction: 'top', offset: [0, -12] }
-    );
-    // Klick: alle Ereignisse der ausgewählten Person an diesem Ort
-    marker.on('click', () => _showPersonEventsAtPlace(p, ev.place, evs));
-    marker.addTo(_mapMarkerLayer);
-  });
-
-  if (latLngs.length > 1) {
-    L.polyline(latLngs, {
-      color:     '#c8a84a',
-      weight:    2,
-      opacity:   0.55,
-      dashArray: '6, 5',
-    }).addTo(_mapLineLayer);
-  }
-
+  const bounds = evs.map(ev => [ev.lat, ev.lng]);
+  evs.forEach((_, i) => _addPersonStep(evs, i, false));
   _leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+  _updateAnimBtn();
 }
 
 function _personGeoEvents(p) {
@@ -330,11 +545,15 @@ function _personGeoEvents(p) {
     evs.push({ place, lat, lng, date: date || '', role, note: note || '', addr: addr || '', desc: desc || '' });
   }
 
-  addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt',     p.birth.note);
-  addEv(p.chr.place,   p.chr.lati,   p.chr.long,   p.chr.date,   'Taufe',      p.chr.note);
+  // Item 9: Koords via _eventCoords (placeObjects single source of truth)
+  const _ec = ev => (typeof _eventCoords === 'function') ? _eventCoords(ev) : { lati: ev?.lati, long: ev?.long };
+  let c;
+  c = _ec(p.birth); addEv(p.birth.place, c.lati, c.long, p.birth.date, 'Geburt',     p.birth.note);
+  c = _ec(p.chr);   addEv(p.chr.place,   c.lati, c.long, p.chr.date,   'Taufe',      p.chr.note);
   for (const ev of p.events) {
+    const cc = _ec(ev);
+    let lati = cc.lati, long = cc.long;
     // RESI/PROP ohne Koordinaten: hofObjects als Fallback
-    let lati = ev.lati, long = ev.long;
     if ((!lati || !long) && ev.addr) {
       const hm = AppState.db.hofObjects?.[ev.addr.trim()];
       if (hm?.lat && hm?.long) { lati = hm.lat; long = hm.long; }
@@ -344,8 +563,8 @@ function _personGeoEvents(p) {
           ev.note, ev.addr,
           ev.value || '');
   }
-  addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
-  addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
+  c = _ec(p.death); addEv(p.death.place, c.lati, c.long, p.death.date, 'Tod',        p.death.note);
+  c = _ec(p.buri);  addEv(p.buri.place,  c.lati, c.long, p.buri.date,  'Beerdigung', p.buri.note);
 
   evs.sort((a, b) => {
     const ya = a.date.match(/\b(\d{4})\b/)?.[1] || '9999';

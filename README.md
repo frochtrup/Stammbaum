@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 7.0
+# Stammbaum PWA — Version 8.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -41,7 +41,21 @@ stammbaum/
 ├── ui-views-family.js  ← Familien-Detailansicht + Liste
 ├── ui-views-source.js  ← Quellen-Detailansicht + Liste
 ├── ui-views-tree.js    ← Sanduhr-Baum + Tastaturnavigation
+├── ui-desc-tree.js     ← Nachkommen-Baum (top-down SVG, Ehepartner/Geschwister)
 ├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
+├── ui-timeline.js      ← Zeitleiste (Swim-Lane 5 Lanes + Dekaden-Modus, Mehrpersonen)
+├── timeline-hist-events.js ← Historische Ereignisse (71 Einträge 1315–2024)
+├── ui-story.js         ← Story Mode (Koordination, Helfer, Karte, Download)
+├── ui-story-person.js  ← Personen-Biografie (18 Event-Templates, Ahnentafel-SVG)
+├── ui-story-fam.js     ← Familien-Biografie (Heirat, Kinder, Geschwister)
+├── story-epochs.js     ← Epochen-Tabelle für Story Mode (11 Einträge)
+├── ui-chart-export.js  ← Diagramm-Export als PNG (Fächer, Sanduhr, Nachkommen)
+├── gedcom-validator.js ← Validierungsengine: runValidation(db) → RAM-Befundbericht
+├── ui-dedup.js         ← Duplikat-Erkennung (Levenshtein, Merge-Modal)
+├── compare-engine.js   ← Datei-Vergleichs-Engine: cmpLoadFile(), cmpMatchPersons()
+├── ui-import-compare.js ← Merge-Assistent (2-Panel Sheet: Liste + Diff)
+├── ui-print.js         ← Druckausgaben: Ahnenliste (Kekule) + Familienbogen
+├── ui-book.js          ← Buchgenerator (Ahnenindex, Biografie, Namenindex)
 ├── ui-forms.js         ← Source-Widget, Quelle-Formular, Modals, Gesten, Keyboard, Utils
 ├── ui-forms-person.js  ← Person-Formular + Extra-Name-Formular
 ├── ui-forms-family.js  ← Familie-Formular
@@ -51,18 +65,42 @@ stammbaum/
 ├── onedrive-auth.js    ← OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 ├── onedrive-import.js  ← Foto-Import-Wizard, Ordner-Browser, Pick-Modus
 ├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
+├── gramps-parser.js    ← parseGRAMPS() — GRAMPS XML-Import (read-only)
+├── gramps-writer.js    ← writeGRAMPS() — GRAMPS XML-Export (gzip Blob)
+├── debug-gramps.js     ← Debug-Tools für GRAMPS-Roundtrip (nur bei ?debug=1)
+├── debug-activate.js   ← lädt debug-gramps.js dynamisch nur bei ?debug=1
+├── gedcom-worker.js    ← Web Worker: parseGEDCOM() mit onProgress-Callback (5%-Schritte)
+├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus, Animation)
+├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
+├── ui-views-hof.js     ← Höfe-Ansicht: buildHofIndex(), renderHofList(), showHofDetail()
+├── ui-views-tasks.js   ← Forschungsaufgaben: IDB-Persistenz, Badge, Tab, Click-Handler
+├── ui-views-rlog.js    ← Forschungsprotokoll (RLOG): Add/Edit/Delete, Filter, MD-Export
+├── ui-views-val.js     ← Validierungspanel + Val-Config-Modal
+├── ui-views-dashboard.js ← Qualitäts-Dashboard (RES-DASH): Ampel + Lückenradar + Brennpunkte, Lücke→Aufgabe
+├── ui-views-projects.js ← Forschungsprojekte (RES-PROJ 3b): IDB+JSON, Scope-Filter, Chip-Selektor, Manager
+├── ui-views-nav.js     ← History-Navigation: goBack/goForward, _navHistory, Verlaufs-Picker
+├── ui-views-undo.js    ← Undo/Redo: pushUndo, applyUndo, applyRedo
+├── ui-event-delegation.js ← _CLICK_MAP (~100 Einträge), document-Listener (click/change/input)
+├── ui-views-stats.js   ← Statistik-Dashboard (Lebensspannen, Heiratsalter, Histogramme)
+├── ui-views-search.js  ← Globale Suche (Personen + Familien + Quellen + Orte, gruppiert)
+├── ui-views-note.js    ← Notiz-Ansicht
+├── leaflet.js          ← Leaflet 1.9.4 lokal (kein CDN)
+├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v413)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v742)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
+├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v998)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
 ├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
 ├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
-├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v7.0
-└── MEMORY.md           ← Projekt-Memory für KI-Kontext
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v8.0
+├── MEMORY.md           ← Projekt-Memory für KI-Kontext
+└── specs/              ← Feature-Specs für Backlog-Items (F11-OCR.md etc.)
 ```
 
 ---
@@ -72,7 +110,8 @@ stammbaum/
 ### Navigation
 | Feature | Details |
 |---|---|
-| Globale Bottom-Nav | 6 Tabs: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · 🔍 Suche |
+| Globale Bottom-Nav | 6 Tabs: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · ☑ Aufgaben |
+| Proband wechseln | ☰ Menü → „⌂ Zum Probanden" navigiert zur aktuellen Startperson |
 | Baum als Standardansicht | Nach Datei-Load wird der Sanduhr-Baum gezeigt |
 | History-Navigation | Zurück-Button merkt Herkunft: Detail→Detail→Baum navigiert korrekt zurück |
 | Menü überall erreichbar | ☰ Menü-Button in Baum- und Listenansicht |
@@ -87,11 +126,15 @@ stammbaum/
 | **Dokumente-Ordner** | Einstellungen → Dokumente-Ordner einrichten |
 | Auto-Load | Letzte Datei in IndexedDB gecacht → automatisch beim Start |
 | GEDCOM öffnen (lokal) | Menü → Öffnen… (lokal) → `showOpenFilePicker()` (Chrome) oder `<input type="file">` |
-| Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei |
+| **GRAMPS XML öffnen** | Menü → Öffnen… (lokal) → `.gramps`-Datei wählen (gzip XML, read/write) |
+| **GRAMPS-Badge** | Lila Pill in Topbar zeigt aktiven GRAMPS-Modus |
+| Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei (GED + GRAMPS) |
 | Download-Fallback (Safari/Firefox) | `<a download>` → Datei im Browser-Download-Ordner + Zeitstempel-Backup |
 | iOS Speichern (lokal) | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Menü → Demo-Daten öffnen |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
+| **Offline-Indikator** | Roter Indikator in Topbar + Toast bei Online/Offline-Wechsel; Cache-Status-Check |
+| **DSGVO-Export** | Einstellungen → Datenschutz: lebende Personen beim GEDCOM-Export anonymisieren; `_anon`-Suffix; Original bleibt unberührt |
 | **Keyboard-Shortcuts** | `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück |
 
 ### Sanduhr-Ansicht (Stammbaum)
@@ -111,10 +154,22 @@ stammbaum/
 - **Desktop Auto-Fit-Zoom**: Baum passt sich beim ersten Laden an die Fenstergröße an
 - **Fan Chart**: ◑-Button in Topbar — konzentrische Halbkreis-Segmente (3–6 Generationen)
 
+### Nachkommen-Ansicht
+- **Toggle `⇩`** in der Baum-Topbar wechselt zwischen Sanduhr und Nachkommen-Baum
+- Top-down-Darstellung: Proband oben, Kinder/Enkel darunter (Generationen 2–7 wählbar)
+- **Ehepartner** des Probanden: in Reihe rechts mit ⚭-Button (öffnet Familien-Detail); bei mehreren Ehepartnern variabler Überlapp wenn wenig Platz
+- **Geschwister** des Probanden: horizontal gestapelt links (variable Überlappung, max. normaler Kästchenabstand)
+- **`½`-Badge** auf Kindern aus anderen Ehen des Elternteils (Halbkinder, analog Sanduhr)
+- **`▼`-Badge** auf Karten mit abgeschnittenen Nachkommen — Klick lädt tiefere Generationen
+- **Klick-Navigation**: alle Nicht-Proband-Karten navigieren im Baum; Klick auf Proband öffnet Detailansicht
+- **T-Linien-Layout**: vertikale Linie vom Elternteil → horizontale Verbindungslinie → vertikale Linien zu allen Kindern
+
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
+- **Erweiterte Filter**: Fehlende Felder-Checkboxen (kein Sterbedatum, keine Quellen, keine Eltern) kombinierbar
 - **Geburtsjahr-Filter**: Von/Bis-Felder mit ✕-Clear-Button
+- **CSV-Export**: gefilterte Personenliste als `;`-getrennte CSV-Datei (BOM für Excel/Numbers)
 - **Foto**: Upload im Personen-Formular, Anzeige links neben Name in Detailansicht; Klick öffnet Lightbox
 - **Mehrere Fotos**: Medien-Abschnitt mit allen Fotos klickbar; „Als Hauptfoto setzen" in Lightbox
 - **Medien bearbeiten**: + Hinzufügen (Titel + Dateiname, optional aus OneDrive) · × Entfernen
@@ -128,6 +183,7 @@ stammbaum/
 - Liste: Elternpaar, Heiratsdatum, Kinderanzahl
 - Detail: Heirat (Datum, Ort, Geo-Link, Quellen), Mitglieder anklickbar
 - **Medien bearbeiten**: + Hinzufügen · × Entfernen
+- **CSV-Export**: gefilterte Familienliste als `;`-getrennte CSV-Datei
 - ⧖-Button öffnet Sanduhr zentriert auf den Ehemann
 
 ### Quellen-Tab
@@ -138,11 +194,40 @@ stammbaum/
 - **Archive-Sektion**: alle REPO-Records mit Quellen-Zähler; Sprungbutton „🏛 Archive"
 
 ### Orte-Tab
-- **Suche** nach Ortsname
-- Automatisch aus allen Ereignissen gesammelt (Geburt, Taufe, Tod, Beerdigung, weitere)
-- Alphabetisch mit 📍 bei vorhandenen Koordinaten
-- Detail: Apple Maps Link + alle Personen dieses Ortes
-- **Ort bearbeiten**: Name umbenennen (wirkt auf alle Personen/Familien) + Koordinaten editieren (Dezimalgrad oder GEDCOM-Format)
+- **Suche** nach Ortsname + **Typ-Filter** (Dorf / Stadt / Pfarrei / Kirche / Friedhof / Hof …)
+- Automatisch aus allen Ereignissen gesammelt; Typ-Badge (⛪/⚰/🏡/…) in der Listenzeile; 📍 bei vorhandenen Koordinaten
+- **Gruppen-Modus** (⊙): fasst String-Varianten eines Ortes unter dem PlaceObject-Titel zusammen
+- **Ort-Steckbrief**: Ereignisse nach Typ gruppiert · Quellen-Sektion · SVG-Namens-Zeitstrahl (historische Schreibweisen) · Mini-Karte
+- **Ort bearbeiten**: Name, Koordinaten, Typ, alternative Namen mit Datumsgrenzen (`pnames[]`), übergeordnete Orte (`enclosedBy[]`)
+- **Orte verknüpfen** (🔗): String-Einträge mit PlaceObject verbinden; Re-Import-Erkennung erhält placeId beim GEDCOM-Roundtrip
+- **Nominatim-Geocoding**: 📍-Button (Einzelort) + 🌐-Batch mit Fortschrittsbalken; befüllt lat/lon + Typ automatisch
+- **GOV-Import**: historische Verwaltungszugehörigkeiten mit Datumsgrenzen aus gov.genealogy.net (Browser + `gov-enrich.py`)
+- **Geo-Plausibilitäts-Validator** (⚠-Badge): BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel
+- **Dubletten-Merge** (⇉): Radio-Wahl mit Herkunfts-Pille (GRAMPS/lokal/JSON-Import/GOV-Platzhalter); verlustfreier Merge
+- **JSON-Import/Export**: `stammbaum-orte.json` (OneDrive); Import mit Dedup-Erkennung (kein Doppel-Anlegen beim Re-Import)
+- **Multi-Device-Konflikterkennung** (v858): `_rev`+`_device` in JSON; Union-Merge + Warn-Toast bei Gerätekollision
+- **Kartenansicht**: interaktive Karte (Leaflet) mit 3 Modi: Orte · Personen-Cluster · Migrationen (nach Epoche eingefärbt, animiert)
+
+### Höfe-Tab
+- Listet alle Hofnamen aus den Ereignissen (RESI, EVEN, FACT)
+- Detail: alle Bewohner eines Hofs chronologisch
+- **Höfe-Formular**: Bewohner hinzufügen/entfernen
+
+### Forschungsaufgaben (☑ Aufgaben-Tab)
+- Eigener Bottom-Nav-Tab ☑ mit Badge für offene Aufgaben
+- Aufgaben pro Person und Familie, kategorisiert (Kirchenbuch / Urkunde / Online-Recherche)
+- Persistenz in GEDCOM (`_TASK`-Tag) und GRAMPS — Roundtrip-stabil
+- Globale Aufgabenliste: Filter Alle / Offen / Erledigt; Klick auf Person/Familie → Detailansicht
+- Aufgaben in der Personen- und Familien-Detailansicht direkt hinzufügen/bearbeiten/abhaken
+- **Markdown-Export** (↓ MD): alle Aufgaben mit Kerndaten (Lebensdaten, Eltern, Ehen) als `.md`-Download
+- **Forschungsprotokoll** (RLOG): pro Person/Familie — Archiv, Quelle, Suchanfrage, Ergebnis-Badge (gefunden/nicht gefunden/ausstehend); globaler Protokoll-Tab mit Filter + MD-Export
+
+### Datenprüfung
+- **„✓ Daten prüfen"**-Button direkt im Aufgaben-Tab (auch über ☰ Menü erreichbar)
+- Prüft alle Personen und Familien auf 25 Regeln (fehlende Quellen, unrealistische Altersangaben, Konsistenz, Ortsnamenvarianten …)
+- Befunde werden als reiner RAM-Bericht angezeigt (keine automatischen Aufgaben)
+- **„+"**-Button neben jedem Befund: Befund als Forschungsaufgabe übernehmen
+- Schweregrade: ✗ Fehler · ⚠ Warnungen · ℹ Hinweise
 
 ### Bearbeiten
 | Was | Felder |
@@ -153,6 +238,8 @@ stammbaum/
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv (aus REPO-Liste), Signatur (CALN), Notiz |
 | Archiv | Name, Adresse, Telefon, Website, E-Mail |
 | Ort | Name umbenennen + Koordinaten (wirkt sich auf alle Personen und Familien aus) |
+
+**Beziehungsrechner**: Verwandtschaftsbeziehung zwischen zwei beliebigen Personen berechnen (BFS-Algorithmus, gemeinsamer Vorfahre, Generationsabstand). Aufruf über „🔗 zu …"-Button in der Personen-Detailansicht.
 
 **Beziehungen modellieren**: `+ Ehepartner`, `+ Kind`, `+ Elternteil` direkt in den Detailansichten — bestehende Person wählen oder neue erstellen → Familien-Formular öffnet vorausgefüllt.
 
@@ -170,30 +257,39 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Stammbaum PWA v7.0                          │
+│  Stammbaum PWA v8.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
 │                                              │
-│  index.html        — App-Shell               │
-│  styles.css        — alle Styles             │
-│  gedcom.js         — State, Labels, Helfer   │
-│  gedcom-parser.js  — parseGEDCOM()           │
-│  gedcom-writer.js  — write*Record()          │
-│  storage*.js       — IDB, Dateiverwaltung    │
-│  ui-views*.js      — Baum, Detail, Listen    │
-│  ui-forms*.js      — Formulare (3 Module)    │
-│  ui-fanchart.js    — Fan Chart (SVG)         │
-│  ui-media.js       — Medien                  │
-│  onedrive*.js      — OAuth, Fotos (3 Module) │
-│  sw.js             — Service Worker (offline)│
+│  index.html          — App-Shell             │
+│  styles.css          — alle Styles           │
+│  gedcom.js           — State, Labels, Helfer │
+│  gedcom-parser.js    — parseGEDCOM()         │
+│  gedcom-writer.js    — write*Record()        │
+│  gramps-parser.js    — parseGRAMPS()         │
+│  gramps-writer.js    — writeGRAMPS()         │
+│  storage*.js         — IDB, Dateiverwaltung  │
+│  ui-views*.js        — Baum, Detail, Listen  │
+│  ui-views-map.js     — Kartenansicht         │
+│  ui-views-place.js   — Orte-Ansicht          │
+│  ui-views-hof.js     — Höfe-Ansicht          │
+│  ui-views-tasks.js   — Aufgaben + Validierung │
+│  ui-desc-tree.js     — Nachkommen-Baum       │
+│  gedcom-validator.js — Validierungsengine    │
+│  ui-forms*.js        — Formulare (4 Module)  │
+│  ui-fanchart.js      — Fan Chart (SVG)       │
+│  ui-media.js         — Medien                │
+│  onedrive*.js        — OAuth, Fotos (3 Mod.) │
+│  leaflet.js/css      — Karte (lokal)         │
+│  sw.js               — Service Worker        │
 │                                              │
 │  State: AppState { db, changed, currentId…} │
-│         UIState  { _treeHistory, _relMode…} │
+│         UIState  { _navHistory, _relMode…}  │
 │                                              │
 │  Persistenz:                                 │
-│  - IndexedDB primär (GEDCOM-Text, Fotos)     │
+│  - IndexedDB primär (GEDCOM/GRAMPS, Fotos)   │
 │  - localStorage stiller Fallback             │
 │  - FileSystemFileHandle (Chrome direktes     │
-│    Speichern)                                │
+│    Speichern, GED + GRAMPS gzip)             │
 │  - Microsoft Graph API (OneDrive)            │
 │                                              │
 │  Offline: sw.js + manifest.json              │
@@ -201,7 +297,8 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
-**Version 7.0** — Mai 2026 — `main` · sw v413
+**GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
+**Version 8.0** — Juni 2026 — `v8-dev` · sw v998 · 558 Unit-Tests grün
 
 ---
 

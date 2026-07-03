@@ -24,17 +24,26 @@ window.showFanChart = function (pid) {
   pid = pid || AppState.currentPersonId;
   if (!pid || !getPerson(pid)) return;
 
+  const _vTree = document.getElementById('v-tree');
+  if (typeof showView === 'function' && !(_vTree && _vTree.classList.contains('active'))) showView('v-tree');
+
   FC._pid = pid;
   AppState.currentPersonId = pid;
   document.body.classList.add('fc-mode', 'tree-active');
+  document.body.classList.remove('desc-tree-mode');
   setBnavActive('tree');
+  if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(pid);
 
   document.getElementById('treeTopTitle').textContent = _fcName(getPerson(pid), 28);
   document.getElementById('treeBtnBack').hidden = true;
 
   const tb = document.getElementById('treeFcToggle');
   if (tb) { tb.textContent = '⧖'; tb.title = 'Zur Sanduhr-Ansicht'; }
+  const dtTb = document.getElementById('treeDescToggle');
+  if (dtTb) { dtTb.textContent = '⇩'; dtTb.title = 'Nachkommen-Baum'; }
 
+  document.querySelectorAll('[data-gen]').forEach(b =>
+    b.classList.toggle('active', +b.dataset.gen === FC.genCount));
   _render(pid);
   _initResizeObserver();
 };
@@ -44,7 +53,7 @@ window.toggleFanChart = function () {
   if (document.body.classList.contains('fc-mode')) {
     document.body.classList.remove('fc-mode');
     const tb = document.getElementById('treeFcToggle');
-    if (tb) { tb.textContent = '◑'; tb.title = 'Fächer-Diagramm'; }
+    if (tb) { tb.textContent = '◠'; tb.title = 'Fächer-Diagramm'; }
     showTree(FC._pid || AppState.currentPersonId);
   } else {
     showFanChart(AppState.currentPersonId);
@@ -209,10 +218,16 @@ function _arc(cx, cy, r1, r2, a1, a2) {
 //  Farben, Skalierung, Hilfsfunktionen
 // ──────────────────────────────────────────
 
-// Füllfarbe: Geschlecht × Generation (außen dunkler)
+// Füllfarbe: Geschlecht × Generation (außen dunkler/heller je nach Theme)
 function _fill(sex, gen, hasData) {
   if (!hasData) return 'var(--surface)';
-  const pal = {
+  const theme = document.documentElement.dataset.theme;
+  const light = theme === 'light' || (!theme && window.matchMedia('(prefers-color-scheme: light)').matches);
+  const pal = light ? {
+    M: ['#a8c4e8', '#88a8d8', '#6890c8', '#4878b8', '#2860a0', '#184880'],
+    F: ['#e8a8c0', '#d888a8', '#c86890', '#b84878', '#a02858', '#801840'],
+    U: ['#ddd0b8', '#ccc0a0', '#bcb090', '#aca080', '#9c9070', '#8c8060'],
+  } : {
     M: ['#4a7ab5', '#2a4a72', '#1e3550', '#162540', '#101830', '#0c121a'],
     F: ['#a84a6e', '#6e2a42', '#501830', '#3a1020', '#280810', '#180406'],
     U: ['#342c1e', '#2a2318', '#211c14', '#1a1610', '#151210', '#111008'],

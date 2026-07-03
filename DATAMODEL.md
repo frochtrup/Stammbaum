@@ -46,24 +46,22 @@ let changed = false;  // Ungespeicherte Änderungen?
   // date/place: null = Tag nicht vorhanden; '' = Tag vorhanden aber leer; 'Wert' = Wert
   birth: {
     date:'8 JAN 1872', place:'München', lati:48.1, long:11.5,
-    sources:['@S1@'], sourcePages:{'@S1@':'47'}, sourceQUAY:{},
-    sourceExtra:{},    // verbatim lv=3 unter 2 SOUR (außer PAGE/QUAY/NOTE/OBJE)
-    sourceNote:{},     // NOTE unter 2 SOUR: {sId: 'text'}
-    sourceMedia:{},    // OBJE unter 2 SOUR: {sId: [{file,scbk,prim,titl,note,_extra[]}]}
+    citations: [{ sid:'@S1@', page:'47', quay:'2', note:null, extra:[], media:[], eval:null }],
+    // citations[i]: { sid, page, quay, note, extra[], media[], eval }  — F4b-Datenmodell (gedcom.js:citationObj)
+    // eval (RES-EVAL/ADR-022): null | { srcType, infoQual, evidence, informant } — 3-Achsen-Evidenzmodell,
+    //   serialisiert als _EVAL/_STYP/_INFO/_EVID/_INFM unter SOUR; QUAY-Vorschlag via _evalToQuay()
     _extra:[],         // unbekannte lv=2 Tags im BIRT-Block
     value:'', seen:true
   },
-  chr:   { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], value:'', seen:false },
-  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], cause:'Herzversagen', value:'', seen:true },
-  buri:  { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], value:'', seen:false },
+  chr:   { date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false },
+  death: { date:'15 APR 1940', place:'München', lati:null, long:null, citations:[], _extra:[], cause:'Herzversagen', value:'', seen:true },
+  buri:  { date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false },
 
   // Weitere Ereignisse
   events: [
     {
       type:'OCCU', value:'Kaufmann', date:null, place:null, lati:null, long:null,
-      sources:[], sourcePages:{}, sourceQUAY:{},
-      sourceExtra:{},    // verbatim lv=3 unter 2 SOUR
-      sourceMedia:{},    // OBJE unter 2 SOUR: {sId: [{file,...}]}
+      citations:[],      // [{sid, page, quay, note, extra[], media[]}]
       note:'', addr:'', addrExtra:[], eventType:'',
       media:[],          // 2 OBJE direkt unter Event
       _extra:[]          // unbekannte lv=2 Tags im Event-Block
@@ -76,27 +74,21 @@ let changed = false;  // Ungespeicherte Änderungen?
   topSourcePages:    {},                     // PAGE unter lv=1 SOUR
   topSourceQUAY:     {},                     // QUAY unter lv=1 SOUR
   topSourceExtra:    {},                     // verbatim lv=2 unter lv=1 SOUR
-  nameSources:       ['@S2@'],              // SOUR unter NAME
-  nameSourcePages:   {},
-  nameSourceQUAY:    {},
-  nameSourceExtra:   {},                    // OBJE etc. unter NAME>SOUR
-  nameSourceMedia:   {},                    // OBJE-Struktur unter NAME>SOUR
+  nameCitations:     [],                    // SOUR unter NAME → [{sid, page, quay, note, extra[], media[]}]
   extraNames:        [],                    // zweite+ NAME-Einträge (v4-dev strukturiert)
-  // extraNames[i]: { given, surname, prefix, suffix, nick, type,
-  //                  sources[], sourcePages{}, sourceQUAY{},
-  //                  sourceExtra{}, sourceMedia{}, _extra[] }
+  // extraNames[i]: { nameRaw, given, surname, prefix, suffix, type,
+  //                  citations:[], _extra:[], _hasGivn, _hasSurn }
+
+  aliases: ['@I002@'],  // 1 ALIA @xref@ — Verweise auf identische/gleichnamige Personen
+  refns:   [{val:'https://...', type:''}],  // 1 REFN + 2 TYPE; read-only (sw v548)
 
   // Assoziationen (GEDCOM ASSO ↔ GRAMPS <personref>)
   associations: [{
     xref:         '@I002@',     // GEDCOM-Xref der verknüpften Person (null bei GRAMPS-only-Herkunft)
     _grampsHlink: 'h1a2b3c',   // GRAMPS-Handle (null bei GEDCOM-Herkunft; für Roundtrip-Fidelity)
-    rela:         'Witness',    // RELA-Wert / GRAMPS rel-Attribut
+    role:         'Witness',    // RELA (GED5) / rel (GRAMPS) / ROLE (GED7) — unified per ADR-018
     note:         '',           // optionale Notiz (2 NOTE / GRAMPS noteref)
-    sources:      [],           // SOUR-Xrefs (2 SOUR)
-    sourcePages:  {},           // PAGE je Quelle
-    sourceQUAY:   {},           // QUAY je Quelle
-    sourceNote:   {},           // NOTE je Quelle (selten)
-    sourceExtra:  {},           // verbatim Extras je Quelle (selten)
+    citations:    [],           // [{sid, page, quay, note, extra[], media[]}]
   }],
   // _grampsWitnessRefs[] (nur GRAMPS-Import, kein GEDCOM-Äquivalent):
   // Zeugen-Eventreferenzen (eventref role != Primary) — Phase-F-Brücke
@@ -129,6 +121,11 @@ let changed = false;  // Ungespeicherte Änderungen?
   }],
   fams: ['@F2@'],                        // Elternteil in Familie
 
+  // Forschung (reisen mit der Datei: GEDCOM _TASK/_RLOG, GRAMPS <attribute> JSON)
+  _tasks: [{ id, text, category, done, status, created }],
+  //   status (RES-PROJ 3a): 'todo'|'doing'|'done' (Kanban); GEDCOM _TSTAT; Invariante done===status==='done'
+  _rlog:  [{ date, repoRef, sourRef, query, result, note }],  // Forschungsprotokoll
+
   // Metadaten
   lastChanged: '15 FEB 2024',
   _passthrough: [],   // verbatim unbekannte lv=1 Tags + Sub-Trees (ADR-012)
@@ -147,15 +144,12 @@ let changed = false;  // Ungespeicherte Änderungen?
 
   marr: {
     date:'5 APR 1898', place:'München', lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{},
-    sourceExtra:{},    // OBJE etc. verbatim unter 2 SOUR
-    sourceMedia:{},    // OBJE-Struktur unter 2 SOUR: {sId: [{file,...}]}
+    citations:[],      // [{sid, page, quay, note, extra[], media[]}]
     value:'', seen:true, addr:'', _extra:[]
   },
   engag: {
     date:null, place:null, lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{},
-    sourceExtra:{}, sourceMedia:{},
+    citations:[],
     value:'', seen:false, _extra:[]
   },
 
@@ -163,8 +157,7 @@ let changed = false;  // Ungespeicherte Änderungen?
   events: [
     {
       type:'EVEN', value:'', date:null, place:null, lati:null, long:null,
-      sources:[], sourcePages:{}, sourceQUAY:{},
-      sourceExtra:{}, sourceMedia:{},
+      citations:[],
       note:'', addr:'', addrExtra:[], eventType:'', _extra:[]
     }
   ],
@@ -177,9 +170,7 @@ let changed = false;  // Ungespeicherte Änderungen?
       frelSeen:false, mrelSeen:false,
       frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[],
       mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[],
-      sourIds:[], sourPages:{}, sourQUAY:{},
-      sourExtra:{},   // verbatim lv=3 unter 2 SOUR in CHIL-Kontext
-      sourMedia:{}    // OBJE-Struktur unter 2 SOUR in CHIL-Kontext
+      citations:[]    // [{sid, page, quay, note, extra[], media[]}] — 2 SOUR in CHIL-Kontext
     }
   },
 
@@ -201,7 +192,11 @@ let changed = false;  // Ungespeicherte Änderungen?
   date:        '1845-1912',
   publ:        '',
   repo:        '@R1@',        // @Rxx@-Referenz ODER Legacy-Freitext ODER ''
-  repoCallNum: 'IV/342',      // 2 CALN unter 1 REPO (v1.2)
+  repoCallNum:  'IV/342',     // 2 CALN unter 1 REPO
+  repoCallMedi: 'film',       // 3 MEDI unter 2 CALN (sw v545)
+  agnc:        '',            // 2 AGNC unter 1 DATA
+  dataEvens:   [{evens:'BIRT, MARR', date:'FROM 1750 TO 1850', plac:'Ochtrup'}],  // 2 EVEN/3 DATE/3 PLAC (sw v546)
+  refns:       [{val:'Non_Duplicates', type:''}],  // 1 REFN + 2 TYPE (sw v548)
   text:        '',
   media:       [{ file:'scan001.pdf', title:'Titelblatt', _extra:[] }],
   lastChanged: '1 MAR 2026',  // CHAN/DATE — auto-gesetzt beim Speichern
@@ -217,10 +212,12 @@ let changed = false;  // Ungespeicherte Änderungen?
 {
   id:          '@R1@',
   name:        'Stadtarchiv München',
+  rtype:       'Archive',     // RES-EVAL 2e: Archivtyp (REPO_TYPES); GRAMPS <type> / GEDCOM _RTYPE
   addr:        'Winzererstr. 68\n80797 München',
   addrExtra:   [],            // CITY, POST, _STYLE etc.
   phon:        '+49 89 233-30010',
   www:         'https://www.stadtarchiv.muenchen.de',
+  findingAid:  'https://...', // RES-EVAL 2e: Findbuch/Online-Katalog; GEDCOM _FAURL / GRAMPS <url type="Web Search">
   email:       'stadtarchiv@muenchen.de',
   lastChanged: '1 MAR 2026',
 }
@@ -261,33 +258,55 @@ birth.sourceMedia['@S4@'] = [
 
 ## JavaScript-Sektionen
 
-Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → `storage-file.js` → `storage.js` → `ui-views.js` → `ui-views-person.js` → … → `ui-forms.js` → …
+Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → `storage-file.js` → `storage.js` → `ui-views.js` → … → `ui-forms.js` → … → `ui-event-delegation.js` (muss letztes `<script>` sein).
 
 | Sektion | Datei | Hauptfunktionen |
 |---|---|---|
-| State & IDs | gedcom.js | `nextId(prefix)`, AppState/UIState |
-| GEDCOM Parser | gedcom-parser.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, `parseGedDate()` |
+| State & IDs | gedcom.js | `nextId(prefix)`, AppState/UIState, JSDoc-Typen (12 Typen) |
+| GEDCOM Parser | gedcom-parser.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, 5 Sub-Parser |
 | GEDCOM Writer | gedcom-writer.js | `writeGEDCOM()`, `writeINDIRecord()`, `writeFAMRecord()`, `eventBlock()`, `geoLines()` |
-| IndexedDB + File I/O | storage-file.js | `_getIDB()`, `idbGet()`, `idbPut()`, `idbDel()`, `exportGEDCOM()`, `saveToFileHandle()`, `readFile()` |
+| GRAMPS Parser | gramps-parser.js | `parseGRAMPS(file)` async |
+| GRAMPS Writer | gramps-writer.js | `writeGRAMPS(db)` → gzip Blob |
+| Validierungsengine | gedcom-validator.js | `runValidation(db, config)` → RAM-Befundbericht (25 Regeln) |
+| Web Worker | gedcom-worker.js | GEDCOM-Parse im Worker mit `onProgress`-Callback (5 %-Schritte) |
+| IndexedDB + File I/O | storage-file.js | `idbGet()`, `idbPut()`, `idbDel()`, `exportGEDCOM()`, `saveToFileHandle()`, `readFile()` |
 | Demo / Backup / Init | storage.js | `loadDemo()`, `tryAutoLoad()`, `fotoExport()` |
-| Navigation + Event-Delegation | ui-views.js | `showView()`, `showMain()`, `showTree()`, `goBack()`, `setBnavActive()`, `_CLICK_MAP` |
-| Personen-Liste + Detail | ui-views-person.js | `renderPersonList()`, `filterPersons()`, `showDetail()` |
-| Familien-Liste + Detail | ui-views-family.js | `renderFamilyList()`, `filterFamilies()`, `showFamilyDetail()` |
+| Gemeinsame Hilfsfunktionen | ui-views.js | `showView()`, `showMain()`, `setBnavActive()`, `factRow()`, `srcNum()`, `esc()`, `showToast()`, `evGeoLink()` |
+| History-Navigation | ui-views-nav.js | `goBack()`, `goForward()`, `_captureCurrentNavState()`, `openDetailHistory()` |
+| Undo/Redo | ui-views-undo.js | `pushUndo()`, `applyUndo()`, `applyRedo()` |
+| Event-Delegation | ui-event-delegation.js | `_CLICK_MAP` (~100 Einträge), document-Listener (click/change/input/blur) |
+| Personen-Liste + Detail | ui-views-person.js | `renderPersonList()`, `filterPersons()`, `showDetail()`, `exportPersonsCsv()` |
+| Familien-Liste + Detail | ui-views-family.js | `renderFamilyList()`, `filterFamilies()`, `showFamilyDetail()`, `exportFamiliesCsv()` |
 | Quellen-Liste + Detail + Archiv | ui-views-source.js | `renderSourceList()`, `filterSources()`, `showSourceDetail()`, `showRepoDetail()` |
-| Stammbaum | ui-views-tree.js | `showTree()`, `mkCard()`, `line()`, `_treeShortName()`, `treeNavBack()` |
+| Orte-System | ui-views-place.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
+| Höfe-Ansicht | ui-views-hof.js | `buildHofIndex()`, `renderHofList()`, `showHofDetail()` |
+| Kartenansicht | ui-views-map.js | `initOrRefreshPlaceMap()`, `switchMapMode()`, `showPersonOnMap()` |
+| Forschungsaufgaben | ui-views-tasks.js | `bnavTasks()`, `renderTaskList()`, `saveTask()`, `exportTasksMd()` |
+| Forschungsprotokoll | ui-views-rlog.js | `showAddRlogForm()`, `_saveRlog()`, `exportRlogMd()` |
+| Validierungspanel | ui-views-val.js | `_renderValidationPanel()`, `openValConfig()`, `saveValConfig()` |
+| Qualitäts-Dashboard | ui-views-dashboard.js | `_renderDashboardView()` (3. Modus im Aufgaben-Tab), Ampel + Lückenradar + Brennpunkte, `_handleDashPromoteAll()` |
+| Forschungsprojekte | ui-views-projects.js | `loadProjects()`/`saveProjects()` (IDB+JSON), `_projectMatches()`, `_projectChipBar()`, `setActiveProject()`, Manager-Modal |
+| Statistik-Dashboard | ui-views-stats.js | `showStats()` |
+| Globale Suche | ui-views-search.js | `renderSearchResults()` |
+| Notizen | ui-views-note.js | `showNoteDetail()` |
+| Sanduhr-Baum | ui-views-tree.js | `showTree()`, `mkCard()`, `_treeShortName()` |
+| Nachkommen-Baum | ui-desc-tree.js | `showDescTree()`, `toggleDescTree()`, `setDescTreeGens()` |
 | Fan Chart | ui-fanchart.js | `showFanChart()` |
-| Orte-System | ui-views.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
-| Render-Helfer | ui-views.js | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
+| Zeitleiste | ui-timeline.js | `showTimeline()`, `_renderTlH()`, `_renderTlV()` |
+| Diagramm-Export | ui-chart-export.js | `exportChartAsPng()` |
+| Story (Kern + Person + Familie) | ui-story.js, ui-story-person.js, ui-story-fam.js | `showStory()`, `downloadStory()`, `showFamilyStory()` |
 | Person-Formular | ui-forms-person.js | `showPersonForm()`, `savePerson()` |
 | Familie-Formular | ui-forms-family.js | `showFamilyForm()`, `saveFamily()` |
-| Quellen-Formular + Widget | ui-forms.js | `showSourceForm()`, `saveSource()`, `initSrcWidget()`, `renderSrcTags()`, `toggleSrc()`, `updateSrcPage()` |
+| Quellen-Formular + Widget | ui-forms.js | `showSourceForm()`, `saveSource()`, `initSrcWidget()`, `renderSrcTags()` |
 | Event-Formular | ui-forms-event.js | `showEventForm()`, `saveEvent()`, `deleteEvent()` |
 | Archiv-Formular + Picker | ui-forms-repo.js | `showRepoForm()`, `saveRepo()`, `showRepoPicker()` |
 | Medien | ui-media.js | `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()` |
+| Duplikat-Erkennung | ui-dedup.js | `showDedupPanel()`, `mergePersons()` |
+| Import-Vergleich | compare-engine.js, ui-import-compare.js | `cmpLoadFile()`, `cmpMatchPersons()`, `showImportCompare()` |
+| Druck + Buchgenerator | ui-print.js, ui-book.js | `printAhnenliste()`, `printFamilienbogen()` |
 | OneDrive Auth | onedrive-auth.js | `_odConnect()`, `_odLogout()`, `_odRefreshTokenSilent()` |
 | OneDrive Import | onedrive-import.js | `_odShowFolder()`, `_odPickSelectFile()` |
 | OneDrive File I/O | onedrive.js | `_odGetMediaUrlByPath()`, `_odSaveFile()`, `openSettings()` |
-| Utils | ui-views.js / ui-forms.js | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
 
 ---
 
@@ -307,6 +326,7 @@ AppState = {
   currentTab:      'persons',
   _fileHandle:     null,       // FileSystemFileHandle (Chrome Desktop)
   _canDirectSave:  false,
+  privacyAnon:     false,      // F5: Lebende beim GEDCOM-Export anonymisieren (IDB: 'privacy_anon')
 }
 
 UIState = {
@@ -333,6 +353,12 @@ UIState = {
 'stammbaum_filename'     — Dateiname
 'fileHandle'             — FileSystemFileHandle (Chrome)
 'proband_id'             — konfigurierter Proband
+'theme_pref'             — Dark/Light-Mode ('dark'|'light'|null)
+'privacy_anon'           — Lebende-Anonymisierung aktiv (boolean, F5/ADR-017)
+'dedup_ignored'          — Set ignorierter Duplikat-Paare ('id1|id2'-Strings)
+'quick_templates'        — Eingabe-Templates (JSON, QUICK-TPL); app-privat, reist nicht mit Datei
+'val_config'             — Validierungs-Config { disabled[], thresholds{}, known[] } (RES-EVAL 2c)
+'projects'               — Forschungsprojekte (JSON, RES-PROJ 3b): [{id,name,color,scope{surnames,places,yearFrom,yearTo,personIds},note,created}]; app-privat
 
 // Medien (pfad-basiert seit sw v105)
 'img:<relPath>'          — Foto-Cache (base64 Data-URL), relativer Pfad ab od_base_path

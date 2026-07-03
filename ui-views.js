@@ -30,11 +30,85 @@ function _updateTopbarH() {
   if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
 }
 
+// Führt fn aus nachdem der Browser das Layout neu berechnet hat (2× rAF).
+// Ersetzt alle magic-number setTimeout-Delays nach CSS-Klassen-Änderungen.
+window._afterLayout = function (fn) {
+  requestAnimationFrame(() => requestAnimationFrame(fn));
+};
+
+// A4/A5 (P5): 5 separate Detail-Container — per-Entität-Scroll-State + data-view-init
+const _DC_IDS = ['detailPerson','detailFamily','detailPlace','detailSource','detailMedia'];
+
+window._activateDetailContainer = function _activateDetailContainer(cid, entityId) {
+  const vdet = document.getElementById('v-detail');
+  const isDesktop = document.body.classList.contains('desktop-mode');
+  // Scroll der aktuell aktiven Fläche sichern
+  if (isDesktop && vdet) {
+    const cur = _DC_IDS.find(id => document.getElementById(id)?.classList.contains('dc-active'));
+    if (cur && cur !== cid) {
+      const curEl = document.getElementById(cur);
+      if (curEl) curEl.dataset.savedScroll = String(vdet.scrollTop);
+    }
+  }
+  // Aktiven Container umschalten
+  _DC_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('dc-active', id === cid);
+  });
+  const el = document.getElementById(cid);
+  if (!el || entityId === undefined) return;
+  const key = String(entityId);
+  const changed = el.dataset.currentId !== key;
+  el.dataset.currentId = key;
+  el.dataset.viewInit = 'true';
+  if (isDesktop && vdet) {
+    vdet.scrollTop = changed ? 0 : (parseInt(el.dataset.savedScroll, 10) || 0);
+  }
+};
+
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  // R1+P6-B1: alle anderen aktiven Views deaktivieren — Desktop hält v-main + v-detail/v-tree
+  // gleichzeitig active (ADR-009). querySelector lieferte nur das erste, was beim Wechsel
+  // v-tree→v-main den Baum sichtbar stehen ließ (links: 360px, fixed → überdeckt Detail).
+  // Desktop-Layout: linkes Panel (v-main) ist permanent sichtbar — niemals deaktivieren.
+  // .view{display:none} würde sonst scrollTop auf 0 zurücksetzen (Browser-Invariant).
+  const _DESKTOP_LEFT = 'v-main';
+  document.querySelectorAll('.view.active').forEach(v => {
+    if (v.id !== id && !(desktop && v.id === _DESKTOP_LEFT)) v.classList.remove('active');
+  });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  // Vollbild-Zustand zwischen Views übertragen oder beenden
+  const _fsTree = document.body.classList.contains('tree-fullscreen');
+  const _fsTl   = document.body.classList.contains('timeline-fullscreen');
+  const _anyFs  = _fsTree || _fsTl;
+  document.body.classList.remove('tree-fullscreen', 'timeline-fullscreen');
+  if (_anyFs) {
+    if (id === 'v-tree') {
+      // Vollbild an Baum weitergeben
+      document.body.classList.add('tree-fullscreen');
+      const b = document.getElementById('treeFsBtn');
+      if (b) { b.textContent = '⤡'; b.title = 'Sidebar einblenden'; }
+    } else if (id === 'v-timeline') {
+      // Vollbild an Timeline weitergeben
+      document.body.classList.add('timeline-fullscreen');
+      const b = document.getElementById('tlFsBtn');
+      if (b) { b.textContent = '⤡'; b.title = 'Sidebar einblenden'; }
+    } else {
+      // Vollbild beendet — linke Seite neu kalibrieren
+      _afterLayout(() => window.dispatchEvent(new Event('resize')));
+    }
+  }
+  // Buttons der verlassenen View zurücksetzen
+  if (!document.body.classList.contains('tree-fullscreen')) {
+    const b = document.getElementById('treeFsBtn');
+    if (b) { b.textContent = '⤢'; b.title = 'Vollbild'; }
+  }
+  if (!document.body.classList.contains('timeline-fullscreen')) {
+    const b = document.getElementById('tlFsBtn');
+    if (b) { b.textContent = '⤢'; b.title = 'Vollbild'; }
+  }
   if (id === 'v-main') _updateTopbarH();
   // Karte ausblenden wenn nicht im Orte-Tab
   if (id !== 'v-main' || AppState.currentTab !== 'places') {
@@ -43,20 +117,26 @@ function showView(id) {
   }
 
   if (desktop) {
-    document.getElementById('v-main').classList.add('active');
     document.getElementById('bottomNav').style.display = 'flex';
     document.getElementById('fabBtn').style.display = '';
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
+    document.body.classList.toggle('timeline-active', id === 'v-timeline');
+    document.body.classList.toggle('story-active', id === 'v-story');
+    if (id === 'v-detail') { const _det = document.getElementById('v-detail'); _normalizeWheel(_det); _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
-    if (id === 'v-detail') _initDetailSwipe();
-    const showNav = (id === 'v-main' || id === 'v-tree');
+    if (id === 'v-detail') {
+      // P0-K1: scrollTop-Reset auch mobile — verhindert „Void"-Artefakt
+      // bei kürzerem neuem Detail-Inhalt (vorher nur im Desktop-Zweig gesetzt).
+      _initDetailSwipe();
+    }
+    const showNav = (id === 'v-main' || id === 'v-tree' || id === 'v-detail');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
+    if (id === 'v-timeline') { const _tb = document.getElementById('tlBody'); if (_tb) _tb.scrollTop = 0; }
   }
 }
 
@@ -96,7 +176,7 @@ function _collectSourceMeta(entity, sid) {
   if (!pairs.size) return '';
   return [...pairs.entries()].map(([page, quay]) => {
     const parts = [];
-    if (page && page !== '\x00') parts.push('S.' + page);
+    if (page && page !== '\x00') parts.push(page);
     if (quay !== undefined && quay !== '') parts.push('Q' + quay);
     return parts.join('\u202f') || '–';
   }).join(', ');
@@ -129,8 +209,13 @@ function _applyDynStyles(root) {
 function bnavTree() {
   setBnavActive('tree');
   const id = currentTreeId || smallestPersonId();
-  if (id) showTree(id);
-  else { showView('v-main'); setBnavActive('persons'); }
+  if (!id) { showView('v-main'); setBnavActive('persons'); return; }
+  // Linken Panel auf Personen zurücksetzen — Personenliste ist der natürliche Partner zur Baumansicht
+  if (AppState.currentTab !== 'persons') switchTab('persons');
+  if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+    showDescTree(id, false);
+  else
+    showTree(id);
 }
 
 function switchPlacesSubTab(sub) {
@@ -147,16 +232,30 @@ function switchPlacesSubTab(sub) {
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
+  // Validator-Panels beim Subtab-Wechsel ausblenden (nicht schließen — Toggle-State bleibt).
+  // Beim Wechsel zurück wird das Panel via _renderPlaceValidator/_renderHofValidator
+  // sofort wieder eingeblendet, falls es geöffnet war.
+  document.getElementById('placeValidatorPanel')?.setAttribute('hidden', '');
+  document.getElementById('hofValidatorPanel')?.setAttribute('hidden', '');
+
   if (sub === 'hoefe') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderHofList();
+    if (typeof _updateHofReviewBadge  === 'function') _updateHofReviewBadge();
+    if (typeof _refreshHofMergeBadge  === 'function') _refreshHofMergeBadge();
+    if (typeof _refreshHofValidatorBadge === 'function') _refreshHofValidatorBadge();
+    if (typeof _renderHofValidator    === 'function') _renderHofValidator();  // offen? Panel wieder zeigen
   } else if (sub === 'orte') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderPlaceList();
+    if (typeof _renderPlaceValidator  === 'function') _renderPlaceValidator(); // offen? Panel wieder zeigen
   } else if (sub === 'karte') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
     if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
@@ -171,10 +270,18 @@ function bnavTab(name) {
     if (cb) cb.style.display = 'none';
   }
   UIState._mapFromContext = null;
+  // Mobile: Orte-Tab erneut tippen während Karte aktiv → zurück zur Orte-Liste
+  if (name === 'places' && AppState.currentTab === 'places' && UIState._placesSubTab === 'karte'
+      && !document.body.classList.contains('desktop-mode')) {
+    switchPlacesSubTab('orte');
+    return;
+  }
   AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
   switchTab(name);
+  _desktopAutoSelect(name);
+  if (!document.body.classList.contains('desktop-mode')) _mobileSelectionRestore(name);
 }
 
 // Bottom-Nav: Globale Suche
@@ -182,13 +289,21 @@ function bnavSearch() {
   setBnavActive('search');
   showView('v-main');
   switchTab('search');
-  setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
+  _afterLayout(() => document.getElementById('searchGlobal')?.focus());
 }
 
-// Bottom-Nav: Proband
+// Bottom-Nav: Proband (nur noch aus Menü erreichbar)
 function bnavHome() {
   const id = getProbandId();
-  if (id) { setBnavActive('home'); showTree(id); }
+  if (id) { setBnavActive('tree'); showTree(id); }
+}
+
+// Bottom-Nav: Aufgaben-Tab
+function bnavTasks() {
+  AppState.currentTab = 'tasks';
+  setBnavActive('tasks');
+  showView('v-main');
+  switchTab('tasks');
 }
 
 // runGlobalSearch → ui-views-search.js
@@ -223,6 +338,25 @@ const _VS_MIN  = 500;  // item threshold to activate
 
 function _vsScrollEl() {
   return window.innerWidth >= 900 ? document.getElementById('v-main') : null;
+}
+
+// Firefox normalisiert Wheel-Events im DOM_DELTA_LINE-Modus (1) nicht auf Pixel.
+// Das führt zu zu schnellem Scrollen. Einmalig pro Element registrieren.
+const _wheelNormalized = new WeakSet();
+function _normalizeWheel(el) {
+  if (!el || _wheelNormalized.has(el)) return;
+  _wheelNormalized.add(el);
+  el.addEventListener('wheel', e => {
+    if (e.deltaMode === 1) {
+      // DOM_DELTA_LINE (Firefox Maus): 40px/Zeile, max. 5 Zeilen
+      e.preventDefault();
+      el.scrollTop += Math.max(-5, Math.min(5, e.deltaY)) * 40;
+    } else if (e.deltaMode === 0 && Math.abs(e.deltaY) > 200) {
+      // DOM_DELTA_PIXEL: Beschleunigungsspike deckeln (Trackpad-Gliding bleibt ok)
+      e.preventDefault();
+      el.scrollTop += Math.sign(e.deltaY) * 200;
+    }
+  }, { passive: false });
 }
 
 function _vsRender(listEl, st) {
@@ -267,6 +401,38 @@ function _vsSetup(listEl, st) {
   st.mid = document.createElement('div');
   st.bot = document.createElement('div');
   listEl.append(st.top, st.mid, st.bot);
+  _normalizeWheel(st.sc);
+  _vsRender(listEl, st);
+  st.fn = () => _vsRender(listEl, st);
+  (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
+}
+
+// Scroll-Listener nach Tab-Rückkehr neu registrieren ohne DOM-Reset.
+// curId: aktuell ausgewählte Entität (Person- oder Familie-ID) — die Scroll-Position
+// wird daraus berechnet, identisch zur Logik im initialen Render von renderPersonList /
+// renderFamilyList. getBoundingClientRect() erzwingt den Reflow nach display:block.
+// lstAbs (= Abstand Listenkopf vom Scroll-Container-Anfang) ist unabhängig von
+// scrollTop — korrekte Berechnung auch wenn sc.scrollTop noch vom anderen Tab stammt.
+function _vsReattach(listEl, st, curId) {
+  if (st.active || !st.top) return;
+  st.sc = _vsScrollEl();
+  st.active = true;
+  st.r = null;
+  _normalizeWheel(st.sc);
+  // Scroll zur aktuellen Auswahl berechnen und setzen, VOR _vsRender
+  if (curId) {
+    const idx = st.items.findIndex(it => it.id === curId);
+    if (idx >= 0) {
+      const sc = st.sc;
+      const scTop  = sc ? sc.scrollTop : window.scrollY;
+      const viewH  = sc ? sc.clientHeight : window.innerHeight;
+      const lr     = listEl.getBoundingClientRect(); // erzwingt Reflow
+      const sr     = sc ? sc.getBoundingClientRect().top : 0;
+      const lstAbs = scTop + lr.top - sr; // Listenkopf in Scroll-Koordinaten (≈ topbar-Höhe)
+      const target = Math.max(0, lstAbs + st.offsets[idx] - viewH / 2 + _VS_ROW / 2);
+      if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+    }
+  }
   _vsRender(listEl, st);
   st.fn = () => _vsRender(listEl, st);
   (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
@@ -285,230 +451,20 @@ function showMain() {
   _closeHistoryPicker();
   _updateNavBtns();
   document.body.classList.remove('tree-active', 'fc-mode');
-  setBnavActive(AppState.currentTab || 'persons');
+  const _activeTab = AppState.currentTab || 'persons';
+  setBnavActive(_activeTab);
+  // Tab-Divs: nur aktiven sichtbar — Schutz gegen Erstload ohne vorigen switchTab-Aufruf
+  ['persons','families','sources','places','stats','search','tasks'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = (t === _activeTab) ? 'block' : 'none';
+  });
   showView('v-main');
   renderTab();
   if (typeof _updateTasksBadge === 'function') _updateTasksBadge();
   if (saved && saved.tab === AppState.currentTab) {
-    // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
-    setTimeout(() => _setListScroll(saved.pos), 0);
+    // _afterLayout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
+    _afterLayout(() => _setListScroll(saved.pos));
   }
-}
-
-// ─── History-Picker (Back-Button Dropdown) ────────────────────────
-// Label für einen History-Eintrag
-function _historyItemLabel(item) {
-  if (item.type === 'person') {
-    const p = AppState.db.individuals[item.id];
-    if (!p) return item.id;
-    return p.surname ? p.surname + (p.given ? ', ' + p.given.split(' ')[0] : '') : (p.name || item.id);
-  }
-  if (item.type === 'family') {
-    const f = AppState.db.families[item.id];
-    if (!f) return item.id;
-    const h = f.husb && AppState.db.individuals[f.husb];
-    const w = f.wife && AppState.db.individuals[f.wife];
-    const parts = [h?.surname, w?.surname].filter(Boolean);
-    return parts.length ? parts.join(' & ') : (h?.name || w?.name || item.id);
-  }
-  if (item.type === 'source')   { const s = AppState.db.sources[item.id];       return s ? (s.abbr || s.title || item.id) : item.id; }
-  if (item.type === 'repo')     { const r = AppState.db.repositories[item.id];  return r ? (r.name  || item.id) : item.id; }
-  if (item.type === 'place')    return item.name || 'Ort';
-  if (item.type === 'tree')     return 'Baum';
-  if (item.type === 'fanchart') return 'Fächer';
-  return '◂';
-}
-
-// Generischer Picker: items = [{label, data}], onSelect(idx, data) — idx=-1 → rootLabel geklickt
-function _showHistoryPicker(triggerEl, items, onSelect, rootLabel) {
-  _closeHistoryPicker();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'history-picker-overlay';
-  overlay.addEventListener('click', _closeHistoryPicker);
-
-  const picker = document.createElement('div');
-  picker.className = 'history-picker';
-  picker.addEventListener('click', e => e.stopPropagation());
-
-  items.forEach((item, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'history-picker-item';
-    btn.type = 'button';
-    btn.textContent = item.label;
-    btn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(i, item.data); });
-    picker.appendChild(btn);
-  });
-
-  if (rootLabel) {
-    picker.appendChild(Object.assign(document.createElement('div'), { className: 'history-picker-sep' }));
-    const rootBtn = document.createElement('button');
-    rootBtn.className = 'history-picker-item history-picker-root';
-    rootBtn.type = 'button';
-    rootBtn.textContent = rootLabel;
-    rootBtn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(-1, null); });
-    picker.appendChild(rootBtn);
-  }
-
-  overlay.appendChild(picker);
-  document.body.appendChild(overlay);
-
-  // Positionierung unterhalb des Trigger-Buttons
-  if (triggerEl) {
-    const r = triggerEl.getBoundingClientRect();
-    picker.style.top  = (r.bottom + 6) + 'px';
-    picker.style.left = r.left + 'px';
-    requestAnimationFrame(() => {
-      const pw = picker.offsetWidth;
-      const left = parseFloat(picker.style.left);
-      if (left + pw > window.innerWidth - 8)
-        picker.style.left = Math.max(8, window.innerWidth - pw - 8) + 'px';
-    });
-  }
-
-  // ESC schließt
-  const onKey = e => { if (e.key === 'Escape') { _closeHistoryPicker(); document.removeEventListener('keydown', onKey); } };
-  document.addEventListener('keydown', onKey);
-}
-
-function _closeHistoryPicker() {
-  document.querySelector('.history-picker-overlay')?.remove();
-}
-
-// Navigation zu einem History-Eintrag (ohne History-Push)
-function _navToHistoryItem(item) {
-  if      (item.type === 'person')   showDetail(item.id, false);
-  else if (item.type === 'family')   showFamilyDetail(item.id, false);
-  else if (item.type === 'source')   showSourceDetail(item.id, false);
-  else if (item.type === 'repo')     showRepoDetail(item.id, false);
-  else if (item.type === 'place')    showPlaceDetail(item.name, false);
-  else if (item.type === 'tree')     showTree(item.id, false);
-  else if (item.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(item.id); }
-  else showMain();
-}
-
-// ─── History-Navigation ───────────────────────────────────────────
-
-// Aktuell angezeigte Entity als History-Eintrag (null = Listenansicht)
-function _captureCurrentNavState() {
-  if (AppState.currentPersonId) return { type: 'person', id: AppState.currentPersonId };
-  if (AppState.currentFamilyId) return { type: 'family', id: AppState.currentFamilyId };
-  if (AppState.currentSourceId) return { type: 'source', id: AppState.currentSourceId };
-  if (AppState.currentRepoId)   return { type: 'repo',   id: AppState.currentRepoId };
-  if (AppState._detailActive) {
-    const title = document.getElementById('detailTopTitle')?.textContent;
-    if (title) return { type: 'place', name: title };
-  }
-  if (document.getElementById('v-tree')?.classList.contains('active') && currentTreeId) {
-    return { type: document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree', id: currentTreeId };
-  }
-  return null;
-}
-
-// Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/showPlaceDetail stehen.
-function _beforeDetailNavigate() {
-  if (AppState._detailActive) {
-    // Detail → Detail: aktuellen Zustand in Back-Stack sichern, Fwd-Stack leeren
-    const cur = _captureCurrentNavState();
-    if (cur) UIState._navHistory.push(cur);
-    UIState._navFwdStack = [];
-  } else if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
-    // Baum → Detail
-    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
-    UIState._navHistory.push({ type: _type, id: currentTreeId });
-    UIState._navFwdStack = [];
-  } else {
-    // Liste → Detail: History neu starten + Scroll-Position sichern
-    UIState._navHistory.length = 0;
-    UIState._navFwdStack = [];
-    UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
-  }
-  setTimeout(_persistNavState, 0); // nach show*() ausführen, wenn neue currentXxxId gesetzt ist
-}
-
-// "← Zurück" — 1 Schritt zurück, aktuellen Zustand auf Fwd-Stack
-function goBack() {
-  const hist = UIState._navHistory;
-  if (!hist.length) { showMain(); return; }
-  const cur = _captureCurrentNavState();
-  if (cur) UIState._navFwdStack.push(cur);
-  _navToHistoryItem(hist.pop());
-  _updateNavBtns();
-  _persistNavState();
-}
-
-// "→ Vorwärts" — 1 Schritt vor, aktuellen Zustand auf Back-Stack
-function goForward() {
-  const fwd = UIState._navFwdStack;
-  if (!fwd.length) return;
-  const cur = _captureCurrentNavState();
-  if (cur) UIState._navHistory.push(cur);
-  _navToHistoryItem(fwd.pop());
-  _updateNavBtns();
-  _persistNavState();
-}
-
-// "▾" — Picker mit vollständigem Verlauf
-function openDetailHistory() {
-  const hist = UIState._navHistory;
-  if (!hist.length) return;
-  const btn = document.getElementById('detailHistBtn');
-  const items = [...hist].reverse().map((item, i) => ({
-    label: _historyItemLabel(item),
-    data:  { item, actualIdx: hist.length - 1 - i }
-  }));
-  _showHistoryPicker(btn, items, (idx, data) => {
-    if (idx < 0) { showMain(); return; }
-    hist.splice(data.actualIdx);
-    UIState._navFwdStack = [];
-    _navToHistoryItem(data.item);
-    _updateNavBtns();
-    _persistNavState();
-  }, 'Liste');
-}
-
-// Alle Nav-Buttons synchron aktualisieren (Back ▾, Fwd, Tree-Back, Tree-Fwd)
-function _updateNavBtns() {
-  _updateDetailHistBtn();
-  if (typeof _updateTreeBackBtn === 'function') _updateTreeBackBtn();
-}
-
-function _updateDetailHistBtn() {
-  const btn = document.getElementById('detailHistBtn');
-  if (btn) btn.hidden = UIState._navHistory.length < 2;
-  const fwd = document.getElementById('detailFwdBtn');
-  if (fwd) fwd.hidden = UIState._navFwdStack.length === 0;
-}
-
-// ─── Nav-State Persistenz (sessionStorage) ───────────────────────
-
-function _persistNavState() {
-  try {
-    sessionStorage.setItem('stammbaum_nav', JSON.stringify({
-      back:    UIState._navHistory,
-      fwd:     UIState._navFwdStack,
-      current: _captureCurrentNavState()
-    }));
-  } catch(e) {}
-}
-
-function _restoreNavState() {
-  try {
-    const raw = sessionStorage.getItem('stammbaum_nav');
-    if (!raw) return false;
-    const saved = JSON.parse(raw);
-    UIState._navHistory  = Array.isArray(saved.back) ? saved.back : [];
-    UIState._navFwdStack = Array.isArray(saved.fwd)  ? saved.fwd  : [];
-    if (saved.current) { _navToHistoryItem(saved.current); return true; }
-    _updateNavBtns();
-  } catch(e) { sessionStorage.removeItem('stammbaum_nav'); }
-  return false;
-}
-
-function _clearNavState() {
-  UIState._navHistory.length = 0;
-  UIState._navFwdStack = [];
-  try { sessionStorage.removeItem('stammbaum_nav'); } catch(e) {}
 }
 
 // Kleinste numerische Personen-ID
@@ -522,44 +478,329 @@ function smallestPersonId() {
   })[0];
 }
 
-// Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
+// Kleinste numerische ID aus beliebiger Map (families, sources)
+function _smallestId(map) {
+  const ids = Object.keys(map || {});
+  if (!ids.length) return null;
+  return ids.sort((a, b) => (parseInt(a.replace(/\D/g,''))||0) - (parseInt(b.replace(/\D/g,''))||0))[0];
+}
+
+// Alphabetisch erster Ortsname
+function _firstPlaceName() {
+  if (typeof collectPlaces !== 'function') return null;
+  const places = collectPlaces();
+  if (!places.size) return null;
+  // ADR-028 Phase 3: collectPlaces ist id-keyed → keys können IDs sein. Über
+  // .values() + .name sortieren, damit die Logik key-Typ-unabhängig bleibt.
+  return [...places.values()].map(p => p.name).filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'de'))[0] || null;
+}
+
+// Mobile: nach Tab-Tipp zur letzten Auswahl scrollen + highlighten (kein showDetail)
+function _mobileSelectionRestore(tab) {
+  if (tab === 'persons') {
+    const id = ViewState.getCurrent('persons');
+    if (id) _updatePersonListCurrent(id);
+  } else if (tab === 'families') {
+    const id = ViewState.getCurrent('families');
+    if (id) _updateFamilyListCurrent(id);
+  } else if (tab === 'sources') {
+    const id = ViewState.getCurrent('sources');
+    if (id) _updateSourceListCurrent(id);
+  } else if (tab === 'places') {
+    const name = ViewState.getCurrent('places');
+    if (name) _updatePlaceListCurrent(name);
+  }
+}
+
+function _persistLastTabSel() {
+  idbPut('last_tab_sel', UIState._lastTabSel).catch(() => {});
+}
+
+// ─────────────────────────────────────
+//  ViewState — zentraler View-Selektion-Helper (A1, ADR-025)
+// ─────────────────────────────────────
+// Garantien: ① IDB-persistent, ② validiert gegen AppState.db, ③ viewstate-change-Event.
+// Ersetzt die parallele Buchführung AppState.currentX + UIState._lastTabSel.
+// AppState.currentX bleibt als Read-Convenience (wird von setCurrent synchron gesetzt).
+const ViewState = (() => {
+  // Mapping tab → AppState-Feld
+  const _FIELD = {
+    persons:  'currentPersonId',
+    families: 'currentFamilyId',
+    sources:  'currentSourceId',
+    // Stufe 2b: Identitäts-Ref (placeId || name) statt nur Name → ViewState/Persistenz
+    // identitätsbasiert. currentPlaceName (lesbarer Name) + currentPlaceId setzt
+    // showPlaceDetail separat; beide in _ALL_FIELDS für exklusiven Fokus-Reset.
+    places:   'currentPlaceRef',
+  };
+  // Alle exklusiven Fokus-Felder (werden beim Setzen eines Tabs auf null zurückgesetzt)
+  const _ALL_FIELDS = ['currentPersonId', 'currentFamilyId', 'currentSourceId', 'currentRepoId', 'currentPlaceName', 'currentPlaceId', 'currentPlaceRef'];
+
+  /**
+   * Setzt aktuelle Auswahl für einen Tab.
+   * - Schreibt in UIState._lastTabSel (IDB-persistent via _persistLastTabSel)
+   * - Setzt AppState.currentX (exklusiver Fokus: alle anderen → null)
+   * - Dispatcht 'viewstate-change' CustomEvent
+   */
+  function setCurrent(tab, id) {
+    // Per-Tab-Persistenz
+    (UIState._lastTabSel || (UIState._lastTabSel = {}))[tab] = id;
+    _persistLastTabSel();
+    // Exklusiver Fokus: alle currentX-Felder löschen, dann dieses setzen
+    _ALL_FIELDS.forEach(f => { AppState[f] = null; });
+    const field = _FIELD[tab];
+    if (field) AppState[field] = id;
+    // Event für spätere Listener (P3, ADR-025)
+    document.dispatchEvent(new CustomEvent('viewstate-change', { detail: { tab, id } }));
+  }
+
+  /**
+   * Gibt aktuelle Auswahl für einen Tab zurück; validiert Existenz gegen AppState.db.
+   * Gibt null zurück wenn ID nicht mehr existiert.
+   */
+  function getCurrent(tab) {
+    const sel = UIState._lastTabSel;
+    if (!sel) return null;
+    const id = sel[tab];
+    if (!id) return null;
+    if (tab === 'persons')  return AppState.db?.individuals?.[id] ? id : null;
+    if (tab === 'families') return AppState.db?.families?.[id] ? id : null;
+    if (tab === 'sources')  return (typeof getSource === 'function' && getSource(id)) ? id : null;
+    if (tab === 'places')   return id; // Existenz bei Verwendung prüfen (collectPlaces)
+    return id;
+  }
+
+  return { setCurrent, getCurrent };
+})();
+
+// Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
+// A5 (P5): Container-Map für Skip-Re-Render-Check
+const _DC_TAB_MAP = { persons: 'detailPerson', families: 'detailFamily', sources: 'detailSource', places: 'detailPlace' };
+
+// P6-B6: Place- und Source-Listen-Highlight zentral (analog zu
+// _updatePersonListCurrent/_updateFamilyListCurrent in ui-views-person.js).
+// Aufgerufen aus show*Detail (Full-Render-Pfad), _dcAlreadyShows (Skip-Pfad) und
+// _mobileSelectionRestore — sonst bleibt der alte Listen-Eintrag markiert, wenn der
+// User in der Liste auf einen anderen Eintrag klickt (Detail wechselt, .current nicht).
+function _updatePlaceListCurrent(name) {
+  const list = document.getElementById('placeList');
+  if (!list) return;
+  list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+  if (!name) return;
+  const cur = list.querySelector(`[data-name="${CSS.escape(String(name))}"]`);
+  if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+}
+function _updateSourceListCurrent(id) {
+  const list = document.getElementById('sourceList');
+  if (!list) return;
+  list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-sid="${CSS.escape(String(id))}"]`);
+  if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+}
+
+// P6-B5: gemeinsame Detail-Toolbar (TopTitle + 8 Buttons) auf den passenden Entity-Typ
+// konfigurieren. Aufgerufen aus den show*Detail-Funktionen UND dem Skip-Pfad in
+// _dcAlreadyShows — sonst zeigte die Toolbar nach Tab-Wechsel-Skip noch die Werte
+// der vorigen Entität (TopTitle „Familie" über Personen-Detail, storyBtn dataset.action
+// auf showFamilyStory mit falscher fid usw. — funktionale Fehlverdrahtung, kein Kosmetikum).
+function _configureDetailToolbar(tab, entityId) {
+  const top      = document.getElementById('detailTopTitle');
+  const editBtn  = document.getElementById('editBtn');
+  const treeBtn  = document.getElementById('treeBtn');
+  const tlBtn    = document.getElementById('timelineBtn');
+  const stBtn    = document.getElementById('storyBtn');
+  const pbBtn    = document.getElementById('probandBtn');
+  const pbsBtn   = document.getElementById('probandSetBtn');
+  const mapBtn   = document.getElementById('detailMapBtn');
+  const camBtn   = document.getElementById('quickCamBtn');
+
+  if (tab === 'persons') {
+    const p = AppState.db.individuals[entityId];
+    if (!p) return;
+    if (top) top.textContent = p.name || entityId;
+    if (editBtn) editBtn.style.display = '';
+    if (camBtn)  { camBtn.hidden = false; camBtn.dataset.id = entityId; }
+    if (treeBtn) { treeBtn.hidden = false; treeBtn.style.display = ''; treeBtn.dataset.id = entityId; }
+    if (tlBtn)   { tlBtn.hidden = false; tlBtn.dataset.id = entityId; }
+    if (stBtn)   { stBtn.hidden = false; stBtn.dataset.action = 'showStory'; stBtn.dataset.id = entityId; delete stBtn.dataset.fid; }
+    if (mapBtn)  mapBtn.hidden = false;
+    if (pbBtn)   pbBtn.hidden = false;
+    if (pbsBtn) {
+      pbsBtn.hidden = false;
+      pbsBtn.dataset.id = entityId;
+      const isProband = typeof getProbandId === 'function' && getProbandId() === entityId;
+      pbsBtn.classList.toggle('proband-active', isProband);
+      pbsBtn.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    }
+  } else if (tab === 'families') {
+    const f = AppState.db.families[entityId];
+    if (!f) return;
+    if (top) top.textContent = 'Familie';
+    if (editBtn) editBtn.style.display = '';
+    const _famTreeTarget = f.husb || f.wife || null;
+    if (treeBtn) {
+      treeBtn.hidden = !_famTreeTarget;
+      treeBtn.style.display = '';
+      if (_famTreeTarget) treeBtn.dataset.id = _famTreeTarget;
+    }
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   { stBtn.hidden = false; stBtn.dataset.action = 'showFamilyStory'; stBtn.dataset.fid = entityId; delete stBtn.dataset.id; }
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    if (mapBtn)  mapBtn.hidden = true;
+    if (camBtn)  camBtn.hidden = true;
+  } else if (tab === 'sources') {
+    if (top) top.textContent = 'Quelle';
+    if (editBtn) editBtn.style.display = '';
+    if (camBtn)  camBtn.hidden = true;
+    if (treeBtn) treeBtn.hidden = true;
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   stBtn.hidden = true;
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    if (mapBtn)  mapBtn.setAttribute('hidden', '');
+  } else if (tab === 'places') {
+    if (top) top.textContent = '📍 Ort';
+    if (editBtn) editBtn.style.display = '';
+    if (camBtn)  camBtn.hidden = true;
+    if (treeBtn) treeBtn.hidden = true;
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   stBtn.hidden = true;
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    // detailMapBtn: kein expliziter Reset (showPlaceDetail-Verhalten unverändert)
+  }
+}
+
+function _dcAlreadyShows(tab, entityId) {
+  const cid = _DC_TAB_MAP[tab];
+  if (!cid) return false;
+  const el = document.getElementById(cid);
+  if (!el || el.dataset.viewInit !== 'true') return false;
+  if (el.dataset.currentId !== String(entityId)) return false;
+  if ((UIState._dirty || {})[tab]) return false; // Daten geändert → immer neu rendern
+  _activateDetailContainer(cid, entityId);
+  // P6-B4: showDetail/showFamilyDetail/etc. rufen am Ende showView('v-detail') auf, was
+  // body.has-detail setzt — der CSS-Schalter für den desktopPlaceholder. Im Skip-Pfad
+  // entfällt dieser Aufruf, sodass der Placeholder oben im scrollbaren v-detail sichtbar
+  // bleibt und das eigentliche Detail erst beim Runterscrollen erscheint.
+  document.body.classList.add('has-detail');
+  AppState._detailActive = true;
+  // P6-B5: Detail-Toolbar auf den passenden Entity-Typ konfigurieren — sonst zeigt
+  // TopTitle/Buttons noch den State der vorigen Entität (z.B. „Familie" über Personen-
+  // Detail, storyBtn mit showFamilyStory + fid). Funktionale Fehlverdrahtung der
+  // Toolbar-Klicks, nicht nur Kosmetikum.
+  _configureDetailToolbar(tab, entityId);
+  // Hist-Picker-Button-Zustand aktualisieren (analog showView('v-detail') desktop-Branch)
+  if (typeof _updateDetailHistBtn === 'function') requestAnimationFrame(_updateDetailHistBtn);
+  // P6-B3: Skip-Pfad muss die LINKE Liste trotzdem synchronisieren — andernfalls behält
+  // die zuvor aktive Tab-Liste die .current-Klasse, und Scroll-Position zeigt nicht auf
+  // den ausgewählten Eintrag. _activateDetailContainer kümmert sich nur um den Detail-
+  // Container, nicht um die Listen-Highlight/Scroll-Synchronisation.
+  if (tab === 'persons') {
+    _updatePersonListCurrent(entityId);
+    _updateFamilyListCurrent(null);
+  } else if (tab === 'families') {
+    _updateFamilyListCurrent(entityId);
+    _updatePersonListCurrent(null);
+  } else if (tab === 'sources') {
+    _updateSourceListCurrent(entityId);
+  } else if (tab === 'places') {
+    _updatePlaceListCurrent(entityId);
+  }
+  return true;
+}
+
+function _desktopAutoSelect(tab) {
+  if (!document.body.classList.contains('desktop-mode')) return;
+  if (tab === 'persons') {
+    const id = ViewState.getCurrent('persons') || smallestPersonId();
+    if (id && !_dcAlreadyShows('persons', id)) showDetail(id, false);
+  } else if (tab === 'families') {
+    const id = ViewState.getCurrent('families') || _smallestId(AppState.db.families);
+    if (id && !_dcAlreadyShows('families', id) && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
+  } else if (tab === 'sources') {
+    const id = ViewState.getCurrent('sources') || _smallestId(AppState.db.sources);
+    if (id && !_dcAlreadyShows('sources', id) && typeof showSourceDetail === 'function') showSourceDetail(id, false);
+  } else if (tab === 'places') {
+    const places = typeof collectPlaces === 'function' ? collectPlaces() : null;
+    const saved  = ViewState.getCurrent('places');
+    // saved ist Identitäts-Ref (Stufe 2b): placeId (objektifiziert) oder Name (String-Ort)
+    const valid  = saved && (((AppState.db.placeObjects || {})[saved]) || places?.has(saved));
+    const ref    = valid ? saved : _firstPlaceName();
+    if (ref && !_dcAlreadyShows('places', ref) && typeof showPlaceDetail === 'function') showPlaceDetail(ref, false);
+  }
+  // tasks / search / stats: kein Detail-View
+}
+
+// Startansicht nach Datei-Load: letzten gewählte Person (Fallback: Proband/kleinste ID)
 async function showStartView() {
   AppState.currentTab = 'persons';
+  // P6-B7: IDB-State VOR dem ersten Listen-Render laden (Details s. git-log).
+  const [savedProband, savedSel] = await Promise.all([
+    idbGet('proband_id').catch(() => null),
+    idbGet('last_tab_sel').catch(() => null),
+  ]);
+  if (savedSel && typeof savedSel === 'object') UIState._lastTabSel = savedSel;
+  UIState._probandId = (savedProband && AppState.db.individuals[savedProband]) ? savedProband : null;
+  // Zuletzt gewählte Person hat Vorrang vor Probanden — App setzt dort fort wo der User
+  // aufgehört hat. Proband / smallestPersonId dienen als Fallback ohne Vorauswahl.
+  const startId = ViewState.getCurrent('persons') || getProbandId();
+  if (startId) AppState.currentPersonId = startId;
   showMain();
-  const saved = await idbGet('proband_id').catch(() => null);
-  UIState._probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
-  const startId = getProbandId();
   if (startId) showTree(startId);
 }
 
 // ─────────────────────────────────────
 //  VIEW DISPATCH
 // ─────────────────────────────────────
+const _TAB_LABELS = { persons:'Personen', families:'Familien', sources:'Quellen', places:'Orte', stats:'Statistik', search:'Suche', tasks:'Aufgaben' };
 function switchTab(tab) {
   AppState.currentTab = tab;
+  _announceList(_TAB_LABELS[tab] || tab);
   if (tab !== 'places') {
     document.body.classList.remove('places-karte');
     document.getElementById('mapContainer')?.style.setProperty('display', 'none');
   }
-  // Personen-Tab: immer in Personen-Modus zurücksetzen (nicht Tasks)
-  if (tab === 'persons' && typeof switchPersonsMode === 'function') {
-    switchPersonsMode('persons');
-  }
-  document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
+  document.getElementById('tab-persons').style.display  = tab === 'persons'  ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
-  document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
-  document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
-  document.getElementById('tab-stats').style.display = tab === 'stats' ? 'block' : 'none';
-  document.getElementById('tab-search').style.display = tab === 'search' ? 'block' : 'none';
-  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats') ? 'none' : '';
-  renderTab();
+  document.getElementById('tab-sources').style.display  = tab === 'sources'  ? 'block' : 'none';
+  document.getElementById('tab-places').style.display   = tab === 'places'   ? 'block' : 'none';
+  document.getElementById('tab-stats').style.display    = tab === 'stats'    ? 'block' : 'none';
+  document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
+  document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
+  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
+  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern
+  if (tab !== 'persons'  && typeof _vsP !== 'undefined') _vsTeardown(_vsP);
+  if (tab !== 'families' && typeof _vsF !== 'undefined') _vsTeardown(_vsF);
+  // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false).
+  // Sonderfall: VS war aufgebaut (st.top vorhanden) aber Listener fehlt → _vsReattach
+  // statt vollem Re-Render, damit Scroll-Position + Auswahl erhalten bleiben.
+  if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
+      && (UIState._dirty || {}).persons === false) {
+    // P6-B3: ViewState.getCurrent statt AppState.currentX — Letzteres wird durch
+    // ViewState.setCurrent exklusiv genullt wenn ein anderer Tab aktiv war.
+    _vsReattach(document.getElementById('personList'), _vsP, ViewState.getCurrent('persons'));
+  } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
+      && (UIState._dirty || {}).families === false) {
+    _vsReattach(document.getElementById('familyList'), _vsF, ViewState.getCurrent('families'));
+  } else if ((UIState._dirty || {})[tab] !== false) {
+    renderTab();
+    UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
+  }
 }
 
 function renderTab() {
   if (!document.getElementById('v-main').classList.contains('active')) return;
   if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
   else if (AppState.currentTab === 'families') renderFamilyList();
-  else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
+  else if (AppState.currentTab === 'sources') {
+    if (document.getElementById('toggle-media')?.classList.contains('active')) showMediaSection();
+    else if (document.getElementById('toggle-repos')?.classList.contains('active')) renderRepoList();
+    else renderSourceList();
+  }
   else if (AppState.currentTab === 'places') {
     if (UIState._placesSubTab === 'hoefe') renderHofList();
     else if (UIState._placesSubTab === 'karte') {
@@ -572,17 +813,19 @@ function renderTab() {
   }
   else if (AppState.currentTab === 'stats') renderStatsTab();
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
+  else if (AppState.currentTab === 'tasks') { if (typeof renderTasksView === 'function') renderTasksView(); }
 }
 
 
 function updateChangedIndicator() {
   const show = AppState.changed;
-  document.getElementById('changedIndicator').style.display = show ? 'inline-block' : 'none';
+  const ind = document.getElementById('changedIndicator');
+  if (ind) ind.style.display = show ? 'inline-block' : 'none';
   const banner = document.getElementById('syncBanner');
   if (!banner) return;
   if (show) {
     const btn = document.getElementById('syncBannerBtn');
-    const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+    const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && _odCurFileId;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (canOD)       { btn.textContent = '☁ Speichern'; }
     else if (isIOS)  { btn.textContent = '↑ Teilen'; }
@@ -594,70 +837,47 @@ function updateChangedIndicator() {
 }
 
 function _syncBannerSave() {
-  const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+  const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && _odCurFileId;
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
-function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; UIState._searchIndexDirty = true; updateChangedIndicator(); }
-
-// ─────────────────────────────────────
-//  UNDO / REDO (U8)
-// ─────────────────────────────────────
-
-// Snapshot der angegebenen Entities vor einer Mutation aufnehmen.
-// Muss VOR der Mutation aufgerufen werden.
-function pushUndo(label, { personIds = [], familyIds = [], sourceIds = [], repoIds = [] } = {}) {
-  const clone = v => (v === undefined || v === null) ? null
-    : (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
-  const snap = {
-    label,
-    persons:  Object.fromEntries(personIds.map(id  => [id, clone(db.individuals[id])])),
-    families: Object.fromEntries(familyIds.map(id  => [id, clone(db.families[id])])),
-    sources:  Object.fromEntries(sourceIds.map(id  => [id, clone(db.sources[id])])),
-    repos:    Object.fromEntries(repoIds.map(id    => [id, clone(db.repositories[id])])),
-  };
-  AppState._undoStack.push(snap);
-  if (AppState._undoStack.length > 30) AppState._undoStack.shift();
-  AppState._redoStack = [];
-}
-
-function applyUndo() { _applyUndoStack(AppState._undoStack, AppState._redoStack); }
-function applyRedo() { _applyUndoStack(AppState._redoStack, AppState._undoStack); }
-
-function _applyUndoStack(from, to) {
-  if (!from.length) return;
-  const snap = from.pop();
-  const clone = v => (v === null) ? null
-    : (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
-
-  // Gegenzug aufnehmen (aktuellen Zustand der betroffenen Entities sichern)
-  const counter = { label: snap.label, persons: {}, families: {}, sources: {}, repos: {} };
-  for (const [id, val] of Object.entries(snap.persons)) {
-    counter.persons[id] = clone(db.individuals[id] ?? null);
-    if (val === null) delete db.individuals[id]; else db.individuals[id] = val;
-  }
-  for (const [id, val] of Object.entries(snap.families)) {
-    counter.families[id] = clone(db.families[id] ?? null);
-    if (val === null) delete db.families[id]; else db.families[id] = val;
-  }
-  for (const [id, val] of Object.entries(snap.sources)) {
-    counter.sources[id] = clone(db.sources[id] ?? null);
-    if (val === null) delete db.sources[id]; else db.sources[id] = val;
-  }
-  for (const [id, val] of Object.entries(snap.repos)) {
-    counter.repos[id] = clone(db.repositories[id] ?? null);
-    if (val === null) delete db.repositories[id]; else db.repositories[id] = val;
-  }
-  to.push(counter);
-
+function markChanged() {
+  AppState.changed = true;
   UIState._placesCache = null;
   UIState._hofCache = null;
   UIState._searchIndexDirty = true;
-  AppState.changed = AppState._undoStack.length > 0;
+  // P0-R5: Personenliste-Cache nach Edit invalidieren (sonst CSV-Export mit Vor-Edit-Stand)
+  if (typeof _invalidatePersonListCache === 'function') _invalidatePersonListCache();
+  // P3-A2: alle Daten-Tabs als dirty markieren → switchTab rendert bei nächstem Besuch
+  UIState._dirty = { persons: true, families: true, sources: true, places: true };
   updateChangedIndicator();
-  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-  renderTab();
-  showToast('↩ ' + snap.label, 'info');
+}
+
+function _setOfflineIndicator(offline) {
+  const el = document.getElementById('offlineIndicator');
+  if (el) el.hidden = !offline;
+}
+
+async function _checkCacheStatus() {
+  if (!('caches' in window)) return;
+  const keys = await caches.keys();
+  if (!keys.some(k => k.startsWith('stammbaum-'))) {
+    showToast('Cache fehlt — bitte einmal online öffnen für Offline-Funktion', 'warn');
+  }
+}
+
+// Lifecycle-Handler → ausgelagert in ui-lifecycle.js (P3-A3)
+
+function _initOfflineDiag() {
+  if (!navigator.onLine) { _setOfflineIndicator(true); _checkCacheStatus(); }
+  window.addEventListener('offline', () => {
+    _setOfflineIndicator(true);
+    showToast('Offline — App läuft aus dem Cache', 'warn');
+  });
+  window.addEventListener('online', () => {
+    _setOfflineIndicator(false);
+    showToast('Wieder online', 'success');
+  });
 }
 
 // ─────────────────────────────────────
@@ -676,12 +896,36 @@ function initAutocomplete(inputId, ddId, opts) {
   const dd    = document.getElementById(ddId);
   if (!input || !dd) return;
   const limit = opts.limit ?? 12;
+  const showAllOnFocus = opts.showAllOnFocus ?? false;
+  const useFixed = opts.useFixed ?? false;
 
-  const _run = debounce(() => {
-    const q = input.value.toLowerCase().trim();
+  // Portal-Modus: Dropdown an body hängen + fixed positionieren (umgeht overflow-Clipping)
+  if (useFixed && dd.parentElement !== document.body) {
+    document.body.appendChild(dd);
+    Object.assign(dd.style, { position: 'fixed', width: 'auto', margin: '0' });
+  }
+
+  const _reposition = () => {
+    if (!useFixed) return;
+    const r = input.getBoundingClientRect();
+    const ddH = Math.min(180, dd.scrollHeight || 180);
+    const spaceBelow = window.innerHeight - r.bottom;
+    if (spaceBelow >= ddH || spaceBelow >= r.top) {
+      dd.style.top  = (r.bottom + 2) + 'px';
+      dd.style.bottom = 'auto';
+    } else {
+      dd.style.top  = 'auto';
+      dd.style.bottom = (window.innerHeight - r.top + 2) + 'px';
+    }
+    dd.style.left  = r.left + 'px';
+    dd.style.width = r.width + 'px';
+  };
+
+  const _hide = () => { dd.innerHTML = ''; dd.style.display = 'none'; };
+
+  const _populate = q => {
     dd.innerHTML = '';
-    if (!q) { dd.style.display = 'none'; return; }
-    const items = opts.getItems(q).slice(0, limit);
+    const items = opts.getItems(q).slice(0, limit || 50);
     if (!items.length) { dd.style.display = 'none'; return; }
     items.forEach(item => {
       const el = document.createElement('div');
@@ -690,20 +934,30 @@ function initAutocomplete(inputId, ddId, opts) {
       if (opts.configEl) opts.configEl(el, item);
       el.addEventListener('mousedown', () => {
         opts.onSelect(item, input);
-        dd.innerHTML = ''; dd.style.display = 'none';
+        _hide();
       });
       dd.appendChild(el);
     });
     dd.style.display = 'block';
+    _reposition();
+  };
+
+  const _run = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    if (!q && !showAllOnFocus) { dd.style.display = 'none'; return; }
+    _populate(q);
   }, 150);
 
   input.addEventListener('input', () => {
     opts.onInput?.(input);
-    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    if (!input.value.trim() && !showAllOnFocus) { _hide(); return; }
     _run();
   });
   input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
-  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+  input.addEventListener('focus', () => {
+    if (showAllOnFocus) { _populate(input.value.toLowerCase().trim()); }
+    else if (dd.children.length) { dd.style.display = 'block'; _reposition(); }
+  });
 }
 
 function safeLinkHref(url) {
@@ -718,7 +972,16 @@ function _validCoord(lat, lon) {
   return isFinite(la) && isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180;
 }
 
-function evGeoLink(lati, long) {
+// Item 9: bevorzugt Event-Objekt (placeObjects als single source of truth via _eventCoords).
+// Backwards-kompat: erste Signatur (lati, long) bleibt als Fallback.
+function evGeoLink(arg1, arg2) {
+  let lati, long;
+  if (arg1 && typeof arg1 === 'object') {
+    const c = (typeof _eventCoords === 'function') ? _eventCoords(arg1) : { lati: arg1.lati, long: arg1.long };
+    lati = c.lati; long = c.long;
+  } else {
+    lati = arg1; long = arg2;
+  }
   return _validCoord(lati, long)
     ? `<a href="https://maps.apple.com/?ll=${lati},${long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
 }
@@ -752,7 +1015,7 @@ function sourceTagsHtml(sourceIds, pageMap, quayMap) {
     const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
     const tipParts = [
       (s.title || s.abbr || sid).substring(0, 50),
-      page ? `S.\u202f${page}` : '',
+      page || '',
       quay !== '' ? `Q${quay}\u202f–\u202f${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
     const isUrl = /^https?:\/\//i.test(page);
@@ -767,22 +1030,131 @@ function citTagsHtml(citations) {
   if (!citations?.length) return '';
   return citations.map(c => {
     const s = AppState.db.sources[c.sid];
-    if (!s) return '';
+    if (!s) return `<span class="src-badge src-badge--orphan" title="Quelle nicht vorhanden (${esc(c.sid || '?')})" style="cursor:default">⚠ ${esc(c.sid || '?')}<button type="button" class="src-badge-orphan-rm" data-action="removeOrphanCitBySid" data-sid="${esc(c.sid || '')}" title="Quellbezug entfernen">✕</button></span>`;
     const page  = c.page || '';
     const quay  = c.quay != null ? String(c.quay) : '';
     const qClass = quay !== '' ? ` src-badge--q${quay}` : '';
     const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
     const tipParts = [
       (s.title || s.abbr || c.sid).substring(0, 50),
-      page ? `S. ${page}` : '',
+      page || '',
       quay !== '' ? `Q${quay} – ${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
-    const isUrl = /^https?:\/\//i.test(page);
-    const linkBtn = isUrl
-      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
+    // Klickbarer ↗-Link: URL in PAGE (Altdaten) ODER in einem Zitat-Medium (OBJE/FILE)
+    const isUrl    = /^https?:\/\//i.test(page);
+    const mediaUrl = (c.media || []).map(m => m && m.file).find(f => /^https?:\/\//i.test(f || '')) || '';
+    const linkHref = isUrl ? page : mediaUrl;
+    const linkBtn = linkHref
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(linkHref)}" title="${esc(linkHref)}">↗</span>`
       : '';
     return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${c.sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(c.sid)}${pageSuffix}</span>${linkBtn}`;
   }).filter(Boolean).join('');
+}
+
+// INDI-Level-Quellen (topSources + nameCitations) als Zitat-Badges, dedupliziert nach SID.
+// URL ggf. aus topSourceExtra (OBJE/FILE-Passthrough) → wird über citTagsHtml als ↗ klickbar.
+function topSourceCitsHtml(p) {
+  const seen = new Set();
+  const cits = [];
+  for (const sid of (p?.topSources || [])) {
+    if (seen.has(sid)) continue;
+    seen.add(sid);
+    const urls = (p.topSourceExtra?.[sid] || [])
+      .map(l => (String(l).match(/\bhttps?:\/\/\S+/) || [])[0]).filter(Boolean);
+    cits.push({ sid, page: p.topSourcePages?.[sid] || '', quay: p.topSourceQUAY?.[sid], media: urls.map(u => ({ file: u })) });
+  }
+  for (const c of (p?.nameCitations || [])) {
+    if (!c?.sid || seen.has(c.sid)) continue;
+    seen.add(c.sid);
+    cits.push(c);
+  }
+  return citTagsHtml(cits);
+}
+
+// Gibt Eltern-Hierarchiekette als HTML zurück (z.B. "Rhein-Sieg-Kreis → NRW").
+// Leer wenn kein placeObjects-Modus oder keine Eltern vorhanden.
+function _placeHierHtml(placeId) {
+  const po = AppState.db?.placeObjects;
+  if (!po || !placeId || !po[placeId]) return '';
+  const chain = [];
+  let cur = po[placeId], guard = 8;
+  while (cur && guard-- > 0) { chain.push(cur.title); cur = cur.parentId ? po[cur.parentId] : null; }
+  if (chain.length <= 1) return '';
+  return `<span class="place-hier">${chain.slice(1).map(esc).join(' → ')}</span>`;
+}
+
+// Periodenkorrekter, vollständiger Hierarchiestring für die Detail-Ansicht.
+// Bei gesetzter placeId + modellierter enclosedBy-Kette: _buildFormString liefert
+// "Ort, Amt, Land" periodengerecht. Nur nutzen wenn das Ergebnis tatsächlich eine
+// Hierarchie enthält (Komma) — sonst ist die enclosedBy-Kette nicht modelliert und
+// compactPlace(ev.place) liefert mehr Information.
+//
+// ADR-024 v1041 fix: bei ev.hofId NIE auf compactPlace(ev.place) fallen — ev.place
+// enthält den Hof als Leitsegment ("Hof, Dorf, Verwaltung"), das wäre Duplikat zur
+// separat gezeigten ev.addr. Stattdessen Dorf-PO über hofObjects[hofId].villageId
+// auflösen wenn ev.placeId fehlt oder fälschlich auf Farm-PO zeigt.
+function _evFullPlace(ev) {
+  // Bei Hof-Event: Dorf-PO bestimmen, nur dessen Hierarchie zurückgeben.
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    const h = AppState.db.hofObjects[ev.hofId];
+    const villageId = (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(h))
+      ? h.villageId : null;
+    if (villageId && typeof _buildFormString === 'function') {
+      const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
+      return _buildFormString(villageId, year) || '';
+    }
+    // hofObject ohne villageId → leerer String statt Hof-im-Ortsfeld
+    return '';
+  }
+  if (ev.placeId && typeof _buildFormString === 'function') {
+    const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
+    const full = _buildFormString(ev.placeId, year);
+    if (full && full.includes(',')) return full;
+    // Fallback bei Datengap: nächstgelegene Zugehörigkeit suchen
+    if (year != null && typeof getPlaceRegistry === 'function') {
+      const reg = getPlaceRegistry();
+      const po  = reg?.byId[ev.placeId];
+      const encs = po?.enclosedBy || [];
+      if (encs.length) {
+        const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+        const datable = encs.filter(e => e.dateFrom || e.dateTo);
+        if (datable.length) {
+          datable.sort((a, b) => {
+            const dist = e => {
+              const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
+              if (ef != null && et != null) return Math.min(Math.abs(year - ef), Math.abs(year - et));
+              if (ef != null) return Math.abs(year - ef);
+              if (et != null) return Math.abs(year - et);
+              return Infinity;
+            };
+            return dist(a) - dist(b);
+          });
+          const nearest = datable[0];
+          const refY = parseY(nearest.dateFrom) ?? parseY(nearest.dateTo);
+          const fallback = refY != null ? _buildFormString(ev.placeId, refY) : null;
+          if (fallback && fallback.includes(',')) return fallback;
+        }
+      }
+    }
+    // Kein Komma-String aus der Hierarchie — aber _buildFormString liefert ggf. den
+    // historisch aufgelösten Ortsnamen (pname zum Jahr). Diesen als erstes Segment
+    // verwenden und mit restlicher Hierarchie aus ev.place kombinieren.
+    if (full) {
+      const evParts = (ev.place || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (evParts.length > 1) return [full, ...evParts.slice(1)].join(', ');
+      return full;
+    }
+  }
+  return compactPlace(ev.place);
+}
+
+// Navigations-Button zur Orts-Detailansicht (🏘), nur wenn placeId gesetzt.
+function _evPlaceNavBtn(ev) {
+  if (!ev.placeId || typeof getPlaceRegistry !== 'function') return '';
+  const reg = getPlaceRegistry();
+  const po = reg && reg.byId[ev.placeId];
+  if (!po) return '';
+  return `<button class="place-nav-btn" data-action="showPlaceByTitle" data-title="${esc(po.title)}" title="Zur Ort-Ansicht">🏘</button>`;
 }
 
 function relRow(person, role, unlinkFamId) {
@@ -803,288 +1175,3 @@ function relRow(person, role, unlinkFamId) {
   </div>`;
 }
 
-// ─────────────────────────────────────
-//  EVENT DELEGATION
-//  Ersetzt alle inline onclick/oninput/onchange in HTML-Strings.
-//  data-action  → click
-//  data-change  → change
-//  data-input   → input
-//  data-action="stop" → stopPropagation ohne Aktion (z.B. <select> in klickbarer Zeile)
-// ─────────────────────────────────────
-function _sortedChildren(children) {
-  return [...(children || [])].sort((a, b) => {
-    const pa = AppState.db.individuals[a];
-    const pb = AppState.db.individuals[b];
-    return evDateKey(pa?.birth?.date || '').localeCompare(evDateKey(pb?.birth?.date || ''));
-  });
-}
-
-const _CLICK_MAP = {
-  // Dynamisch generierte Einträge (bereits vorhanden)
-  showEventFormTyped:      el => showEventForm(el.dataset.pid, undefined, el.dataset.evtype),
-  newSourceForm:           ()  => showSourceForm(null),
-  newFamilyForm:           ()  => showFamilyForm(null),
-  removeNoteRef:           el  => el.closest('[data-ref-section]')?.remove(),
-  jumpToSection:           el => document.getElementById(el.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-  showDetail:              el => showDetail(el.dataset.pid  || el.dataset.id),
-  showFamilyDetail:        el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
-  showSourceDetail:        el => showSourceDetail(el.dataset.sid  || el.dataset.id),
-  showRepoDetail:          el => showRepoDetail(el.dataset.id),
-  showPlaceDetail:         el => showPlaceDetail(el.dataset.name),
-  showHofDetail:           el => showHofDetail(el.dataset.addr),
-  showHofAddForm:          el => showHofAddForm(el.dataset.addr),
-  showHofPropForm:         el => showHofPropForm(el.dataset.addr),
-  saveHofBewohner:         el => saveHofBewohner(el.dataset.addr),
-  cancelHofBewohner:       ()  => cancelHofBewohner(),
-  saveHofEigentum:         el => saveHofEigentum(el.dataset.addr),
-  cancelHofEigentum:       ()  => cancelHofEigentum(),
-  showHofCoordForm:        el => showHofCoordForm(el.dataset.addr),
-  cancelHofCoord:          ()  => cancelHofCoord(),
-  saveHofCoord:            el => saveHofCoord(el.dataset.addr),
-  deleteHofCoord:          el => deleteHofCoord(el.dataset.addr),
-  openHofNote:             el => openNoteModal('hof', el.dataset.addr),
-  showHofRenameForm:       ()  => showHofRenameForm(),
-  cancelHofRename:         ()  => cancelHofRename(),
-  saveHofRename:           el  => saveHofRename(el.dataset.addr),
-  switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
-  switchMapMode:           el => switchMapMode(el.dataset.mode),
-  closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
-  showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
-  mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },
-  openMapPersonPicker:     ()  => openMapPersonPicker(),
-  selectMapPerson:         el => selectMapPerson(el.dataset.pid),
-  deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
-  unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
-  showPersonForm:          el => showPersonForm(el.dataset.pid),
-  showExtraNameForm:       el => showExtraNameForm(el.dataset.pid, parseInt(el.dataset.enidx ?? '-1', 10)),
-  saveExtraName:           ()  => saveExtraName(),
-  deleteExtraName:         ()  => deleteExtraName(),
-  showEventForm:           el => showEventForm(el.dataset.pid, el.dataset.ev),
-  showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey, el.dataset.evidx),
-  showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),
-  showAddChildFlow:        el => showAddChildFlow(el.dataset.fid),
-  showAddParentFlow:       el => showAddParentFlow(el.dataset.pid),
-  openAddMediaDialog:      el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
-  openMediaPhoto:          el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
-  openEditMediaDialog:     el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
-  openSourceMediaView:     el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
-  showChildRelDialog:      el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
-  removeSrc:               el => removeSrc(el.dataset.prefix, +el.dataset.citidx),
-  addSrc:                  el => addSrc(el.dataset.prefix, el.dataset.sid),
-  'copy-cit':              el => copyCitations(el.dataset.prefix),
-  'paste-cit':             el => pasteCitations(el.dataset.prefix),
-  openCitLink:             (el, e) => { e.stopPropagation(); window.open(el.dataset.href, '_blank', 'noopener'); },
-  odLoadFile:              el => odLoadFile(el.dataset.odid, el.dataset.odname),
-  odFolderBack:            ()  => _odFolderBack(),
-  odPickCancel:            ()  => _odPickCancel(),
-  odShowAllFolders:        ()  => _odShowAllFolders(),
-  odScanDocFolder:         el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
-  odImportPhotos:          el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
-  odEnterFolder:           el => _odEnterFolder(el),
-  odPickSelectFile:        el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
-  browserShowSource:       el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
-  browserShowPerson:       el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
-  browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
-  showLightbox:            el => showLightbox(el.src || el.dataset.src),
-  // Statische index.html-Handler (P1-Migration)
-  loadDemo:                ()  => loadDemo(),
-  openModal:               el => openModal(el.dataset.modal),
-  closeModal:              el => closeModal(el.dataset.modal),
-  bnavSearch:              ()  => bnavSearch(),
-  toggleSoundex:           ()  => toggleSoundex(),
-  openMenuModal:           ()  => { openModal('modalMenu'); _odUpdateUI(); },
-  clearYearFilter:         ()  => clearYearFilter(),
-  togglePersonSort:        ()  => togglePersonSort(),
-  toggleAdvFilter:         ()  => toggleAdvFilter(),
-  showPersonMediaBrowser:  ()  => showPersonMediaBrowser(),
-  showFamilyMediaBrowser:  ()  => showFamilyMediaBrowser(),
-  scrollToRepo:            ()  => document.getElementById('repoSection').scrollIntoView({behavior:'smooth'}),
-  showMediaBrowser:        ()  => showMediaBrowser(),
-  showAddSheet:            ()  => showAddSheet(),
-  goBack:                  ()  => goBack(),
-  goForward:               ()  => goForward(),
-  openDetailHistory:       ()  => openDetailHistory(),
-  openTreeHistory:         ()  => openTreeHistory(),
-  showEditSheet:           ()  => showEditSheet(),
-  treeNavBack:             ()  => treeNavBack(),
-  setTreeGens:             el => setTreeGens(+el.dataset.tgen),
-  setFcGens:               el => setFcGens(+el.dataset.gen),
-  toggleFanChart:          ()  => toggleFanChart(),
-  toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
-  showRelPath:             el  => showRelPath(el.dataset.pid),
-  relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
-  showTree:                el  => showTree(el.dataset.id),
-  toggleProband:           el  => _toggleProband(el.dataset.id),
-  bnavTree:                ()  => bnavTree(),
-  bnavTab:                 el => bnavTab(el.dataset.tab),
-  bnavHome:                ()  => bnavHome(),
-  addPerson:               ()  => { closeModal('modalAdd'); showPersonForm(null); },
-  addFamily:               ()  => { closeModal('modalAdd'); showFamilyForm(null); },
-  addSource:               ()  => { closeModal('modalAdd'); showSourceForm(null); },
-  addPlace:                ()  => { closeModal('modalAdd'); showNewPlaceForm(); },
-  addPfExtraName:          ()  => addPfExtraName(),
-  toggleSrcPicker:         el => toggleSrcPicker(el.dataset.prefix),
-  savePerson:              ()  => savePerson(),
-  savePersonAndNew:        ()  => savePerson(true),
-  deletePerson:            ()  => deletePerson(),
-  togglePlaceMode:         el => togglePlaceMode(el.dataset.placeid),
-  addMediaEntry:           el => _addMediaEntry(el.dataset.prefix),
-  saveFamily:              ()  => saveFamily(),
-  deleteFamily:            ()  => deleteFamily(),
-  saveFamEvent:            ()  => saveFamEvent(),
-  deleteFamEvent:          ()  => deleteFamEvent(),
-  applySourceTemplate:     el => _applySourceTemplate(el.dataset.tpl),
-  sfRepoClear:             ()  => sfRepoClear(),
-  openRepoPicker:          ()  => openRepoPicker(),
-  sfToggleMore:            ()  => sfToggleMore(),
-  saveSource:              ()  => saveSource(),
-  deleteSource:            ()  => deleteSource(),
-  addEfMedia:              ()  => addEfMedia(),
-  saveEvent:               ()  => saveEvent(),
-  saveAndCopyEvent:        ()  => saveAndCopyEvent(),
-  applyClipboardEvent:     el  => applyClipboardEventToPerson(el.dataset.pid),
-  deleteEvent:             ()  => deleteEvent(),
-  savePlace:               ()  => savePlace(),
-  saveNewPlace:            ()  => saveNewPlace(),
-  relPickerCreateNew:      ()  => relPickerCreateNew(),
-  saveRepo:                ()  => saveRepo(),
-  deleteRepo:              ()  => deleteRepo(),
-  repoPickerCreateNew:     ()  => repoPickerCreateNew(),
-  menuOdToggle:            ()  => { closeModal('modalMenu'); odToggle(); },
-  menuOdOpen:              ()  => { closeModal('modalMenu'); odOpenFilePicker(); },
-  odSaveFile:              ()  => odSaveFile(),
-  menuSettings:            ()  => { closeModal('modalMenu'); openSettings(); },
-  menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
-  menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
-  menuGrampsExport:        ()  => { closeModal('modalMenu'); exportGRAMPS(); },
-  menuBackup:              ()  => { closeModal('modalMenu'); downloadBackup(); },
-  menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
-  menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
-  menuNewFile:             ()  => { closeModal('modalMenu'); confirmNewFile(); },
-  menuHelp:                ()  => { closeModal('modalMenu'); openModal('modalHelp'); },
-  menuRoundtrip:           ()  => { closeModal('modalMenu'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
-  settingsChangePhoto:     ()  => { closeModal('modalSettings'); odImportPhotos(); },
-  odClearPhotoFolder:      ()  => odClearPhotoFolder(),
-  settingsChangeDoc:       ()  => { closeModal('modalSettings'); odSetupDocFolder(); },
-  odClearDocFolder:        ()  => odClearDocFolder(),
-  odCancelOrClose:         ()  => _odCancelOrClose(),
-  camCapture:              ()  => document.getElementById('am-cam-input').click(),
-  camGallery:              ()  => {
-    const inp = document.getElementById('am-cam-input');
-    inp.removeAttribute('capture');
-    inp.click();
-    setTimeout(() => inp.setAttribute('capture', 'environment'), 500);
-  },
-  odPickFileForMedia:      ()  => odPickFileForMedia(),
-  confirmAddMedia:         ()  => confirmAddMedia(),
-  odPickFileForEditMedia:  ()  => odPickFileForEditMedia(),
-  confirmDeleteMedia:      ()  => confirmDeleteMedia(),
-  confirmEditMedia:        ()  => confirmEditMedia(),
-  helpRoundtrip:           ()  => { closeModal('modalHelp'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
-  menuDedup:               ()  => { closeModal('modalMenu'); openDedupModal(); },
-  menuStats:               ()  => { closeModal('modalMenu'); bnavTab('stats'); },
-  dedupRunScan:            ()  => dedupRunScan(),
-  dedupOpenMerge:          el  => dedupOpenMerge(el),
-  dedupSwapWinner:         ()  => dedupSwapWinner(),
-  dedupIgnorePair:         ()  => dedupIgnorePair(),
-  dedupConfirmMerge:       ()  => dedupConfirmMerge(),
-  openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
-  saveNoteModal:           ()  => saveNoteModal(),
-  saveChildRelDialog:      ()  => saveChildRelDialog(),
-  syncBannerSave:          ()  => _syncBannerSave(),
-  startupChoiceOneDrive:   ()  => _startupChoiceOneDrive(),
-  startupChoiceLocal:      ()  => _startupChoiceLocal(),
-  closeLightbox:           ()  => { document.getElementById('modalLightbox').style.display = 'none'; },
-  lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
-  confirmModalOk:          ()  => { _confirmResolve?.(true); _confirmResolve = null; closeModal('modalConfirm'); },
-  confirmModalCancel:      ()  => closeModal('modalConfirm'),
-  switchPersonsMode:       el  => switchPersonsMode(el.dataset.mode),
-  switchTasksFilter:       el  => switchTasksFilter(el.dataset.filter),
-  showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
-  saveAddTask:             ()  => _saveAddTask(),
-  toggleTask:              el  => _handleToggleTask(el),
-  editTask:                el  => _handleEditTask(el),
-  deleteTask:              el  => _handleDeleteTask(el),
-};
-
-document.addEventListener('click', e => {
-  const el = e.target.closest('[data-action]');
-  if (!el) return;
-  const action = el.dataset.action;
-  if (action === 'stop') { e.stopPropagation(); return; }
-  const fn = _CLICK_MAP[action];
-  if (fn) fn(el, e);
-});
-
-document.addEventListener('change', e => {
-  const el = e.target.closest('[data-change]');
-  if (!el) return;
-  const action = el.dataset.change;
-  if      (action === 'applyPersonFilter') applyPersonFilter();
-  else if (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
-  else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, +el.dataset.citidx, el.value);
-  else if (action === 'onEventTypeChange')    onEventTypeChange();
-  else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
-  else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
-  else if (action === 'amCamChange') {
-    (async () => {
-      const f = el.files[0];
-      if (!f) return;
-      try { const b64 = await resizeImageToBase64(f); _onCamCapture(b64); }
-      catch(err) { showToast('Fehler: ' + err.message); }
-      el.value = '';
-    })();
-  }
-  else if (action === 'photoImportChange') {
-    _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });
-  }
-});
-
-document.addEventListener('input', e => {
-  const el = e.target.closest('[data-input]');
-  if (!el) return;
-  const action = el.dataset.input;
-  if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, +el.dataset.citidx, el.value);
-  else if (action === 'applyPersonFilter') applyPersonFilter();
-  else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
-  else if (action === 'filterSources')   filterSourcesDebounced(el.value);
-  else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
-  else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
-  else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
-  else if (action === 'filterMapPersonList') filterMapPersonList();
-  else if (action === 'renderRelPicker') renderRelPicker(el.value);
-  else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
-  else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
-});
-
-document.addEventListener('blur', e => {
-  const el = e.target.closest('[data-blur]');
-  if (!el) return;
-  if (el.dataset.blur === 'normMonth') {
-    const v = normMonth(el.value);
-    if (v && el.value) el.value = v;
-  }
-}, true);
-
-// openNoteModal / saveNoteModal / _pruneOrphanNotes / _noteRefUsers → ui-views-note.js
-
-// ─────────────────────────────────────
-//  OBJE-REFERENZ-HELPER
-//  Baut Map @Oxx@ → {file, title} aus AppState.db.extraRecords
-// ─────────────────────────────────────
-function _buildObjeRefMap() {
-  const map = {};
-  for (const rec of (AppState.db.extraRecords || [])) {
-    if (!rec._lines || !rec._lines.length) continue;
-    const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
-    if (!hm) continue;
-    const objId = hm[1];
-    let file = '', title = '';
-    for (let i = 1; i < rec._lines.length; i++) {
-      const lm = rec._lines[i].match(/^1 (FILE|TITL) (.+)$/);
-      if (lm) { if (lm[1] === 'FILE') file = lm[2]; else title = lm[2]; }
-    }
-    map[objId] = { file, title };
-  }
-  return map;
-}

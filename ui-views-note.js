@@ -116,10 +116,14 @@ function saveNoteModal() {
     s.text = inlineVal;
     markChanged(); closeModal('modalNote'); showSourceDetail(id);
   } else if (type === 'hof') {
-    if (!AppState.db.hofObjects[id]) AppState.db.hofObjects[id] = { addr: id };
-    AppState.db.hofObjects[id].note = inlineVal;
-    if (!inlineVal && !AppState.db.hofObjects[id].lat) delete AppState.db.hofObjects[id];
-    saveHofObjects();
+    // Single source of truth: Farm-placeObject-Notiz (geräteübergreifend; ruft
+    // savePlaceObjects + markChanged). GEDCOM-Export läuft seit 2c über den [Hof]-
+    // Record, der die Farm-PO-Notiz liest (_hofNoteFor) → kein Sidecar-Write mehr.
+    if (typeof upsertHofPO === 'function') upsertHofPO(id, { note: inlineVal });
+    // Beim Leeren den Sidecar mitbereinigen — sonst resurrektiert die Migration
+    // (_mergeHofObjects liest ihn weiter) die alte Notiz beim nächsten Reload.
+    const side = AppState.db.hofObjects[id];
+    if (!inlineVal && side) { delete side.note; if (side.lat == null) delete AppState.db.hofObjects[id]; saveHofObjects(); }
     markChanged(); closeModal('modalNote'); showHofDetail(id, false);
   }
 }

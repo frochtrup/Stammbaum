@@ -20,6 +20,47 @@ const _odPhotoCache = (() => {
 // Basis-Pfad-Cache (voller OneDrive-Pfad zum GED-Ordner)
 let _odCurrentBasePath = null; // null = nicht geladen; '' = kein Basis-Pfad
 
+// Datei-ID und -Name der zuletzt geladenen Datei (IDB-primär, sync-cached)
+let _odCurFileId   = null;
+let _odCurFileName = null;
+// TREE-CONFLICT: eTag der Datei zum Lade-/Speicher-Zeitpunkt. Beim Speichern als
+// If-Match gesendet → Graph antwortet 412, wenn die Remote-Datei seither (von einem
+// anderen Gerät) geändert wurde → kein lautloses Überschreiben (last-write-wins).
+let _odCurEtag     = null;
+(async () => {
+  _odCurFileId   = await idbGet('od_file_id').catch(() => null);
+  _odCurFileName = await idbGet('od_file_name').catch(() => null);
+  _odCurEtag     = await idbGet('od_etag').catch(() => null);
+  if (_odCurFileId === null) {
+    const ls = localStorage.getItem('od_file_id');
+    if (ls) { _odCurFileId = ls; idbPut('od_file_id', ls).catch(() => {}); localStorage.removeItem('od_file_id'); }
+  }
+  if (_odCurFileName === null) {
+    const ls = localStorage.getItem('od_file_name');
+    if (ls) { _odCurFileName = ls; idbPut('od_file_name', ls).catch(() => {}); localStorage.removeItem('od_file_name'); }
+  }
+})();
+
+// eTag merken (in-memory + IDB). null löscht den gespeicherten Wert.
+function _odSetEtag(tag) {
+  _odCurEtag = tag || null;
+  if (_odCurEtag) idbPut('od_etag', _odCurEtag).catch(() => {});
+  else idbDel('od_etag').catch(() => {});
+}
+
+// eTag der DriveItem-Metadaten holen (ein kleiner Request; /content liefert nur den
+// CDN-eTag des Downloads, nicht den DriveItem-eTag — daher Metadaten-GET).
+async function _odFetchItemEtag(fileId, token) {
+  if (!fileId || !token) return null;
+  try {
+    const r = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}?select=id,eTag,cTag`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) return null;
+    const m = await r.json();
+    return m.eTag || m.cTag || null;
+  } catch (e) { return null; }
+}
+
 async function _odGetBasePath() {
   if (_odCurrentBasePath !== null) return _odCurrentBasePath;
   _odCurrentBasePath = await idbGet('od_base_path').catch(() => null) ?? '';
@@ -235,8 +276,14 @@ async function _odGetSourceFileUrl(srcId, idx) {
 async function openSettings() {
   await _odMigrateIfNeeded();
   openModal('modalSettings');
+  const themePref = (await idbGet('theme_pref').catch(() => null)) || 'auto';
+  applyTheme(themePref);
   const odSection = document.getElementById('set-od-section');
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
+  const privacyAnonEl = document.getElementById('set-privacy-anon');
+  if (privacyAnonEl) privacyAnonEl.checked = AppState.privacyAnon;
+  const privacyYearEl = document.getElementById('set-privacy-year');
+  if (privacyYearEl) privacyYearEl.textContent = new Date().getFullYear() - 100;
   const basePath = await _odGetBasePath();
   const baseEl = document.getElementById('set-base-path');
   if (baseEl) baseEl.value = basePath || '';
@@ -247,7 +294,7 @@ async function openSettings() {
   const cntEl   = document.getElementById('set-photo-count');
   if (nameEl) nameEl.textContent = photoFolder
     ? (photoFolder.relPath || photoFolder.name || '.') : 'nicht konfiguriert';
-  if (clearEl) clearEl.style.display = photoFolder ? '' : 'none';
+  if (clearEl) clearEl.hidden = !photoFolder;
   if (cntEl) {
     let pCount = 0, fCount = 0;
     Object.values(AppState.db?.individuals || {}).forEach(p => { if (p.media?.length) pCount++; });
@@ -261,8 +308,14 @@ async function openSettings() {
   const dCntEl   = document.getElementById('set-doc-count');
   if (dNameEl) dNameEl.textContent = docFolder
     ? (docFolder.relPath || docFolder.name || '.') : 'nicht konfiguriert';
-  if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
+  if (dClearEl) dClearEl.hidden = !docFolder;
   if (dCntEl) dCntEl.textContent = '';
+  // Konfig-Ordner
+  const cfgFolder = await idbGet('od_config_folder').catch(() => null);
+  const cfgNameEl  = document.getElementById('set-config-name');
+  const cfgClearEl = document.getElementById('set-config-clear');
+  if (cfgNameEl)  cfgNameEl.textContent  = cfgFolder ? (cfgFolder.relPath || cfgFolder.name || '.') : 'nicht konfiguriert';
+  if (cfgClearEl) cfgClearEl.hidden      = !cfgFolder;
 }
 
 async function odSetBasePath(val) {
@@ -270,6 +323,49 @@ async function odSetBasePath(val) {
   await idbPut('od_base_path', bp).catch(() => {});
   _odCurrentBasePath = bp;
   _odPhotoCache.clear();
+}
+
+// Ordner-Browser für GED-Startpfad öffnen
+// Startet im konfigurierten GED-Ordner selbst (← Zurück führt zum Parent)
+async function odBrowseBasePath() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
+  _odBasePathMode = true;
+  _odFolderStack = [];
+  closeModal('modalSettings');
+  await _odGetBasePath();
+  const token = await _odGetToken().catch(() => null);
+
+  if (token && _odCurrentBasePath) {
+    try {
+      const encoded = _odCurrentBasePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const res = await fetch(
+        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.id) {
+          _odFolderStack = _odBuildStack(data.parentReference);
+          await _odShowFolder(data.id, data.name || _odCurrentBasePath.split('/').pop());
+          return;
+        }
+      }
+    } catch(e) { console.warn('[OD] Browse base path:', e); }
+  }
+
+  await _odShowFolder('root', 'OneDrive');
+}
+
+// GED-Startpfad aus Ordner-Browser übernehmen
+async function odScanBasePathFolder(folderId, folderName) {
+  closeModal('modalOneDrive');
+  _odBasePathMode = false;
+  const fullPath = [..._odFolderStack.map(f => f.name), folderName]
+    .filter(n => n !== 'OneDrive').join('/');
+  await odSetBasePath(fullPath);
+  showToast(`✓ GED-Ordner: ${fullPath || '/'}`);
+  openSettings();
 }
 
 async function odClearPhotoFolder() {
@@ -293,21 +389,76 @@ async function odClearDocFolder() {
   openSettings();
 }
 
+async function odClearConfigFolder() {
+  await idbDel('od_config_folder').catch(() => {});
+  showToast('Konfig-Ordner zurückgesetzt');
+  openSettings();
+}
+
+// ── App-Datendateien im Konfig-Ordner lesen/schreiben ────────────────────────
+async function _odGetConfigFolder() {
+  return idbGet('od_config_folder').catch(() => null);
+}
+
+async function _odWriteAppData(filename, data) {
+  if (!_odIsConnected()) return false;
+  const token  = await _odGetToken().catch(() => null);
+  if (!token) return false;
+  const folder = await _odGetConfigFolder();
+  if (!folder?.id) return false;
+  try {
+    const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    const blob    = new Blob([content], { type: 'application/json' });
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folder.id}:/${encodeURIComponent(filename)}:/content`,
+      { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob });
+    return res.ok;
+  } catch(e) { console.warn('[OD] _odWriteAppData:', filename, e); return false; }
+}
+
+async function _odReadAppData(filename) {
+  if (!_odIsConnected()) return null;
+  const token  = await _odGetToken().catch(() => null);
+  if (!token) return null;
+  const folder = await _odGetConfigFolder();
+  if (!folder?.id) return null;
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folder.id}:/${encodeURIComponent(filename)}:/content`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) { return null; }
+}
+
 // ── File I/O ──────────────────────────────────────────────────────────────────
+
+const _isGedOrGramps = n => { const l = n.toLowerCase(); return l.endsWith('.ged') || l.endsWith('.gramps'); };
 
 async function odOpenFilePicker() {
   const token = await _odGetToken(); if (!token) return;
-  showToast('Suche GEDCOM-Dateien…');
+  showToast('Suche Dateien in OneDrive…');
   try {
     const seen = new Set();
     const allFiles = [];
     const addFile = f => { if (!seen.has(f.id)) { seen.add(f.id); allFiles.push(f); } };
 
-    // 1) Bekannten Ordner direkt auflisten (sofort aktuell, kein Index-Delay)
+    // Hilfsfunktion: Ordner direkt auflisten (Index-frei, immer aktuell)
+    const _listFolder = async (folderPath) => {
+      const encodedPath = folderPath.split('/').map(encodeURIComponent).join('/');
+      const url = `${OD_GRAPH}/me/drive/root:/${encodedPath}:/children?select=id,name,lastModifiedDateTime,size&$orderby=lastModifiedDateTime desc&top=200`;
+      const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
+      if (!res?.ok) return;
+      const data = await res.json();
+      for (const f of (data.value || [])) { if (_isGedOrGramps(f.name)) addFile(f); }
+    };
+
+    // 1a) Standard-Speicherpfad immer scannen (kein Index-Delay für zuletzt gespeicherte Dateien)
+    await _listFolder('Stammbaum');
+
+    // 1b) Bekannten Basis-Ordner scannen (falls abweichend von Stammbaum/)
     let basePath = await idbGet('od_base_path').catch(() => null);
     // Fallback: Ordner der zuletzt geladenen Datei per od_file_id ermitteln
     if (!basePath) {
-      const lastId = localStorage.getItem('od_file_id');
+      const lastId = _odCurFileId;
       if (lastId) {
         const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${lastId}?select=parentReference`, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
         if (metaRes?.ok) {
@@ -318,32 +469,23 @@ async function odOpenFilePicker() {
         }
       }
     }
-    if (basePath) {
-      // Pfad-Segmente einzeln kodieren (nicht encodeURIComponent auf den ganzen Pfad!)
-      const encodedPath = basePath.split('/').map(encodeURIComponent).join('/');
-      const folderUrl = `${OD_GRAPH}/me/drive/root:/${encodedPath}:/children?select=id,name,lastModifiedDateTime,size&top=200`;
-      const folderRes = await fetch(folderUrl, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
-      if (folderRes?.ok) {
-        const folderData = await folderRes.json();
-        for (const f of (folderData.value || [])) {
-          if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
+    if (basePath && basePath !== 'Stammbaum') await _listFolder(basePath);
+
+    // 2) Suchindex als Fallback für Dateien außerhalb bekannter Ordner
+    for (const ext of ['.ged', '.gramps']) {
+      let url = `${OD_GRAPH}/me/drive/root/search(q='${ext}')?select=id,name,lastModifiedDateTime,size&top=200`;
+      while (url) {
+        const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        for (const f of (data.value || [])) {
+          if (_isGedOrGramps(f.name)) addFile(f);
         }
+        url = data['@odata.nextLink'] || null;
       }
     }
 
-    // 2) Suchindex (findet Dateien in anderen Ordnern, hat aber Delay für neue Dateien)
-    let url = `${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=200`;
-    while (url) {
-      const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      for (const f of (data.value || [])) {
-        if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
-      }
-      url = data['@odata.nextLink'] || null;
-    }
-
-    if (!allFiles.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
+    if (!allFiles.length) { showToast('Keine .ged/.gramps-Dateien in OneDrive gefunden'); return; }
     allFiles.sort((a, b) => (b.lastModifiedDateTime || '').localeCompare(a.lastModifiedDateTime || ''));
     const list = document.getElementById('odFileList');
     if (list) {
@@ -365,21 +507,29 @@ async function odLoadFile(itemId, fileName) {
   closeModal('modalOneDrive');
   const token = await _odGetToken(); if (!token) return;
   showToast('Lade ' + fileName + '…');
+  const isGramps = fileName.toLowerCase().endsWith('.gramps');
   try {
     const res = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}/content`, {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    localStorage.setItem('od_file_id',   itemId);
-    localStorage.setItem('od_file_name', fileName);
-    _processLoadedText(await res.text(), fileName);
-    // Startpfad (od_base_path) aus dem Ordner der GED-Datei ableiten
+    _odCurFileId   = itemId;   idbPut('od_file_id',   itemId).catch(() => {});
+    _odCurFileName = fileName; idbPut('od_file_name', fileName).catch(() => {});
+    if (isGramps) {
+      const blob = await res.blob();
+      await _loadGRAMPS(new File([blob], fileName, { type: 'application/octet-stream' }));
+    } else {
+      _processLoadedText(await res.text(), fileName);
+      showToast('✓ ' + fileName + ' geladen');
+    }
+    // Startpfad (od_base_path) aus dem Ordner der Datei ableiten
     try {
       const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}`, {
         headers: { Authorization: 'Bearer ' + token }
       });
       if (metaRes.ok) {
         const meta = await metaRes.json();
+        _odSetEtag(meta.eTag || meta.cTag); // TREE-CONFLICT: Lade-eTag merken
         const rawPath = meta.parentReference?.path || '';
         const match   = rawPath.match(/\/drive\/root:\/(.*)/);
         const basePath = match ? decodeURIComponent(match[1]) : '';
@@ -388,35 +538,82 @@ async function odLoadFile(itemId, fileName) {
         if (basePath) _odStripBaseFromPaths(basePath);
       }
     } catch(e) { console.warn('[OD] Basis-Pfad ermitteln:', e); }
-    showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
 
-async function odSaveFile() {
+async function odSaveFile(force = false) {
+  if (AppState.db?._grampsMaster) return _odSaveGramps(force);
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
-  const fileId   = localStorage.getItem('od_file_id');
-  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.ged';
   let text;
   try { text = writeGEDCOM(true); } catch(e) { showToast('Fehler beim Schreiben: ' + e.message); return; }
+  // TREE-CONFLICT: eTag nachholen, falls Datei vor diesem Feature geladen wurde
+  if (fileId && !_odCurEtag && !force) _odSetEtag(await _odFetchItemEtag(fileId, token));
   showToast('Speichere in OneDrive… (' + Math.round(text.length/1024) + ' KB)');
   try {
     const url = fileId
       ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
       : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' };
+    if (fileId && _odCurEtag && !force) headers['If-Match'] = _odCurEtag;
     const ctrl = new AbortController();
     const _to = setTimeout(() => ctrl.abort(), 30000);
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' },
-      body: text,
-      signal: ctrl.signal
-    });
+    const res = await fetch(url, { method: 'PUT', headers, body: text, signal: ctrl.signal });
     clearTimeout(_to);
+    if (res.status === 412) return _odHandleSaveConflict(() => odSaveFile(true));
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
     const saved = await res.json().catch(() => ({}));
-    if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
+    if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
+    _odSetEtag(saved.eTag || saved.cTag); // TREE-CONFLICT: neuen eTag übernehmen
+    AppState.changed = false; updateChangedIndicator();
+    const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
+    showToast('✓ In OneDrive gespeichert: ' + _loc);
+  } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
+}
+
+// TREE-CONFLICT: Remote-Datei hat sich seit dem Laden geändert (412). Statt lautlos
+// zu überschreiben → informierte Entscheidung. confirm() wie sonst im Projekt (CSP-safe).
+function _odHandleSaveConflict(forceSaveFn) {
+  showToast('⚠ OneDrive-Konflikt erkannt', 'warn');
+  const ok = confirm(
+    'Die Datei in OneDrive wurde seit dem Öffnen geändert — vermutlich von einem anderen Gerät.\n\n' +
+    'Wenn du jetzt speicherst, überschreibst du diese Remote-Änderungen mit deiner lokalen Version.\n\n' +
+    'OK = trotzdem mit lokaler Version überschreiben\n' +
+    'Abbrechen = nicht speichern (Remote-Version zuerst prüfen, z. B. Menü → Aus OneDrive öffnen)'
+  );
+  if (ok) return forceSaveFn();
+  showToast('Speichern abgebrochen — Remote-Version unverändert', 'info');
+}
+
+async function _odSaveGramps(force = false) {
+  showToast('Verbinde mit OneDrive…');
+  const token = await _odGetToken();
+  if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.gramps';
+  showToast('GRAMPS-Datei wird erstellt …');
+  let blob;
+  try { blob = await writeGRAMPS(AppState.db); } catch(e) { showToast('Fehler: ' + e.message); return; }
+  if (fileId && !_odCurEtag && !force) _odSetEtag(await _odFetchItemEtag(fileId, token));
+  showToast('Speichere in OneDrive… (' + Math.round(blob.size/1024) + ' KB)');
+  try {
+    const url = fileId
+      ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
+      : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/octet-stream' };
+    if (fileId && _odCurEtag && !force) headers['If-Match'] = _odCurEtag;
+    const ctrl = new AbortController();
+    const _to = setTimeout(() => ctrl.abort(), 30000);
+    const res = await fetch(url, { method: 'PUT', headers, body: blob, signal: ctrl.signal });
+    clearTimeout(_to);
+    if (res.status === 412) return _odHandleSaveConflict(() => _odSaveGramps(true));
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
+    const saved = await res.json().catch(() => ({}));
+    if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
+    _odSetEtag(saved.eTag || saved.cTag);
     AppState.changed = false; updateChangedIndicator();
     const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
@@ -426,8 +623,8 @@ async function odSaveFile() {
 // Auto-Load beim App-Start: lädt letzte bekannte Datei von OneDrive (kein Redirect bei Fehler)
 async function odAutoLoadFromOneDrive() {
   await _odMigrateIfNeeded();
-  const fileId   = localStorage.getItem('od_file_id');
-  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.ged';
   if (!fileId) return false;
   const token = await _odRefreshTokenSilent();
   if (!token) return false;
@@ -439,9 +636,16 @@ async function odAutoLoadFromOneDrive() {
     });
     clearTimeout(_to);
     if (!res.ok) return false;
-    _processLoadedText(await res.text(), fileName);
+    if (fileName.toLowerCase().endsWith('.gramps')) {
+      const blob = await res.blob();
+      await _loadGRAMPS(new File([blob], fileName, { type: 'application/octet-stream' }));
+    } else {
+      _processLoadedText(await res.text(), fileName);
+      showToast('☁ ' + fileName + ' von OneDrive geladen');
+    }
+    // TREE-CONFLICT: Lade-eTag erfassen (eigener Metadaten-GET, /content liefert ihn nicht)
+    _odSetEtag(await _odFetchItemEtag(fileId, token));
     _odUpdateUI();
-    showToast('☁ ' + fileName + ' von OneDrive geladen');
     return true;
   } catch(e) {
     clearTimeout(_to);

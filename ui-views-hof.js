@@ -3,6 +3,21 @@
 // ─────────────────────────────────────
 // buildHofIndex() → gedcom.js (Domain-Logik)
 
+let _hofDetailMap = null;
+
+function _initHofDetailMap(lat, lon, title) {
+  if (typeof L === 'undefined') return;
+  const el = document.getElementById('hof-mini-map');
+  if (!el) return;
+  if (_hofDetailMap) { try { _hofDetailMap.remove(); } catch(_) {} _hofDetailMap = null; }
+  _hofDetailMap = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, tap: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_hofDetailMap);
+  _hofDetailMap.setView([lat, lon], 14);
+  L.circleMarker([lat, lon], { radius: 9, color: '#c8793a', fillColor: '#c8793a', fillOpacity: 0.85, weight: 2 })
+    .bindPopup(title).addTo(_hofDetailMap);
+  setTimeout(() => _hofDetailMap?.invalidateSize(), 150);
+}
+
 // Ersten nicht-leeren Teil einer Ortsangabe extrahieren (ignoriert Hierarchie-Prefix)
 // ", Ochtrup" → "Ochtrup"  |  "Ochtrup, Steinfurt" → "Ochtrup"  |  "Ochtrup" → "Ochtrup"
 function _placeFirstPart(place) {
@@ -10,25 +25,43 @@ function _placeFirstPart(place) {
   return place.split(',').map(s => s.trim()).find(s => s.length > 0) || '';
 }
 
-// Adress-Sortierkey: Straße + numerische Hausnummer trennen
-function _addrSortKey(addr) {
-  const line = (addr || '').split('\n')[0].trim();
-  const m = line.match(/^(.*?)\s+(\d+\S*)\s*$/);
-  if (m) return { street: m[1].trim(), nr: parseInt(m[2]) || 0, nrSuffix: m[2].replace(/^\d+/, '') };
-  return { street: line, nr: 0, nrSuffix: '' };
+// Kanonischer Gruppen-Label eines Hofs: bevorzugt PO-Titel des Dorfs via
+// villageId (V2-Höfe nach ADR-027 P3), Fallback auf _placeFirstPart(hof.place).
+// Damit gruppieren „Ochtrup" und „Ochtrup, Westfalen" als identische Sektion.
+function _hofGroupLabel(hof) {
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  // V2-Hof → villageId aus hofObjects[hofId]
+  let villageId = null;
+  if (hof && hof.hofId && AppState.db?.hofObjects?.[hof.hofId]) {
+    const h = AppState.db.hofObjects[hof.hofId];
+    villageId = h.villageId || null;
+  }
+  // Fallback: Farm-PO (ADR-026 pre-Phase-3)
+  if (!villageId && hof && hof.placeId && AppState.db?.placeObjects?.[hof.placeId]) {
+    const po = AppState.db.placeObjects[hof.placeId];
+    if (po.enclosedBy && po.enclosedBy[0]) villageId = po.enclosedBy[0].placeId;
+    if (!villageId) villageId = po.parentId || null;
+  }
+  if (reg && villageId && reg.byId[villageId]) return reg.byId[villageId].title || '';
+  // Fallback: String-Ort des Events
+  return _placeFirstPart(hof.place) || '';
 }
 
+// ADR-028 v1032: hausnummern-aware Sortierung via Intl.Collator(numeric:true).
+// „Wall 33" vor „Wall 100" (90 vor 100), „Hof 5a" vor „Hof 5b", funktioniert
+// auch wenn die Hausnummer nicht am Ende steht oder die Adresse mehrzeilig ist.
+const _ADDR_COLLATOR = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+
 function _hofSortFn(a, b) {
-  // 1. Ort — nur erster Teil der Hierarchie, damit ", Ochtrup" = "Ochtrup"
-  const pc = _placeFirstPart(a.place).localeCompare(_placeFirstPart(b.place), 'de');
+  // 1. Gruppen-Label (Dorf — kanonisch via villageId/PO-Titel) als Primär-Sortierung
+  const ga = _hofGroupLabel(a), gb = _hofGroupLabel(b);
+  const pc = ga.localeCompare(gb, 'de');
   if (pc !== 0) return pc;
-  // 2. Straße
-  const sa = _addrSortKey(a.addr), sb = _addrSortKey(b.addr);
-  const sc = sa.street.localeCompare(sb.street, 'de');
-  if (sc !== 0) return sc;
-  // 3. Hausnummer numerisch
-  if (sa.nr !== sb.nr) return sa.nr - sb.nr;
-  return sa.nrSuffix.localeCompare(sb.nrSuffix, 'de');
+  // 2. Adresse — kollator-basiert numerisch korrekt
+  return _ADDR_COLLATOR.compare(
+    (a.addr || '').replace(/\n/g, ' ').trim(),
+    (b.addr || '').replace(/\n/g, ' ').trim()
+  );
 }
 
 function renderHofList(sorted) {
@@ -44,10 +77,11 @@ function renderHofList(sorted) {
   let html = '';
   let lastSep = '';
   for (const hof of sorted) {
-    // Alpha-Separator: erster Buchstabe des normalisierten Orts (oder Adresse als Fallback)
-    const sepSrc = _placeFirstPart(hof.place) || hof.addr;
-    const sep = sepSrc[0].toUpperCase();
-    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
+    // ADR-027 P5 + ADR-028 v1032: Höfe sind nach Dorf-Identität gruppiert
+    // (kanonisch via villageId → po.title). Damit landen „Ochtrup" und
+    // „Ochtrup, Westfalen" in derselben Sektion. Höfe ohne Dorf unter „—".
+    const sep = _hofGroupLabel(hof) || '—';
+    if (sep !== lastSep) { html += `<div class="alpha-sep">${esc(sep)}</div>`; lastSep = sep; }
 
     const count      = new Set(hof.entries.map(e => e.pid)).size;
     const propCount  = new Set((hof.propEntries || []).map(e => e.pid)).size;
@@ -56,16 +90,18 @@ function renderHofList(sorted) {
     const minYr  = dates.length ? dates[0].slice(0,4)  : '';
     const maxYr  = dates.length ? dates[dates.length-1].slice(0,4) : '';
     const range  = minYr && maxYr && minYr !== maxYr ? `${minYr}–${maxYr}` : (minYr || '');
-    const hofMeta   = AppState.db.hofObjects?.[hof.addr];
-    const hasCoords = hofMeta?.lat && hofMeta?.long;
-    const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
+    const meta      = hofMeta(hof);   // Farm-placeObject primär, hofObjects-Sidecar Fallback
+    const hasCoords = meta.lat != null && meta.long != null;
+    const hasNote   = !!meta.note;
+    const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '')
+                    + (hasNote   ? '<span class="c-dim  mr-4">📝</span>' : '')
+                    + esc(hof.addr).replace(/\n/g, ' · ');
     const metaParts = [];
     if (hof.place) metaParts.push(esc(compactPlace(hof.place)));
     metaParts.push(`${count} Person${count !== 1 ? 'en' : ''}`);
     if (propCount) metaParts.push(`${propCount} Eigentümer`);
     if (range) metaParts.push(range);
     html += `<div class="person-row" data-action="showHofDetail" data-addr="${esc(hof.addr)}">
-      <div class="p-avatar fs-md">🏠</div>
       <div class="p-info">
         <div class="p-name">${addrLine}</div>
         <div class="p-meta">${metaParts.join(' · ')}</div>
@@ -306,17 +342,43 @@ function _initHofPersonSearchFor(prefix) {
   });
 }
 
+// Öffnet das Hof-Detail direkt per hofId (z.B. aus dem Validator-Panel im Orte-Tab).
+// Leitet auf showHofDetail(addr) um wenn der Hof im buildHofIndex bekannt ist,
+// sonst zeigt es das Orphan-Detail (hofObject ohne Event-Bezug).
+function showHofDetailById(hofId) {
+  if (!hofId) return;
+  // Versuche den Hof über buildHofIndex zu finden (der byAddr-Wrapper greift auch auf hofId-keyed Einträge zu).
+  const hoefe = buildHofIndex();
+  const hof = hoefe.get(hofId);
+  if (hof) { showHofDetail(hof.addr || hofId, true); return; }
+  // Orphan-Pfad: hofObject existiert aber hat keine Events — Detail direkt zeigen.
+  showHofDetail(hofId, true);
+}
+
 function showHofDetail(addr, pushHistory = true) {
   const hoefe = buildHofIndex();
   const hof   = hoefe.get(addr);
-  if (!hof) return;
+
+  // Orphan-Pfad: hofObject vorhanden, aber kein Event referenziert diesen Hof mehr.
+  if (!hof) {
+    const ho = AppState.db?.hofObjects?.[addr];
+    if (!ho || (typeof _isHofObjectV2 === 'function' && !_isHofObjectV2(ho))) return;
+    _showOrphanHofDetail(addr, ho, pushHistory);
+    return;
+  }
   if (pushHistory) _beforeDetailNavigate();
   AppState.currentPersonId = null; AppState.currentFamilyId = null;
   AppState.currentSourceId = null; AppState.currentRepoId = null;
 
   document.getElementById('detailTopTitle').textContent = 'Hof';
   document.getElementById('editBtn').style.display = 'none';
-  document.getElementById('treeBtn').hidden = true;
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
 
   const addrDisplay = esc(addr).replace(/\n/g, '<br>');
   const allEntries = [
@@ -334,6 +396,26 @@ function showHofDetail(addr, pushHistory = true) {
     <div class="detail-name">${addrDisplay}</div>
     <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
+
+  // ADR-027 P5: Adress-Historie aus V2-hofObject (z.B. „bis 1900: Schulze-Hof").
+  // Nur sichtbar, wenn der Hof migriert ist (hof.hofId) UND mehrere addrs-Einträge
+  // existieren. Reine 1-Adresse-Höfe zeigen die Section nicht (unnötiges Rauschen).
+  const _v2 = hof.hofId ? AppState.db.hofObjects?.[hof.hofId] : null;
+  if (_v2 && Array.isArray(_v2.addrs) && _v2.addrs.length > 1) {
+    const histLines = _v2.addrs.map(a => {
+      if (!a.value) return null;
+      if (a.dateFrom && a.dateTo) return `<li><b>${esc(a.dateFrom)}–${esc(a.dateTo)}:</b> ${esc(a.value)}</li>`;
+      if (a.dateTo)   return `<li><b>bis ${esc(a.dateTo)}:</b> ${esc(a.value)}</li>`;
+      if (a.dateFrom) return `<li><b>ab ${esc(a.dateFrom)}:</b> ${esc(a.value)}</li>`;
+      return `<li>${esc(a.value)}</li>`;
+    }).filter(Boolean).join('');
+    if (histLines) {
+      html += `<div class="section fade-up">
+        <div class="section-title">Adress-Historie</div>
+        <ul class="addrs-history" style="margin:0;padding:8px 0 8px 22px;line-height:1.5">${histLines}</ul>
+      </div>`;
+    }
+  }
 
   html += _renderHofRenameSection(addr);
   html += _renderHofCoordSection(addr);
@@ -367,26 +449,107 @@ function showHofDetail(addr, pushHistory = true) {
   html += _renderAddBewohnerForm(addr);
   html += _renderAddPropForm(addr);
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailPlace').innerHTML = html;
+  _activateDetailContainer('detailPlace', addr);
   _initHofFormEvents();
   showView('v-detail');
+  const meta = hofMeta(hof);
+  if (meta.lat != null && meta.long != null) _initHofDetailMap(meta.lat, meta.long, addr.split('\n')[0]);
+}
+
+// Detail-View für orphaned hofObjects (kein Event referenziert diesen Hof mehr).
+// Zeigt Name, Dorf-Info und einen Löschen-Button.
+function _showOrphanHofDetail(hofId, ho, pushHistory) {
+  if (pushHistory) _beforeDetailNavigate();
+  AppState.currentPersonId = null; AppState.currentFamilyId = null;
+  AppState.currentSourceId = null; AppState.currentRepoId = null;
+
+  document.getElementById('detailTopTitle').textContent = 'Hof (verwaist)';
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
+
+  const title = (ho.addrs && ho.addrs[0] && ho.addrs[0].value) || hofId;
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const villageTitle = (reg && ho.villageId && reg.byId[ho.villageId])
+    ? reg.byId[ho.villageId].title : (ho.villageId || '');
+
+  const html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar hof">🏠</div>
+    <div class="detail-name">${esc(title)}</div>
+    <div class="detail-id">${villageTitle ? esc(villageTitle) + ' · ' : ''}Keine Bewohner / Eigentümer in den Daten</div>
+  </div>
+  <div class="section fade-up">
+    <div class="section-title">Verwaister Hof-Eintrag</div>
+    <p class="modal-hint" style="margin:8px 0 16px">Dieser Hof ist in der Strukturdatei gespeichert, aber kein RESI- oder PROP-Event verweist mehr darauf. Er kann sicher gelöscht werden.</p>
+    <button type="button" class="btn btn-danger" data-action="deleteHofObject" data-hofid="${esc(hofId)}">🗑 Hof löschen</button>
+  </div>`;
+
+  document.getElementById('detailPlace').innerHTML = html;
+  _activateDetailContainer('detailPlace', hofId);
+  showView('v-detail');
+}
+
+// Löscht ein hofObject (inkl. zugehöriges Farm-placeObject) aus der Datenbank.
+function deleteHofObject(hofId) {
+  if (!hofId || !AppState.db?.hofObjects?.[hofId]) return;
+  const ho = AppState.db.hofObjects[hofId];
+  // Zugehöriges Farm-placeObject entfernen, falls vorhanden
+  const pos = AppState.db.placeObjects || {};
+  for (const [pid, po] of Object.entries(pos)) {
+    if ((po.type === 'Farm' || po.type === 'Building')
+        && (po.enclosedBy || []).some(en => en.placeId === ho.villageId)
+        && typeof _normPlaceName === 'function') {
+      const addrTitle = (ho.addrs && ho.addrs[0] && ho.addrs[0].value) || '';
+      if (addrTitle && _normPlaceName(po.title) === _normPlaceName(addrTitle)) {
+        delete pos[pid];
+        UIState._placeRegistry = null;
+        UIState._placesCache   = null;
+        break;
+      }
+    }
+  }
+  delete AppState.db.hofObjects[hofId];
+  UIState._hofCache    = null;
+  UIState._hofRegistry = null;
+  if (typeof saveHofObjects === 'function') saveHofObjects();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  markChanged();
+  showToast('✓ Hof-Eintrag gelöscht');
+  // Zurück zur Höfe-Liste
+  if (typeof switchPlacesSubTab === 'function') {
+    switchPlacesSubTab('hoefe');
+  } else {
+    goBack();
+  }
+  if (typeof renderHofList === 'function') renderHofList();
+  if (typeof _updateHofReviewBadge === 'function') _updateHofReviewBadge();
+  if (typeof _refreshHofMergeBadge === 'function') _refreshHofMergeBadge();
 }
 
 // ── Koordinaten-Sektion ──────────────────────────────────────────────────────
 
 function _renderHofCoordSection(addr) {
-  const m    = AppState.db.hofObjects?.[addr];
-  const lat  = m?.lat ?? '';
-  const long = m?.long ?? '';
+  const m    = hofMeta(buildHofIndex().get(addr) || { addr });  // Farm-PO primär, Sidecar Fallback
+  const lat  = m.lat  ?? '';
+  const long = m.long ?? '';
   const addrAttr = esc(addr);
 
   let body = '';
   if (lat && long) {
     const mapsUrl = `https://maps.apple.com/?ll=${encodeURIComponent(lat)},${encodeURIComponent(long)}&q=${encodeURIComponent(compactPlace(addr))}`;
-    body = `<div class="hof-coord-body">
-      <span class="hof-coord-val">${esc(String(lat))}° N &nbsp; ${esc(String(long))}° E</span>
-      <a href="${mapsUrl}" target="_blank" class="hof-map-link">Karte öffnen</a>
-    </div>`;
+    const osmUrl  = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${long}#map=14/${lat}/${long}`;
+    body = `<div class="place-map-wrap"><div id="hof-mini-map"></div></div>
+    <div class="place-map-links">
+      <a href="${mapsUrl}" target="_blank" class="place-maps-link">🗺 Apple Maps</a>
+      <a href="${osmUrl}"  target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
+    </div>
+    <div class="place-map-coords">${esc(String(lat))}, ${esc(String(long))}</div>`;
   } else {
     body = `<div class="hof-coord-no-data">Keine Koordinaten hinterlegt</div>`;
   }
@@ -435,24 +598,24 @@ function saveHofCoord(addr) {
     showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
     return;
   }
-  if (!AppState.db.hofObjects[addr]) AppState.db.hofObjects[addr] = { addr };
-  AppState.db.hofObjects[addr].lat  = lat;
-  AppState.db.hofObjects[addr].long = lon;
-  saveHofObjects();
+  // Single source of truth: Farm-placeObject (geräteübergreifend via savePlaceObjects,
+  // überlebt Reload aus IDB seit v995). Sidecar wird NICHT mehr geschrieben (read-only
+  // Legacy: die Migration liest ihn weiter für unmigrierte Altbestände).
+  upsertHofPO(addr, { lat, long: lon });   // ruft savePlaceObjects + markChanged
   invalidatePlacePersonIndex?.();
-  markChanged();
   showToast('✓ Koordinaten gespeichert');
   showHofDetail(addr, false);
 }
 
 function deleteHofCoord(addr) {
+  // Farm-placeObject-Koords löschen (primär)
+  const hof = (typeof buildHofIndex === 'function') ? buildHofIndex().get(addr) : null;
+  const fpo = hof && hof.placeId ? AppState.db.placeObjects?.[hof.placeId] : null;
+  if (fpo) { fpo.lat = null; fpo.long = null; if (typeof savePlaceObjects === 'function') savePlaceObjects(); }
+  // Sidecar (dual-write): Eintrag bewusst behalten, nur Koords entfernen.
   const m = AppState.db.hofObjects[addr];
-  if (!m) return;
-  delete m.lat;
-  delete m.long;
-  // Eintrag bewusst behalten (auch ohne Note): beim Reload überschreibt er
-  // _derivedHofObjectsFromDb(), sonst kommen die Koordinaten aus den Events zurück.
-  saveHofObjects();
+  if (m) { delete m.lat; delete m.long; saveHofObjects(); }
+  UIState._hofCache = null;
   invalidatePlacePersonIndex?.();
   markChanged();
   showHofDetail(addr, false);
@@ -461,8 +624,7 @@ function deleteHofCoord(addr) {
 // ── Notiz-Sektion ─────────────────────────────────────────────────────────────
 
 function _renderHofNoteSection(addr) {
-  const m    = AppState.db.hofObjects?.[addr];
-  const note = m?.note || '';
+  const note = hofMeta(buildHofIndex().get(addr) || { addr }).note || '';  // Farm-PO primär
   const addrAttr = esc(addr);
   const body = note
     ? `<div class="hof-note-body">${esc(note)}</div>`
@@ -620,6 +782,11 @@ function saveHofRename(oldAddr) {
   if (!newAddr) { showToast('Adresse darf nicht leer sein', 'warn'); return; }
   if (newAddr === oldAddr) { cancelHofRename(); return; }
 
+  // Alte Hof-Meta (Farm-PO bevorzugt) sichern, BEVOR die Events umgehängt werden.
+  const oldHof   = buildHofIndex().get(oldAddr);
+  const oldMeta  = oldHof ? hofMeta(oldHof) : { lat: null, long: null, note: '' };
+  const oldFarmId = oldHof && oldHof.placeId || null;
+
   // Alle RESI/PROP-Ereignisse aller Personen aktualisieren
   let count = 0;
   for (const p of Object.values(AppState.db.individuals)) {
@@ -631,15 +798,195 @@ function saveHofRename(oldAddr) {
     }
   }
 
-  // hofObjects-Key migrieren
+  // hofObjects-Sidecar-Key migrieren (Legacy-read bleibt konsistent)
   if (AppState.db.hofObjects?.[oldAddr]) {
     AppState.db.hofObjects[newAddr] = { ...AppState.db.hofObjects[oldAddr], addr: newAddr };
     delete AppState.db.hofObjects[oldAddr];
     saveHofObjects();
   }
 
+  UIState._hofCache = null;   // buildHofIndex/_ensureHofFarmPO sollen die neuen addr sehen
+  // Farm-PO für neue Adresse anlegen + Koords/Notiz übertragen, Events umhängen
+  upsertHofPO(newAddr, { lat: oldMeta.lat, long: oldMeta.long, note: oldMeta.note || '' });
+  // Altes Farm-PO entfernen, wenn verwaist (kein Event zeigt mehr darauf)
+  if (oldFarmId && AppState.db.placeObjects[oldFarmId]) {
+    const stillUsed = Object.values(AppState.db.individuals)
+      .some(p => (p.events || []).some(ev => ev.placeId === oldFarmId));
+    if (!stillUsed) { delete AppState.db.placeObjects[oldFarmId]; if (typeof savePlaceObjects === 'function') savePlaceObjects(); }
+  }
+
   UIState._hofCache = null;
   markChanged();
   showToast(`Adresse aktualisiert (${count} Ereignis${count !== 1 ? 'se' : ''})`, 'success');
   showHofDetail(newAddr, false);
+}
+
+// ─── ADR-027 P5: „Hof-Zuweisungen prüfen" — Review-UI ────────────────────────
+// Liest die Liste über _findUnresolvedHofEvents (data-layer in gedcom.js), rendert
+// als Tabelle. Pro Zeile drei Aktionen: bestehenden Hof aus Dropdown wählen,
+// neuen Hof aus diesem Event anlegen (legt V2-hofObject mit addrs[0]=ev.addr an),
+// oder Ignorieren (persistiert per Datei).
+
+function _updateHofReviewBadge() {
+  const el = document.getElementById('hofReviewBadge');
+  const btn = document.getElementById('hofReviewBtn');
+  if (!el || !btn) return;
+  const n = (typeof _countUnresolvedHofEvents === 'function') ? _countUnresolvedHofEvents() : 0;
+  if (n > 0) { el.textContent = String(n); el.hidden = false; btn.setAttribute('aria-label', `Hof-Zuweisungen prüfen (${n})`); }
+  else       { el.hidden = true; btn.setAttribute('aria-label', 'Hof-Zuweisungen prüfen'); }
+}
+
+function openHofReviewModal(focusKey) {
+  renderHofReview(focusKey);
+  openModal('modalHofReview');
+}
+
+// ADR-028 P5 (v1033): Klassen-Definitionen für Hof-Review. Nur drei Klassen,
+// alle mit ev.addr — PLAC-Lücken (frühere Klassen B/E) sind keine Hof-Themen
+// und gehören in einen separaten Orts-Review (offen).
+const _HOF_REVIEW_CLASS_META = {
+  A: { label: 'A', color: '#999',
+       title: 'Event-Typ ohne Hof-Semantik (BIRT/DEAT/EDUC/GRAD/…). Vermutlich Krankenhaus, Kirche, Schule, Friedhof — nicht Hof.' },
+  C: { label: 'C', color: '#b03030',
+       title: 'Mehrdeutig: mehrere Höfe gleicher Adresse im Dorf' },
+  D: { label: 'D', color: '#3070b0',
+       title: 'Adresse matcht keinen Hof, Höfe existieren aber im Dorf — Variante zum Hof hinzufügen oder Hof wählen' },
+};
+
+function renderHofReview(focusKey) {
+  const body = document.getElementById('hofReviewBody');
+  if (!body) return;
+  const rows = (typeof _findUnresolvedHofEvents === 'function')
+    ? _findUnresolvedHofEvents(AppState.db) : [];
+  if (!rows.length) {
+    body.innerHTML = '<div class="empty empty-pad">✓ Alle Hof-Zuweisungen aufgelöst</div>';
+    return;
+  }
+  // Höfe nach Dorf indizieren — für das Pro-Zeile-Dropdown
+  const hofsByVillage = {};
+  for (const [hid, h] of Object.entries(AppState.db.hofObjects || {})) {
+    if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+    (hofsByVillage[h.villageId] || (hofsByVillage[h.villageId] = [])).push({ id: hid, title: (h.addrs && h.addrs[0] && h.addrs[0].value) || hid });
+  }
+  let html = '<div class="hof-review-list" style="display:flex;flex-direction:column;gap:8px">';
+  for (const r of rows) {
+    const isFocus = focusKey && focusKey === r.key;
+    const cls = r._class || 'A';
+    const meta = _HOF_REVIEW_CLASS_META[cls] || _HOF_REVIEW_CLASS_META.A;
+    const hofsInVillage = (r.placeId && hofsByVillage[r.placeId]) || [];
+    const placeLabel = r.place ? esc(compactPlace(r.place)) : '<em style="color:#aaa">— ohne Dorf —</em>';
+    const addrLabel  = r.addr  ? `📍 ${esc(r.addr)} · ` : '';
+
+    // ADR-028 P5: Klassen-bewusste Aktions-Matrix
+    //   A: + neu anlegen (wenn placeId) | Quelle schärfen
+    //   B: Quelle schärfen
+    //   C: Hof wählen | Quelle schärfen
+    //   D: Variante zum Hof hinzufügen (Dropdown) | Hof wählen | Quelle schärfen
+    //   E: Quelle schärfen
+    const opts = '<option value="">Hof wählen…</option>'
+      + hofsInVillage.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+    const sharpBtn = `<button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewSharpenSource" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem" title="Event-Detail öffnen, um PLAC/ADDR zu schärfen">Quelle schärfen</button>`;
+    const newBtn   = (r.placeId)
+      ? `<button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewCreateNew" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">+ Hof anlegen</button>` : '';
+    const pickSel  = (hofsInVillage.length)
+      ? `<select class="form-select" style="max-width:200px" data-change="hofReviewAssign" data-key="${esc(r.key)}">${opts}</select>` : '';
+    const variantSel = (cls === 'D' && hofsInVillage.length)
+      ? `<select class="form-select" style="max-width:240px" data-change="hofReviewAddVariant" data-key="${esc(r.key)}">
+           <option value="">Variante zum Hof…</option>
+           ${hofsInVillage.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('')}
+         </select>` : '';
+
+    let actions = '';
+    if (cls === 'A') actions = newBtn + ' ' + sharpBtn;
+    else if (cls === 'B') actions = sharpBtn;
+    else if (cls === 'C') actions = pickSel + ' ' + sharpBtn;
+    else if (cls === 'D') actions = variantSel + ' ' + pickSel + ' ' + newBtn + ' ' + sharpBtn;
+    else if (cls === 'E') actions = sharpBtn;
+    else actions = sharpBtn;
+
+    html += `<div class="hof-review-row" data-key="${esc(r.key)}" style="border:1px solid var(--border,#ddd);border-radius:6px;padding:8px 10px;${isFocus ? 'box-shadow:0 0 0 2px var(--accent,#b88c2e)' : ''}">
+      <div style="font-weight:600;display:flex;align-items:center;gap:8px">
+        <span class="hof-review-class" title="${esc(meta.title)}" style="background:${meta.color};color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:3px;font-weight:700">${esc(meta.label)}</span>
+        <span>${esc(r.personName)}</span>
+      </div>
+      <div style="font-size:0.85rem;color:var(--text-dim,#666);margin:2px 0 6px">${esc(r.evType || 'Event')}${r.evDate ? ' · ' + esc(r.evDate) : ''} · ${addrLabel}${placeLabel}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${actions}</div>
+    </div>`;
+  }
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+// Pro-Zeile-Aktion: bestehenden Hof via Dropdown wählen.
+function hofReviewAssign(selectEl) {
+  const key = selectEl.dataset.key;
+  const hofId = selectEl.value;
+  if (!key || !hofId) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (typeof applyHofToEvent === 'function' && applyHofToEvent(row.ev, hofId)) {
+    showToast('✓ Event mit Hof verknüpft', 'success');
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
+}
+
+// ADR-028 P5 Pro-Zeile-Aktion (Klasse D): ev.addr als neue addrs[]-Variante an
+// einen bestehenden Hof anhängen + linken. Nächster Load: Pfad B matcht deter-
+// ministisch über die neue Variante; gleichartige Events anderer Personen
+// werden auto-aufgelöst (universelle Daten-Anreicherung in orte.json).
+function hofReviewAddVariant(selectEl) {
+  const key = selectEl.dataset.key;
+  const hofId = selectEl.value;
+  if (!key || !hofId) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (typeof addHofAddrVariantAndLink === 'function'
+      && addHofAddrVariantAndLink(row.ev, hofId)) {
+    showToast('✓ Adress-Variante am Hof gespeichert + Event verknüpft', 'success');
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
+}
+
+// ADR-028 P5 Pro-Zeile-Aktion (alle Klassen): Event-Detail öffnen, damit der
+// User PLAC/ADDR direkt schärfen kann. Delegiert an showDetail(pid) — die
+// Personen-Ansicht zeigt das Event editierbar. Nach Schärfung + Save greift
+// der Link-Pass beim nächsten Load.
+function hofReviewSharpenSource(btn) {
+  const key = btn.dataset.key;
+  if (!key) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  closeModal('modalHofReview');
+  if (typeof showDetail === 'function') {
+    showDetail(row.pid);
+    showToast('ℹ Event-Detail geöffnet — PLAC/ADDR schärfen, dann speichern', 'info');
+  }
+}
+
+// Pro-Zeile-Aktion: neuen V2-Hof aus diesem Event anlegen. Nutzt ev.addr als
+// initialen addrs-Eintrag (undatiert), ev.placeId als villageId. Wenn ev.placeId
+// fehlt, kein Anlegen möglich (Dorf ist Pflicht im V2-Modell).
+function hofReviewCreateNew(btn) {
+  const key = btn.dataset.key;
+  if (!key) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (!row.placeId) {
+    showToast('⚠ Event hat kein Dorf — bitte zuerst Ort verknüpfen', 'warn');
+    return;
+  }
+  // ADR-028 P5: deterministische ID via findOrCreateHofObject — idempotent
+  // gegen bestehende V2-Höfe gleicher (norm-addr, villageId), gleiches ID-
+  // Schema wie Pfad C, weniger Duplikat-Logik vor Ort.
+  if (typeof findOrCreateHofObject === 'function') {
+    const hofId = findOrCreateHofObject(row.addr, row.placeId);
+    if (hofId && typeof applyHofToEvent === 'function') {
+      applyHofToEvent(row.ev, hofId);
+      showToast('✓ Hof angelegt + Event verknüpft', 'success');
+      renderHofReview();
+      _updateHofReviewBadge();
+    }
+  }
 }

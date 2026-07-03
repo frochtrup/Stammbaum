@@ -1,4 +1,21 @@
 // ─────────────────────────────────────
+//  Item 13: GOV-Platzhalter-Toast nach Load
+// ─────────────────────────────────────
+// Wenn placeObjects unaufgelöste GOV-IDs enthalten, User informieren.
+// Delayed (1.5s), damit andere Load-Toasts nicht überschrieben werden.
+function _toastUnresolvedGov() {
+  const pos = AppState.db?.placeObjects;
+  if (!pos) return;
+  let n = 0;
+  for (const po of Object.values(pos)) if (po._govUnresolved) n++;
+  if (!n) return;
+  setTimeout(() => {
+    if (typeof showToast === 'function')
+      showToast(`ℹ ${n} Ort${n !== 1 ? 'e' : ''} mit offener GOV-ID — im Orte-Tab via ⚙-Filter sehen, dann GOV-Text einfügen oder gov-enrich.py nutzen`, 'info');
+  }, 1500);
+}
+
+// ─────────────────────────────────────
 //  INDEXEDDB HELPERS (für Dir-Handle)
 // ─────────────────────────────────────
 let _idb = null;
@@ -49,9 +66,11 @@ function updateSaveIndicator() {
     else btn.classList.remove('direct-save');
   });
 }
-function updateTopbarTitle(filename) {
+function updateTopbarTitle(filename, isGramps = false) {
   const el = document.getElementById('topbarFileName');
   if (el) el.textContent = filename ? ' · ' + filename : '';
+  const badge = document.getElementById('grampsBadge');
+  if (badge) badge.hidden = !isGramps;
 }
 
 // Prüft ob createWritable() für diesen Handle tatsächlich funktioniert.
@@ -88,11 +107,17 @@ async function openFilePicker() {
     await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
+    AppState._fileLastModified = file.lastModified;
     if (file.name.toLowerCase().endsWith('.gramps')) {
-      // GRAMPS: async path, no direct-save
-      AppState._fileHandle = null; AppState._canDirectSave = false;
-      updateSaveIndicator();
+      // _loadGRAMPS setzt _canDirectSave=false — vorher sichern und danach wiederherstellen
+      const savedHandle  = AppState._fileHandle;
+      const savedCanSave = AppState._canDirectSave;
       await _loadGRAMPS(file);
+      AppState._fileHandle     = savedHandle;
+      AppState._canDirectSave  = savedCanSave;
+      updateSaveIndicator();
+      const saveInfo = savedCanSave ? ' · Direktes Speichern aktiv' : '';
+      showToast('✓ ' + file.name + ' geladen' + saveInfo);
     } else {
       _processLoadedText(await file.text(), file.name);
       const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
@@ -113,6 +138,7 @@ async function restoreFileHandle() {
     if (perm === 'granted') {
       AppState._fileHandle = fh;
       AppState._canDirectSave = await testCanWrite(fh);
+      try { AppState._fileLastModified = (await fh.getFile()).lastModified; } catch(_) {}
       updateSaveIndicator();
     }
   } catch(e) {}
@@ -131,9 +157,14 @@ async function saveToFileHandle(content) {
       updateSaveIndicator();
       return false;
     }
+    const curFile = await AppState._fileHandle.getFile();
+    if (AppState._fileLastModified && curFile.lastModified !== AppState._fileLastModified) {
+      if (!confirm('Datei wurde extern verändert — trotzdem überschreiben?')) return false;
+    }
     w = await AppState._fileHandle.createWritable();
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
+    try { AppState._fileLastModified = (await AppState._fileHandle.getFile()).lastModified; } catch(_) {}
     AppState.changed = false; updateChangedIndicator();
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');
@@ -141,10 +172,38 @@ async function saveToFileHandle(content) {
   } catch(e) {
     if (w) { try { await w.abort(); } catch(_) {} }
     if (e.name === 'NotAllowedError') {
-      // Datei möglicherweise durch Cloud-Sync gesperrt → Retry anbieten
       showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
     } else {
       console.error('saveToFileHandle:', e.name, e.message);
+      showToast('⚠ Fehler beim Speichern: ' + (e.message || e.name));
+    }
+    return false;
+  }
+}
+
+async function saveToFileHandleBinary(blob) {
+  let w = null;
+  try {
+    let perm = await AppState._fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await AppState._fileHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      AppState._fileHandle = null; AppState._canDirectSave = false;
+      idbDel('fileHandle').catch(() => {});
+      updateSaveIndicator();
+      return false;
+    }
+    w = await AppState._fileHandle.createWritable();
+    await w.write(blob);
+    await w.close(); w = null;
+    AppState.changed = false; updateChangedIndicator();
+    showToast('✓ Direkt gespeichert');
+    return true;
+  } catch(e) {
+    if (w) { try { await w.abort(); } catch(_) {} }
+    if (e.name === 'NotAllowedError') {
+      showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
+    } else {
+      console.error('saveToFileHandleBinary:', e.name, e.message);
       showToast('⚠ Fehler beim Speichern: ' + (e.message || e.name));
     }
     return false;
@@ -163,27 +222,38 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
-async function exportGEDCOM() {
-  const content  = writeGEDCOM(true);
+async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false, forceStrict = false) {
+  const isAnon   = AppState.privacyAnon;
+  const isStrict = forceStrict;
+  if (!forceGEDCOM && !isAnon && !forceGed7 && !isStrict && AppState.db?._grampsMaster) return exportGRAMPS(true);
+  let content;
+  try { content = writeGEDCOM(true, forceGed7, isStrict); }
+  catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
-  const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const basename = filename.replace(/\.ged$/i, '');
+  // Anon/GED7/Strict: nie Originaldatei überschreiben — immer Download mit Suffix
+  const exportFilename = isAnon    ? `${basename}_anon.ged`
+                       : forceGed7 ? `${basename}_ged7.ged`
+                       : isStrict  ? `${basename}_strict.ged`
+                       : filename;
+  const _forceDownload = isAnon || forceGed7 || isStrict;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
   if (isIOS && navigator.canShare) {
-    const basename   = filename.replace(/\.ged$/i, '');
     const now        = new Date();
     const today      = now.toISOString().slice(0, 10);
     const time       = now.toTimeString().slice(0, 8).replace(/:/g, '');
-    const backupName = `${basename}_${today}_${time}.ged`;
-    const mainFile   = new File([content], filename,   { type: 'text/plain' });
-    const backupFile = new File([content], backupName, { type: 'text/plain' });
+    const backupName = `${exportFilename.replace(/\.ged$/i, '')}_${today}_${time}.ged`;
+    const mainFile   = new File([content], exportFilename, { type: 'text/plain' });
+    const backupFile = new File([content], backupName,     { type: 'text/plain' });
     if (navigator.canShare({ files: [mainFile] })) {
-      navigator.share({ files: [mainFile, backupFile], title: filename })
+      navigator.share({ files: [mainFile, backupFile], title: exportFilename })
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
-          // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
-          showToast('✓ Gespeichert');
+          // des Share-Dialogs gemacht wurden — und nur wenn nicht anonymisiert
+          if (!_forceDownload && writeGEDCOM(true, false, false) === content) { AppState.changed = false; updateChangedIndicator(); }
+          showToast(_forceDownload ? `✓ ${exportFilename} geteilt` : '✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
@@ -191,52 +261,47 @@ async function exportGEDCOM() {
   }
 
   // Chrome Desktop: Direkt speichern via gespeichertem File Handle
-  if (!AppState._fileHandle) {
-    try {
-      const stored = await idbGet('fileHandle');
-      if (stored) {
-        const perm = await stored.queryPermission({ mode: 'readwrite' });
-        if (perm === 'granted') {
-          AppState._fileHandle = stored;
-          AppState._canDirectSave = await testCanWrite(stored);
-          updateSaveIndicator();
+  // Bei Anonymisierung/GED7 immer Download (nie Originaldatei überschreiben)
+  if (!_forceDownload) {
+    if (!AppState._fileHandle) {
+      try {
+        const stored = await idbGet('fileHandle');
+        if (stored) {
+          const perm = await stored.queryPermission({ mode: 'readwrite' });
+          if (perm === 'granted') {
+            AppState._fileHandle = stored;
+            AppState._canDirectSave = await testCanWrite(stored);
+            updateSaveIndicator();
+          }
         }
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
+    if (AppState._fileHandle && AppState._canDirectSave) {
+      const ok = await saveToFileHandle(content);
+      if (ok) return;
+      if (AppState._canDirectSave) return;
+    }
+    if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
+      showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
+    }
   }
 
-  if (AppState._fileHandle && AppState._canDirectSave) {
-    const ok = await saveToFileHandle(content);
-    if (ok) return;
-    // NotAllowedError (Cloud-Sync-Lock): Nutzer soll es nochmals versuchen,
-    // KEIN automatischer Fallback auf Download (würde verwirren).
-    if (AppState._canDirectSave) return; // Toast wurde bereits gezeigt
+  // Download (Safari Mac, Firefox, kein File Handle, Anon- oder GED7-Modus)
+  _downloadBlob(content, exportFilename);
+  if (!_forceDownload) {
+    AppState.changed = false; updateChangedIndicator();
+    idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   }
-
-  // Fallback 1: showOpenFilePicker war nicht verfügbar oder handle fehlt →
-  // Datei öffnen lassen, dann direkt speichern
-  if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
-    showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
-  }
-
-  // Fallback 2: Download (Safari Mac, Firefox, kein File Handle)
-  const basename = filename.replace(/\.ged$/i, '');
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-  // Backup (Original) nur wenn Inhalt geändert
-  const _origForExport = _getOriginalText();
-  if (_origForExport && _origForExport !== content) {
-    _downloadBlob(_origForExport, `${basename}_${ts}.ged`);
-  }
-  _downloadBlob(content, filename);
-  AppState.changed = false; updateChangedIndicator();
-  idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
-  showToast('✓ ' + filename + ' heruntergeladen');
+  const _dlLabel = isAnon    ? `✓ ${exportFilename} heruntergeladen (anonymisiert)`
+                 : forceGed7 ? `✓ ${exportFilename} heruntergeladen (GEDCOM 7.0)`
+                 : isStrict  ? `✓ ${exportFilename} heruntergeladen (Strict GEDCOM 5.5.1)`
+                 : '✓ ' + exportFilename + ' heruntergeladen';
+  showToast(_dlLabel);
 }
 
-// GRAMPS XML Export (.gramps = gzip) — immer Download/Share (kein File Handle)
-async function exportGRAMPS() {
+// GRAMPS XML Export/Speichern (.gramps = gzip) — immer Download/Share (kein File Handle)
+// asSave=true: Originalname ohne Zeitstempel (Speichern); false: Zeitstempel (Formatkonvertierung)
+async function exportGRAMPS(asSave = false) {
   if (!AppState.db) {
     showToast('⚠ Keine Datei geladen');
     return;
@@ -256,13 +321,20 @@ async function exportGRAMPS() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const exportName = filename.replace(/\.gramps$/, `_${ts}.gramps`);
+  const outputName = asSave ? filename : filename.replace(/\.gramps$/, `_${ts}.gramps`);
+
+  // Chrome Desktop: Direkt speichern via File Handle
+  if (asSave && AppState._fileHandle && AppState._canDirectSave) {
+    const ok = await saveToFileHandleBinary(blob);
+    if (ok) return;
+    if (AppState._canDirectSave) return;
+  }
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (isIOS && navigator.canShare) {
-    const file = new File([blob], exportName, { type: 'application/octet-stream' });
+    const file = new File([blob], outputName, { type: 'application/octet-stream' });
     if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: exportName })
+      navigator.share({ files: [file], title: outputName })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
     }
@@ -271,10 +343,10 @@ async function exportGRAMPS() {
   // Download
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
-  a.href = url; a.download = exportName; a.style.display = 'none';
+  a.href = url; a.download = outputName; a.style.display = 'none';
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  showToast('✓ ' + exportName + ' heruntergeladen');
+  showToast('✓ ' + outputName + ' heruntergeladen');
 }
 
 // ─────────────────────────────────────
@@ -301,55 +373,164 @@ document.getElementById('fileInput2').addEventListener('change', e => {
   if (e.target.files[0]) readFile(e.target.files[0]);
 });
 
+// Post-parse: db-Objekt einbauen + UI auffrischen (Worker- und Sync-Pfad)
+async function _finishLoad(db, text, filename) {
+  try {
+    setDb(db);
+    if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
+      console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+      showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+    }
+    const _gd = detectGRAMPS(text);
+    AppState.db._grampsMaster = _gd.isGramps;
+    if (_gd.isGramps) {
+      setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+    }
+    AppState._currentFilename = filename;
+    AppState._placeNormToastShown = false; // Toast einmal pro geladener Datei erlauben
+    AppState.db.extraPlaces = loadExtraPlaces();
+    { const _ppt = AppState.db.parsedPlaceTrans || {};
+      for (const [_pp, _tt] of Object.entries(_ppt)) {
+        if (!AppState.db.extraPlaces[_pp]) AppState.db.extraPlaces[_pp] = { name: _pp, lati: null, long: null };
+        if (_tt.length) AppState.db.extraPlaces[_pp].trans = _tt;
+      }
+    }
+    applyAllExtraPlaceCoords();
+    if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
+    // ADR-027 v1025: HofObjects-Aufbau + Migrationen MÜSSEN vor dem Link-Pass laufen.
+    // Reihenfolge:
+    //   1. loadPlaceObjectsFromIDB inkl. loadHofObjectsV2FromIDB
+    //   2. _mergeHofObjects (V1-derived + Legacy-Sidecar)  — historisch in _deriveHofAndMigrate
+    //   3. ADR-026 P2: _migrateHofObjectsToPlaceObjects
+    //   4. ADR-027 P3: _migrateFarmPOsToHofObjects (war hier vorher fälschlich nicht gerufen)
+    //   5. Link-Pass: A/B linken gegen aufgebaute hofObjects, C bootstrappt rich-PLAC ohne Hof
+    // Sonst würde Pfad C V2-Höfe anlegen, die Schritt 2 wegräumt — bzw. P3 würde nie laufen
+    // im File-Load-Pfad. _deriveHofAndMigrate (storage.js) bleibt für Auto-Load/Revert/Demo.
+    await _deriveHofAndMigrate();
+    if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
+      // Ersten Pass (aus _deriveHofAndMigrate) sichern, bevor der zweite Pass die Stats überschreibt.
+      // Der zweite Pass ist idempotent (alles schon verlinkt) → seine Stats wären alle 0.
+      const _firstStats = { ...(AppState._lastLinkPassStats || {}) };
+      const _recollapsedFirst = _firstStats.recollapsed || 0;
+
+      const _recollapsedSecond = _linkGedcomEventsToPlaceObjects(AppState.db); // idempotenter zweiter Pass
+
+      // Akkumulierte Stats beider Pässe für den Toast
+      const _recollapsed = _recollapsedFirst + _recollapsedSecond;
+      const _s2 = AppState._lastLinkPassStats || {};
+      const _hs = {
+        linkedHofPlac:          (_firstStats.linkedHofPlac          || 0) + (_s2.linkedHofPlac          || 0),
+        linkedHofAtomic:        (_firstStats.linkedHofAtomic        || 0) + (_s2.linkedHofAtomic        || 0),
+        linkedHofBootstrap:     (_firstStats.linkedHofBootstrap     || 0) + (_s2.linkedHofBootstrap     || 0),
+        linkedHofAddr:          (_firstStats.linkedHofAddr          || 0) + (_s2.linkedHofAddr          || 0),
+        linkedHofTypeBootstrap: (_firstStats.linkedHofTypeBootstrap || 0) + (_s2.linkedHofTypeBootstrap || 0),
+      };
+      AppState._lastLinkPassStats = _hs;
+      const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofAtomic || 0)
+                      + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0)
+                      + (_hs.linkedHofTypeBootstrap || 0);
+      const _ignoredCount = (typeof _migrateLegacyIgnoredHofKeys === 'function')
+        ? _migrateLegacyIgnoredHofKeys() : 0;
+      const _lines = [];
+      // Recollapse = Normalisierung bestehender PLAC-Strings gegen das Ortsmodell.
+      // Passiert auf JEDEM Laden der Originaldatei (ev.place kommt jedes Mal aus dem
+      // Rohtext; ev.placeId ist runtime-only). Kein separater User-Schritt nötig —
+      // beim nächsten Speichern wird die normalisierte Form automatisch geschrieben.
+      // Daher: einmal pro Session anzeigen (Session-Flag), nicht bei jedem Laden.
+      if (_recollapsed > 0 && !AppState._placeNormToastShown) {
+        AppState._placeNormToastShown = true;
+        _lines.push(`🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst.`);
+      }
+      // Nur wenn neue Höfe ERSTELLT wurden (Bootstrap/TypeBootstrap) → Aktion nötig.
+      // linkedHofPlac/Addr/Atomic sind reine Re-Links bestehender Höfe (jeder Lade-
+      // Vorgang, da ev.hofId runtime-only) — kein Toast, kein „Bitte speichern".
+      const _newHofs = (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofTypeBootstrap || 0);
+      if (_hofTotal > 0 && _newHofs > 0) {
+        const _detail = [];
+        if (_hs.linkedHofBootstrap)     _detail.push(`${_hs.linkedHofBootstrap} aus rich-PLAC neu`);
+        if (_hs.linkedHofTypeBootstrap) _detail.push(`${_hs.linkedHofTypeBootstrap} aus RESI/PROP-Adresse neu`);
+        if (_hs.linkedHofAtomic)        _detail.push(`${_hs.linkedHofAtomic} aus atomarer PLAC`);
+        _lines.push(`🏡 ${_hofTotal} Hof-Zuweisung${_hofTotal === 1 ? '' : 'en'} erkannt`
+          + (_detail.length ? ` (${_detail.join(', ')})` : '') + '.');
+      }
+      if (_ignoredCount > 0) {
+        _lines.push(`ℹ ${_ignoredCount} zuvor markierte Hof-Reviews aufgehoben — bitte erneut sichten.`);
+      }
+      if (_lines.length > 0) {
+        _lines.push('Bitte speichern, um die Verknüpfungen + Anreicherungen in der Datei zu sichern.');
+        // showToast erkennt '\n' → schaltet auf toast-multi (pre-line + max-width).
+        setTimeout(() => showToast(_lines.join('\n'), 'info'), 2000);
+      }
+    }
+    _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
+    { let maxUsed = 0;
+      const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
+                      ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
+      for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
+      if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
+    }
+    AppState._originalGedText = text;
+    AppState._undoStack = [];
+    AppState._redoStack = [];
+    if (typeof _clearNavState === 'function') _clearNavState();
+    if (typeof clearValidationResults === 'function') clearValidationResults();
+    if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    UIState._hofCache = null;
+    UIState._placesCache = null;
+    UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neue Daten → Such-Index (p._searchStr) neu aufbauen
+    Promise.all([
+      idbPut('stammbaum_ged', text),
+      idbPut('stammbaum_ged_backup', text),
+      idbPut('stammbaum_filename', filename)
+    ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
+    updateTopbarTitle(filename);
+    showStartView();
+    showToast('✓ ' + filename + ' geladen');
+  } catch(err) {
+    console.error('_finishLoad:', err);
+    showToast('⚠ Fehler beim Laden: ' + err.message);
+  } finally {
+    hideLoadingOverlay();
+  }
+}
+
 // Gemeinsame Lade-Logik für openFilePicker() und readFile()
 function _processLoadedText(text, filename) {
   showLoadingOverlay('GEDCOM wird eingelesen …');
-  requestAnimationFrame(() => setTimeout(() => {
-    try {
-      setDb(parseGEDCOM(text));
-      if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
-        console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+  if (typeof Worker !== 'undefined') {
+    const worker = new Worker('gedcom-worker.js');
+    worker.onmessage = function(e) {
+      if (e.data.type === 'progress') {
+        if (typeof updateLoadingProgress === 'function') updateLoadingProgress(e.data.pct);
+        document.getElementById('loadingMsg').textContent = 'GEDCOM wird eingelesen … ' + e.data.pct + ' %';
+        return;
       }
-      // GRAMPS-Export erkennen und Hinweis anzeigen
-      const _gd = detectGRAMPS(text);
-      AppState.db._grampsMaster = _gd.isGramps;
-      if (_gd.isGramps) {
-        setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+      worker.terminate();
+      if (e.data.type === 'error') {
+        // Worker-Fehler → Sync-Fallback (z.B. bei veralteten Caches)
+        console.warn('[WW-PARSER] Worker-Fehler, Sync-Fallback:', e.data.message);
+        try { _finishLoad(parseGEDCOM(text), text, filename); }
+        catch(e2) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + e2.message); }
+        return;
       }
-      AppState.db.extraPlaces = loadExtraPlaces();
-      applyAllExtraPlaceCoords();
-      { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
-      // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
-      { let maxUsed = 0;
-        const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
-                        ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
-        for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
-        if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
-      }
-      AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
-      AppState._undoStack = [];
-      AppState._redoStack = [];
-      if (typeof _clearNavState === 'function') _clearNavState();
-      _newPhotoIds.clear(); _deletedPhotoIds.clear();
-      if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-      // IDB: primäre Persistenz (kein Größenlimit)
-      Promise.all([
-        idbPut('stammbaum_ged', text),
-        idbPut('stammbaum_ged_backup', text),
-        idbPut('stammbaum_filename', filename)
-      ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
-      updateBackupBtn();
-      updateTopbarTitle(filename);
-      showStartView();
-      showToast('✓ ' + filename + ' geladen');
-    } catch(err) {
-      console.error('_processLoadedText:', err);
-      showToast('⚠ Fehler beim Laden: ' + err.message);
-    } finally {
-      hideLoadingOverlay();
-    }
-  }, 0));
+      // type === 'done'
+      _finishLoad(e.data.db, text, filename);
+    };
+    worker.onerror = function(err) {
+      console.warn('[WW-PARSER] Worker-Fehler, Sync-Fallback:', err.message);
+      worker.terminate();
+      try { _finishLoad(parseGEDCOM(text), text, filename); }
+      catch(e2) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + e2.message); }
+    };
+    worker.postMessage({ type: 'parse', text: text });
+  } else {
+    // Sync-Fallback (kein Worker-Support)
+    requestAnimationFrame(() => setTimeout(() => {
+      try { _finishLoad(parseGEDCOM(text), text, filename); }
+      catch(err) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + err.message); }
+    }, 0));
+  }
 }
 
 // Öffnen per <input> (iOS / Drag & Drop / Fallback)
@@ -376,25 +557,36 @@ async function _loadGRAMPS(file) {
   try {
     const parsed = await parseGRAMPS(file);
     setDb(parsed);
+    AppState._currentFilename = file.name;
+    AppState._placeNormToastShown = false;
     AppState.db.extraPlaces = loadExtraPlaces();
+    // P2 Item 7: kein pname → extraPlaces.trans-Backfill mehr — placeObjects.pnames
+    // ist single source of truth, Writer + UI lesen direkt von dort.
     applyAllExtraPlaceCoords();
+    if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
+    if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
+    _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
-    // localStorage-Einträge (user edits) überschreiben diese.
-    { const _hb = parsed.hofObjects || {}; AppState.db.hofObjects = Object.assign({}, _hb, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hb[a]?.note) h.note = _hb[a].note; }
+    // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
+    AppState.db.hofObjects = _mergeHofObjects(parsed.hofObjects || {}, loadHofObjects());
+    if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
     // Calibrate idCounter to avoid collisions
     if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
-    AppState._fileHandle      = null;
+    if (typeof clearValidationResults === 'function') clearValidationResults();
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    UIState._hofCache = null;
+    UIState._placesCache = null;
+    UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neue Daten → Such-Index (p._searchStr) neu aufbauen
     AppState._canDirectSave   = false;
-    _newPhotoIds.clear();
-    _deletedPhotoIds.clear();
     // Persist filename in localStorage for display
     const filename = file.name;
-    try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
+    AppState._currentFilename = filename;
+    AppState._placeNormToastShown = false;
+    idbPut('stammbaum_filename', filename).catch(() => {});
     updateSaveIndicator();
-    updateBackupBtn();
-    updateTopbarTitle(filename);
+    updateTopbarTitle(filename, true);
     showStartView();
     const n = Object.keys(db.individuals).length;
     const f = Object.keys(db.families).length;
@@ -411,4 +603,100 @@ function openFileOrDir() {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (!isIOS && 'showOpenFilePicker' in window) { openFilePicker(); }
   else { document.getElementById('fileInput2').click(); }
+}
+
+// ─────────────────────────────────────
+//  IDB-RESET / DIAGNOSE
+// ─────────────────────────────────────
+
+// Stufe 1: Ortsdaten in IDB löschen (placeObjects + hofObjects).
+// GEDCOM-Text, File-Handle und App-Einstellungen bleiben erhalten.
+// Nützlich wenn stammbaum-orte.json korrupt oder inkonsistent ist.
+async function resetPlaceDataIDB() {
+  if (!confirm('Ortsdaten (stammbaum-orte.json) aus dem lokalen Speicher löschen?\n\nDas GEDCOM bleibt erhalten. Die App lädt danach frisch — Orts-Verknüpfungen werden aus dem GEDCOM neu aufgebaut.')) return;
+  try {
+    await Promise.all([
+      idbDel('stammbaum_placeobjects'),
+      idbDel('stammbaum_hofobjects_v2'),
+    ]);
+    // In-Memory-Caches leeren
+    if (typeof AppState !== 'undefined' && AppState.db) {
+      AppState.db.placeObjects = {};
+      AppState.db.hofObjects   = {};
+    }
+    if (typeof UIState !== 'undefined') {
+      UIState._placeRegistry = null;
+      UIState._hofRegistry   = null;
+      UIState._placesCache   = null;
+      UIState._hofCache      = null;
+    }
+    if (typeof showToast === 'function') showToast('✓ Ortsdaten gelöscht — Seite wird neu geladen', 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('⚠ Löschen fehlgeschlagen: ' + (e?.message || e), 'error');
+  }
+}
+
+// Stufe 2: Alle lokalen App-Daten löschen (GEDCOM + Ortsdaten + File-Handle).
+// Entspricht einem Neustart als ob die App nie geöffnet worden wäre.
+// OneDrive-Login und Theme-Einstellung bleiben erhalten.
+async function resetAllLocalData() {
+  if (!confirm('ALLE lokalen App-Daten löschen?\n\nDas betrifft: GEDCOM-Text (IDB), Ortsdaten, Datei-Zugriffs-Rechte.\nNicht betroffen: OneDrive-Login, Theme.\n\nNach dem Löschen erscheint wieder der Startbildschirm.')) return;
+  try {
+    const idbKeys = [
+      'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename',
+      'stammbaum_placeobjects', 'stammbaum_hofobjects_v2', 'fileHandle',
+    ];
+    await Promise.all(idbKeys.map(k => idbDel(k).catch(() => {})));
+    // Auch den IDB-Backup-Pre-ADR027-Key (datumsgekeyt) via Enumeration löschen
+    try {
+      const db = await _getIDB();
+      await new Promise((res, rej) => {
+        const tx = db.transaction('kv', 'readwrite');
+        const store = tx.objectStore('kv');
+        const req = store.openCursor();
+        req.onsuccess = e => {
+          const cur = e.target.result;
+          if (!cur) { res(); return; }
+          if (cur.key && typeof cur.key === 'string' && cur.key.startsWith('stammbaum_orte_backup_')) {
+            cur.delete();
+          }
+          cur.continue();
+        };
+        req.onerror = rej;
+      });
+    } catch (_) {}
+    // localStorage-Einträge (Altbestände)
+    ['stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename',
+     'stammbaum_hofobjects', 'stammbaum_backup_date', 'stammbaum_device_id',
+     'dedup_ignored', 'last_tab_sel',
+    ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    // extraPlaces-Key (dateiname-abhängig) — alle stammbaum_extra_* entfernen
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('stammbaum_extra')) { try { localStorage.removeItem(k); } catch (_) {} }
+    }
+    if (typeof showToast === 'function') showToast('✓ Lokale Daten gelöscht — Seite wird neu geladen', 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('⚠ Löschen fehlgeschlagen: ' + (e?.message || e), 'error');
+  }
+}
+
+// ─────────────────────────────────────
+//  THEME-VERWALTUNG
+// ─────────────────────────────────────
+function applyTheme(pref) {
+  const html = document.documentElement;
+  if (pref === 'light') html.dataset.theme = 'light';
+  else if (pref === 'dark') html.dataset.theme = 'dark';
+  else delete html.dataset.theme;
+  document.querySelectorAll('.theme-seg button[data-theme]').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === (pref || 'auto'));
+  });
+}
+
+async function setThemePref(pref) {
+  await idbPut('theme_pref', pref).catch(() => {});
+  applyTheme(pref);
 }

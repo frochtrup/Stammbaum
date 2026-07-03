@@ -5,22 +5,35 @@
 // Backward-compat-Shims (unten) leiten bare Variablennamen zu den Namespaces um,
 // sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
+// ADR-027 Phase 1: orte.json Schema-Version, die diese App schreibt + akzeptiert.
+// Eine Datei mit höherem _schemaVersion → Schema-Refusal (Read-Only-Modus, kein
+// Save), damit ein offline-eingefrorenes Gerät keine neuere Datei zerschießt.
+// Auto-Reload (sw v1019) sorgt für zeitnahe App-Aktualität auf aktiven Geräten.
+const APP_KNOWN_SCHEMA_VERSION = 2;
+
 const AppState = {
-  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
+  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [], gedVersion: 'unknown' },
   changed:          false,
+  _schemaLocked:    false,       // ADR-027 P1: true wenn geladene orte.json neuer als APP_KNOWN_SCHEMA_VERSION → Saves gesperrt
+  _schemaLockedVersion: null,    // ADR-027 P1: das Datei-Schema, das zur Sperre geführt hat (für User-Info)
   idCounter:        1000,
   currentPersonId:  null,
   currentFamilyId:  null,
   currentSourceId:  null,
   currentRepoId:    null,
-  currentPlaceName: null,
+  currentPlaceName: null,        // menschenlesbarer Name des aktuellen Orts (für Edit-Form)
+  currentPlaceId:   null,        // Stufe 2b: placeId des aktuellen Orts (Identität, null bei String-Ort)
+  currentPlaceRef:  null,        // Stufe 2b: Identitäts-Ref = placeId || name (für Re-Render/History/Listen-Sync)
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
-  _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
-  _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
+  _currentFilename: '',          // Dateiname der aktuell geladenen Datei (für per-Datei extraPlaces)
+  _fileHandle:        null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
+  _canDirectSave:     false,       // true wenn createWritable() auf _fileHandle funktioniert
+  _fileLastModified:  null,        // lastModified-Timestamp beim letzten Laden/Speichern (STAB-2)
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
   _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
   _redoStack:       [],          // gleiche Struktur wie _undoStack
+  privacyAnon:      false,       // F5: lebende Personen beim GEDCOM-Export anonymisieren
 };
 
 const UIState = {
@@ -29,8 +42,12 @@ const UIState = {
   _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
+  _pendingFfState:  null,        // { slot, id, husb, wife, … } — gesetzt vor showPersonForm() aus Familienformular
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
+  _placeRegistry:     null,      // PLACE-HIST (ADR-024): Cache für getPlaceRegistry(); in setDb geleert
+  _hofRegistry:       null,      // ADR-027 P1: Cache für getHofRegistry(); in setDb + mutateHofObject geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
+  _personSortCache:   null,      // { mode, count, sorted } — ungefilterte Personenliste sortiert; in markChanged() + _finishLoad geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
   _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'
@@ -40,6 +57,8 @@ const UIState = {
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
   _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }
   _placeModes:     {},           // { placeId: 'free'|'parts' } — UI-Toggle-Zustand Orts-Eingabe
+  _mediaCtxFilter: 'all',        // 'all'|'person'|'family'|'source' — Medien-Sub-Tab Filter
+  _mediaViewMode:  'grid',       // 'grid'|'list' — Medien-Sub-Tab Ansicht
   _formState: {                  // transienter Formular-State (ADR-003)
     srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
     pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
@@ -59,6 +78,16 @@ Object.defineProperty(window, 'db', {
 function setDb(newDb) {
   for (const k of Object.keys(AppState.db)) delete AppState.db[k];
   Object.assign(AppState.db, newDb);
+  _migratePlaceObjects(AppState.db);              // PLACE-HIST (ADR-024): Altdaten parentId→enclosedBy
+  _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3: extraPlaces→placeObjects (idempotent)
+  UIState._placeRegistry = null;                  // Registry beim DB-Wechsel invalidieren
+  UIState._hofRegistry   = null;                  // ADR-027 P1: Hof-Registry beim DB-Wechsel invalidieren
+  // ADR-028 Phase 3: auch die Aggregator-Caches invalidieren — sonst hängen
+  // collectPlaces/buildHofIndex-Wrapper vom vorigen db an. Vorher hatte das im
+  // produktiven Pfad keinen Effekt (markChanged/Link-Pass leerten sie meist
+  // implizit), aber nach Datei-Wechsel ohne Mutation blieben sie stale.
+  UIState._placesCache   = null;
+  UIState._hofCache      = null;
 }
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
@@ -79,8 +108,6 @@ function setDb(newDb) {
 })();
 
 // ─── Konstante Globals (const — kein Shim nötig) ────────────────────────────
-const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
-const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
 const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version, aus RAM oder IDB via tryAutoLoad).
@@ -92,6 +119,22 @@ function nextId(prefix) {
   AppState.idCounter++;
   return `@${prefix}${AppState.idCounter}@`;
 }
+
+// Hof-Notiz-Marker: GEDCOM-konformes Text-Präfix in einer normalen NOTE. Trennt die
+// hof-/adressbezogene Notiz (gilt für alle Bewohner/Eigentümer der Adresse) deterministisch
+// von der event-spezifischen RESI/PROP-Notiz — ohne Custom-Tag, in jedem Programm lesbar.
+// Parser routet [Hof]-präfixierte Notizen → hofObjects; Writer schreibt hof.note mit Präfix.
+const HOF_NOTE_PREFIX = '[Hof] ';
+function _isHofNoteText(t)   { return typeof t === 'string' && t.startsWith(HOF_NOTE_PREFIX); }
+function _stripHofPrefix(t)  { return _isHofNoteText(t) ? t.slice(HOF_NOTE_PREFIX.length) : t; }
+
+// ADR-028 Phase 4: Event-Typen, deren Semantik „Person an stabiler Adresse =
+// Hof" eindeutig ist. Bei diesen Typen darf der Link-Pass aus (Dorf-Kontext +
+// ev.addr) einen neuen hofObject anlegen, sogar wenn keiner existiert — der
+// Event-Typ ist der Quell-Anker (analog rich-PLAC-Struktur bei Pfad C).
+// BIRT/DEAT/MARR/BURI tragen diese Semantik NICHT (Krankenhaus/Kirche/
+// Friedhof/Standesamt sind plausible Nicht-Hof-Adressen) → Review-Pfad.
+const HOF_BOOTSTRAP_EVENT_TYPES = new Set(['RESI', 'PROP', 'CENS', 'OCCU']);
 
 // Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
 const EVENT_LABELS = {
@@ -106,6 +149,7 @@ const EVENT_LABELS = {
   FCOM:'Erstkommunion',  ORDN:'Ordination',     RETI:'Pensionierung',
   PROP:'Eigentum',       WILL:'Testament',      PROB:'Testamentseröffnung',
   DSCR:'Beschreibung',   IDNO:'ID-Nummer',      SSN:'Sozialversicherungs-Nr.',
+  BAPM:'Taufe (BAPM)',   BARM:'Bar-Mizwa',      BASM:'Bat-Mizwa',      CREM:'Einäscherung',
   // GEDCOM FAM-Ereignisse (können in events-Array landen)
   ENGA:'Verlobung',      DIV:'Scheidung',       DIVF:'Scheidungsantrag',
   MARR:'Heirat',         BIRT:'Geburt',         DEAT:'Tod',
@@ -115,8 +159,9 @@ const EVENT_LABELS = {
 // GEDCOM-Typ → Person-Property-Name für die 4 Sonder-Ereignisse (BIRT/CHR/DEAT/BURI)
 const SPECIAL_EVENT_KEYS = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
 
-// Label-Map für ASSO RELA-Werte (GEDCOM) / rel-Attribut (GRAMPS <personref>)
+// Label-Map für ASSO .role-Werte (GED5 RELA-Freitext, GRAMPS rel, GED7 ROLE-Enum)
 const RELA_LABELS = {
+  // GED5 / GRAMPS Freitext
   'Godparent':  'Taufpate/-mutter',
   'Godchild':   'Patenkind',
   'Witness':    'Zeuge/Zeugin',
@@ -126,6 +171,16 @@ const RELA_LABELS = {
   'Employer':   'Arbeitgeber',
   'Employee':   'Arbeitnehmer',
   'Landlord':   'Vermieter',
+  // GED7 ROLE-Enum-Werte
+  'GODP':  'Taufpate/-mutter',
+  'WITN':  'Zeuge/Zeugin',
+  'CHIL':  'Kind',
+  'HUSB':  'Ehemann',
+  'WIFE':  'Ehefrau',
+  'MOTH':  'Mutter',
+  'FATH':  'Vater',
+  'SPOU':  'Ehepartner',
+  'OTHER': 'Sonstige',
 };
 
 // Label-Map für GEDCOM NAME TYPE-Werte
@@ -138,19 +193,234 @@ const NAME_TYPE_LABELS = {
   nickname:  'Spitzname',
 };
 
+// ─────────────────────────────────────
+//  JSDoc-Typen (T0-TYPES, sw v698)
+//  VS Code / IntelliJ nutzen @typedef nativ — kein Build-Step nötig.
+//  Änderungen hier synchron halten mit gedcom-parser.js (Struct-Init).
+// ─────────────────────────────────────
+
+/** @typedef {{ sourceId:string, page?:string, quay?:string, text?:string, media?:Object }} Citation */
+
+/** @typedef {{ file:string, titl?:string, note?:string, date?:string, prim?:boolean, scbk?:boolean, crop?:{top:number,left:number,width:number,height:number}|null }} MediaRef */
+
+/**
+ * @typedef {Object} SpecialEvent  Sonder-Ereignis (BIRT/CHR/DEAT/BURI) direkt auf der Person.
+ * @property {string|null}  date
+ * @property {string|null}  place
+ * @property {number|null}  lati
+ * @property {number|null}  long
+ * @property {string}       value
+ * @property {string}       note
+ * @property {string}       datePhrase   GED7: lesbare Datumsalternative (DATE/PHRASE)
+ * @property {string[]}     noteRefs
+ * @property {Citation[]}   citations
+ * @property {Object[]}     _extra
+ * @property {boolean}      seen
+ * @property {string}       [cause]   Todesursache (nur DEAT)
+ */
+
+/**
+ * @typedef {Object} PersonEvent  Freies Ereignis einer Person.
+ * @property {string}     type
+ * @property {string}     [value]
+ * @property {string}     [date]
+ * @property {string}     [datePhrase]  GED7: lesbare Datumsalternative (DATE/PHRASE)
+ * @property {string}     [place]
+ * @property {number|null} [lati]
+ * @property {number|null} [long]
+ * @property {string}     [addr]
+ * @property {string}     [note]
+ * @property {string[]}   [noteRefs]
+ * @property {Citation[]} citations
+ * @property {MediaRef[]} media
+ * @property {Object[]}   [_extra]
+ */
+
+/** @typedef {{ id:string, text:string, cat:string, done:boolean, added?:string }} Task */
+
+/** @typedef {{ id:string, date?:string, repo?:string, sour?:string, query?:string, result:string, note?:string }} RlogEntry */
+
+/**
+ * @typedef {Object} Person  Personen-Datensatz (GEDCOM INDI).
+ * @property {string}          id
+ * @property {string}          name
+ * @property {string}          nameRaw
+ * @property {string}          surname
+ * @property {string}          given
+ * @property {string}          nick
+ * @property {string}          prefix
+ * @property {string}          suffix
+ * @property {'M'|'F'|'U'|'X'} sex
+ * @property {string}          uid
+ * @property {string}          grampId
+ * @property {string}          resn
+ * @property {string}          reli
+ * @property {string}          titl
+ * @property {string}          email
+ * @property {string}          www
+ * @property {SpecialEvent}    birth
+ * @property {SpecialEvent}    death
+ * @property {SpecialEvent}    chr
+ * @property {SpecialEvent}    buri
+ * @property {PersonEvent[]}   events
+ * @property {string[]}        famc
+ * @property {string[]}        fams
+ * @property {string[]}        topSources
+ * @property {Citation[]}      nameCitations
+ * @property {Set<string>}     sourceRefs
+ * @property {Object}          topSourcePages
+ * @property {Object}          topSourceQUAY
+ * @property {Object}          topSourceExtra
+ * @property {string[]}        noteRefs
+ * @property {Object}          noteRefExtras
+ * @property {string[]}        noteTexts
+ * @property {string}          noteText
+ * @property {Object[]}        extraNames
+ * @property {Object[]}        aliases
+ * @property {string[]}        aliaNames    GED7: ALIA als Namens-String (neben aliases[] für @xref@)
+ * @property {Object[]}        refns
+ * @property {{value:string,type:string}[]} exids  GED7: EXID External Identifiers
+ * @property {Object[]}        associations         Feld .role (ehem. .rela)
+ * @property {{lang:string,nameRaw:string,given:string,surname:string}[]} nameTrans  GED7: Primärname-Übersetzungen
+ * @property {Set<string>}     noEvents     GED7: bestätigtes Fehlen (NO BIRT, NO DEAT …)
+ * @property {string}          createdDate  GED7: CREA/DATE Anlagedatum
+ * @property {MediaRef[]}      media
+ * @property {Task[]}          _tasks
+ * @property {RlogEntry[]}     _rlog
+ * @property {Object[]}        _passthrough
+ * @property {boolean}         _hasGivn
+ * @property {boolean}         _hasSurn
+ * @property {boolean}         _nameParsed
+ * @property {string|null}     _stat
+ * @property {string}          lastChanged
+ * @property {string}          lastChangedTime
+ * @property {string}          chanNote
+ */
+
+/**
+ * @typedef {Object} FamilyEvent  Familien-Ereignis (MARR/ENGA/DIV/DIVF + freie FAM-Events).
+ * @property {string|null}  date
+ * @property {string|null}  place
+ * @property {number|null}  lati
+ * @property {number|null}  long
+ * @property {string}       value
+ * @property {string}       note
+ * @property {string[]}     noteRefs
+ * @property {Citation[]}   citations
+ * @property {MediaRef[]}   media
+ * @property {Object[]}     _extra
+ * @property {boolean}      seen
+ * @property {string}       [addr]
+ * @property {string}       [type]
+ */
+
+/**
+ * @typedef {Object} Family  Familien-Datensatz (GEDCOM FAM).
+ * @property {string}         id
+ * @property {string|null}    husb
+ * @property {string|null}    wife
+ * @property {string[]}       children
+ * @property {Object}         childRelations
+ * @property {FamilyEvent}    marr
+ * @property {FamilyEvent}    engag
+ * @property {FamilyEvent}    div
+ * @property {FamilyEvent}    divf
+ * @property {FamilyEvent[]}  events
+ * @property {string[]}       noteRefs
+ * @property {Object}         noteRefExtras
+ * @property {string[]}       noteTexts
+ * @property {string}         noteText
+ * @property {Set<string>}    sourceRefs
+ * @property {MediaRef[]}     media
+ * @property {Task[]}         _tasks
+ * @property {RlogEntry[]}    _rlog
+ * @property {Object[]}       refns
+ * @property {Object[]}       _passthrough
+ * @property {string|null}    _stat
+ * @property {string}         grampId
+ * @property {string}         lastChanged
+ * @property {string}         lastChangedTime
+ * @property {string}         chanNote
+ */
+
+/**
+ * @typedef {Object} Source  Quellen-Datensatz (GEDCOM SOUR).
+ * @property {string}    id
+ * @property {string}    title
+ * @property {string}    abbr
+ * @property {string}    author
+ * @property {string}    date
+ * @property {string}    publ
+ * @property {string}    repo
+ * @property {Object[]}  repoCalns
+ * @property {string}    text
+ * @property {string}    note
+ * @property {string[]}  noteRefs
+ * @property {string}    agnc
+ * @property {string}    grampId
+ * @property {Object[]}  dataEvens
+ * @property {Object[]}  dataExtra
+ * @property {Object[]}  refns
+ * @property {MediaRef[]} media
+ * @property {Object[]}  _passthrough
+ * @property {string}    lastChanged
+ * @property {string}    lastChangedTime
+ * @property {string}    chanNote
+ */
+
+/**
+ * @typedef {Object} Repo  Archiv-Datensatz (GEDCOM REPO).
+ * @property {string}    id
+ * @property {string}    name
+ * @property {string}    addr
+ * @property {string}    phon
+ * @property {string}    www
+ * @property {string}    email
+ * @property {Object[]}  _passthrough
+ * @property {string}    lastChanged
+ * @property {string}    lastChangedTime
+ * @property {string}    chanNote
+ */
+
+/**
+ * @typedef {Object} AppDb  Haupt-Datenbankstruktur (AppState.db / globales `db`).
+ * @property {Object.<string, Person>}  individuals
+ * @property {Object.<string, Family>}  families
+ * @property {Object.<string, Source>}  sources
+ * @property {Object.<string, Repo>}    repositories
+ * @property {Object.<string, Object>}  notes
+ * @property {Object}   extraPlaces
+ * @property {Object}   hofObjects
+ * @property {Object}   [placeObjects]
+ * @property {Object}   [tags]
+ * @property {Object}   [_grampsHandles]
+ * @property {string}   placForm
+ * @property {string}   [_sourceFormat]
+ * @property {Object[]} extraRecords
+ * @property {string[]} headLines
+ */
+
 // ── Getters / Mutations-Helpers ────────────────────────────────────────────
 // Zentraler Einstiegspunkt — ein Ort für künftige Validierung, Undo oder Struktur-Änderungen.
 // Getters geben null zurück statt undefined, sodass Aufrufer einheitlich auf null prüfen können.
+/** @param {string} id @returns {Person|null} */
 function getPerson(id)  { return AppState.db.individuals[id]  ?? null; }
+/** @param {string} id @returns {Family|null} */
 function getFamily(id)  { return AppState.db.families[id]     ?? null; }
+/** @param {string} id @returns {Source|null} */
 function getSource(id)  { return AppState.db.sources[id]      ?? null; }
+/** @param {string} id @returns {Repo|null} */
 function getRepo(id)    { return AppState.db.repositories[id] ?? null; }
 
 // Setters — Object.assign-Patch auf bestehende Top-Level-Felder.
 // Für verschachtelte Array-Mutations (media[idx], fams.push etc.) weiter direkt verwenden.
+/** @param {string} id @param {Partial<Person>} patch */
 function setPerson(id, patch) { const p = AppState.db.individuals[id]; if (p) Object.assign(p, patch); }
+/** @param {string} id @param {Partial<Family>} patch */
 function setFamily(id, patch) { const f = AppState.db.families[id];   if (f) Object.assign(f, patch); }
+/** @param {string} id @param {Partial<Source>} patch */
 function setSource(id, patch) { const s = AppState.db.sources[id];    if (s) Object.assign(s, patch); }
+/** @param {string} id @param {Partial<Repo>} patch */
 function setRepo(id, patch)   { const r = AppState.db.repositories[id]; if (r) Object.assign(r, patch); }
 
 // ─────────────────────────────────────
@@ -245,7 +515,7 @@ function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
   if (date2BaseId) {
     writeDatePartToFields(date2BaseId, date2);
     const grp = document.getElementById(date2BaseId + '-group');
-    if (grp) grp.style.display = (qual === 'BET' || qual === 'FROM') ? '' : 'none';
+    if (grp) grp.hidden = !(qual === 'BET' || qual === 'FROM');
   }
 }
 
@@ -253,7 +523,7 @@ function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
 function onDateQualChange(selectEl, date2Id) {
   if (!date2Id) return;
   const grp = document.getElementById(date2Id + '-group');
-  if (grp) grp.style.display = (selectEl.value === 'BET' || selectEl.value === 'FROM') ? '' : 'none';
+  if (grp) grp.hidden = !(selectEl.value === 'BET' || selectEl.value === 'FROM');
 }
 
 // ── 3-Felder-Datum-Hilfsfunktionen ──────────────────────────────────────────
@@ -333,10 +603,15 @@ function getPlacLabels() {
   return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
 }
 
-function buildPlacePartsHtml(placeId) {
-  return getPlacLabels().map((lbl, i) =>
-    `<input class="form-input mb-3" id="${placeId}-p${i}" placeholder="${esc(lbl)}">`
-  ).join('');
+function _buildPlaceParts(placeId, container) {
+  container.textContent = '';
+  getPlacLabels().forEach((lbl, i) => {
+    const inp = document.createElement('input');
+    inp.className = 'form-input mb-3';
+    inp.id = placeId + '-p' + i;
+    inp.placeholder = lbl;
+    container.appendChild(inp);
+  });
 }
 
 function fillPlaceParts(placeId, raw) {
@@ -360,6 +635,2309 @@ function joinPlaceParts(placeId, keepAll = false) {
 function compactPlace(place) {
   if (!place) return '';
   return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+}
+
+// Kurzname für Listen: erstes nicht-leeres Segment von po.title (bei placeId)
+// oder von placeStr. po.title kann selbst ein Hierarchiestring sein → nur [0].
+function shortPlace(placeStr, placeId) {
+  if (placeId && typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    const title = reg && reg.byId[placeId] && (reg.byId[placeId].title || '');
+    if (title) return title.split(',')[0].trim() || title;
+  }
+  if (!placeStr) return '';
+  return placeStr.split(',').map(s => s.trim()).find(s => s) || '';
+}
+
+// ─── PLACE-HIST (ADR-024): Orts-Entität — Registry + Auflösung über Zeit ─────
+// KANONISCHES Identity-Matching für Ortsnamen. NFC + casefold + Whitespace.
+// Anwenden überall, wo zwei Ortsnamen auf „gleiche Identität" geprüft werden
+// (Registry-Lookup, Propagation, Lösch-Suche, Geocoder-Cache, JSON-Import-Dedup).
+// NIE für Anzeige/Speicherung verwenden → bleibt verlustfrei.
+function _normPlaceName(s) {
+  if (!s) return '';
+  return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Stufe 2: Typ-Spezifität für die Disambiguierung gleichnamiger Orte.
+// Niedriger Rang = spezifischer (Siedlung, wo Ereignisse stattfinden); hoher Rang =
+// allgemeiner (Verwaltungs-Container). Bei reinem Blatt-String ("Münster" ohne
+// Hierarchie) bevorzugt findByName die Siedlung (Stadt) vor dem Kreis — denn
+// „geboren in Münster" meint die Ortschaft, nicht die Gebietskörperschaft.
+// Unknown/null liegt bewusst zwischen Siedlung und Verwaltung.
+const _PLACE_SPECIFICITY = {
+  Building:0, Farm:0, Cemetery:0, Church:1, Borough:1, Neighborhood:1, Locality:1,
+  Hamlet:2, Parish:2, Village:3, Town:4, City:4, Municipality:5,
+  District:7, County:7, Region:8, Province:8, State:9, Country:10,
+};
+function _placeTypeRank(type) {
+  const r = _PLACE_SPECIFICITY[type];
+  return r == null ? 6 : r;
+}
+
+// Erste 3–4-stellige Jahreszahl aus einem GEDCOM/ISO/Freitext-Datum.
+function _placeYear(d) {
+  if (d == null) return null;
+  const m = String(d).match(/\d{3,4}/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+// Migriert Alt-placeObjects (vor ADR-024 P0a-1): undatiertes parentId → enclosedBy[];
+// stellt pnames/enclosedBy als Arrays sicher. Idempotent.
+function _migratePlaceObjects(db) {
+  const pos = db && db.placeObjects;
+  if (!pos) return;
+  for (const pl of Object.values(pos)) {
+    if (!Array.isArray(pl.pnames)) pl.pnames = [];
+    if (!Array.isArray(pl.enclosedBy)) {
+      pl.enclosedBy = pl.parentId
+        ? [{ placeId: pl.parentId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
+        : [];
+    }
+    // Koord-Paar-Invariante: halbe Paare (lat ohne long o.ä.) entstanden in alten
+    // savePlace-Pfaden, wenn User Koords als DMS ohne Direction eintippte (NaN auf
+    // einer Achse). Würden showPlaceDetail crashen — beide auf null setzen.
+    if ((pl.lat == null) !== (pl.long == null)) { pl.lat = null; pl.long = null; }
+    // pnames-Bereinigung:
+    // 1) Hierarchie-Strings (Komma im Wert) sind niemals valide Atom-pnames → entfernen
+    // 2) Duplikate (selber normalisierter Wert + selbe Daten) → entfernen
+    // Entstanden durch alte Autocomplete-Bugs (Hierarchie-String als ev.place) oder
+    // wiederholte _migrateExtraPlacesToPlaceObjects-Läufe.
+    pl.pnames = pl.pnames.filter(pn => pn.value && !pn.value.includes(','));
+    if (pl.pnames.length > 1) {
+      const seen = new Set();
+      seen.add(_normPlaceName(pl.title));
+      pl.pnames = pl.pnames.filter(pn => {
+        const k = `${_normPlaceName(pn.value)}|${pn.dateFrom||''}|${pn.dateTo||''}`;
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    }
+  }
+}
+
+// ─── P0b-3: extraPlaces → placeObjects Migration ─────────────────────────────
+// Erzeugt aus jedem extraPlaces-Eintrag mit Koordinaten oder Übersetzungen ein
+// placeObject (idempotent via stabiler _epId-Hash). Bestehende placeObjects werden
+// additiv ergänzt (Koordinaten nur wenn fehlend; pnames dedupliziert).
+// Aufruf NACH loadExtraPlaces() + parsedPlaceTrans-Merge in storage-file.js.
+function _epId(name) {
+  // Stabiler djb2-Hash: gleicher Name → gleiche ID über Sessions
+  let h = 5381;
+  const s = String(name);
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return '_ep_' + h.toString(16).padStart(8, '0');
+}
+
+function _migrateExtraPlacesToPlaceObjects(db) {
+  const ep = db && db.extraPlaces;
+  if (!ep || !Object.keys(ep).length) return;
+  if (!db.placeObjects) db.placeObjects = {};
+  const pos = db.placeObjects;
+  let changed = false;
+
+  for (const epEntry of Object.values(ep)) {
+    const name = epEntry.name || '';
+    if (!name) continue;
+    // Paar-Invariante: nur als vollständiges Paar — halbe Werte führen sonst zu
+    // place.long.toFixed-Crash in showPlaceDetail
+    const hasCoords = epEntry.lati != null && epEntry.long != null;
+    const hasTrans  = Array.isArray(epEntry.trans) && epEntry.trans.length > 0;
+    if (!hasCoords && !hasTrans) continue;
+
+    // Vorhandenes placeObject suchen (direkt, ohne Registry-Cache)
+    let existingId = null;
+    const norm = _normPlaceName(name);
+    for (const [id, po] of Object.entries(pos)) {
+      if (_normPlaceName(po.title) === norm
+        || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) {
+        existingId = id; break;
+      }
+    }
+
+    if (existingId) {
+      const po = pos[existingId];
+      if (po.lat == null && hasCoords) { po.lat = epEntry.lati; po.long = epEntry.long; changed = true; }
+      if (hasTrans) {
+        if (!Array.isArray(po.pnames)) po.pnames = [];
+        const have = new Set(po.pnames.map(pn => _normPlaceName(pn.value)));
+        have.add(_normPlaceName(po.title));
+        for (const t of epEntry.trans) {
+          if (!t.value || have.has(_normPlaceName(t.value))) continue;
+          have.add(_normPlaceName(t.value));
+          po.pnames.push({ value: t.value, lang: t.lang || '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+          changed = true;
+        }
+      }
+    } else {
+      // Neues placeObject anlegen
+      let id = _epId(name);
+      if (pos[id]) {
+        // 32-bit djb2-Kollision: anderer Name landet auf demselben Hash.
+        // Statt stillem `continue` (Eintrag verschwindet) → Suffix-Fallback.
+        let suf = 2;
+        while (pos[id + '_' + suf] && suf < 16) suf++;
+        const candidate = id + '_' + suf;
+        const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
+                    : (typeof console !== 'undefined' && console.log) ? console.log : null;
+        if (pos[candidate]) {
+          _warn && _warn('[PLACE] _epId-Kollision unauflösbar — Ort übersprungen:', name);
+          continue;
+        }
+        _warn && _warn('[PLACE] _epId-Kollision für', JSON.stringify(name),
+          '→ Suffix-Fallback', candidate);
+        id = candidate;
+      }
+      const pnames = [];
+      if (hasTrans) {
+        const have = new Set([_normPlaceName(name)]);
+        for (const t of epEntry.trans) {
+          if (!t.value || have.has(_normPlaceName(t.value))) continue;
+          have.add(_normPlaceName(t.value));
+          pnames.push({ value: t.value, lang: t.lang || '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+        }
+      }
+      pos[id] = {
+        id, title: name, type: null,
+        lat:  hasCoords ? epEntry.lati : null,
+        long: hasCoords ? epEntry.long : null,
+        pnames, enclosedBy: [], parentId: null,
+      };
+      changed = true;
+    }
+  }
+  if (changed) UIState._placeRegistry = null;
+}
+
+// ─── ADR-026 Phase 1: Höfe → erstklassige Farm-placeObjects ──────────────────
+// Wandelt db.hofObjects[addr] (localStorage-Sidecar) in placeObjects vom Typ
+// 'Farm' um: enclosedBy = Dorf des Hofs, eigene lat/long/note. RESI/PROP-Events
+// mit dieser Adresse werden auf den Farm-Ort umgehängt (ev.placeId); ev.addr
+// bleibt als Postdetail erhalten. Pure + idempotent (gleicher Lauf zweimal =
+// keine Dubletten). NOCH NICHT in setDb verdrahtet — Verdrahtung + Writer-
+// Anpassung erfolgen gemeinsam in Phase 2, damit der GEDCOM-PLAC-Übergang
+// (Ochtrup → "Hof…, Ochtrup") koordiniert + idempotent-stabil verifizierbar ist.
+
+// Dorf-placeObject-ID zu einer Hof-Adresse: häufigster Nicht-Farm-Ort der
+// RESI/PROP-Events mit dieser addr (über ev.placeId oder ev.place-Namensmatch).
+function _hofVillageId(db, addr) {
+  const isVillage = po => po && po.type !== 'Farm' && po.type !== 'Building';
+  const counts = {};
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP') || (ev.addr || '').trim() !== addr) continue;
+      let vid = null;
+      if (ev.placeId && isVillage(db.placeObjects?.[ev.placeId])) {
+        vid = ev.placeId;
+      } else if (ev.place && ev.place.trim()) {
+        const norm = _normPlaceName(ev.place.trim());
+        for (const [id, po] of Object.entries(db.placeObjects || {})) {
+          if (!isVillage(po)) continue;
+          if (_normPlaceName(po.title) === norm
+            || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) { vid = id; break; }
+        }
+      }
+      if (vid) counts[vid] = (counts[vid] || 0) + 1;
+    }
+  }
+  const e = Object.entries(counts);
+  return e.length ? e.sort((a, b) => b[1] - a[1])[0][0] : null;
+}
+
+// Dorf-NAME zu einer Hof-Adresse (Fallback wenn kein placeObject existiert —
+// GEDCOM-Modus hat i.d.R. keine Dorf-placeObjects). Häufigste ev.place der
+// RESI/PROP-Events dieser addr; führender Hof-Blatt-Teil wird entfernt, damit
+// nach Reimport (PLAC="Hof Schulze, Ochtrup") wieder "Ochtrup" herauskommt →
+// idempotente Dorf-Bestimmung über den GEDCOM-Roundtrip hinweg.
+function _hofVillageString(db, addr) {
+  // Konvention α: Hof-Identität = alles vor dem ersten Komma ODER Zeilenumbruch.
+  // Wichtig wenn addr Komma enthält ("Oster 82a, Wester 141"): split('\n')[0] würde
+  // den ganzen String zurückgeben, sodass segs[0]-Vergleich unten nie matcht und
+  // ev.place ungekürzt in counts landet → _ensureVillageChain legt PO "Oster 82a" an.
+  const _leaf = typeof _extractHofAddr === 'function' ? _extractHofAddr(addr) : addr.split('\n')[0].trim();
+  const leafNorm = _normPlaceName(_leaf);
+  const counts = {};
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP') || (ev.addr || '').trim() !== addr) continue;
+      let pl = (ev.place || '').trim();
+      if (!pl) continue;
+      const segs = pl.split(',').map(s => s.trim());
+      if (segs.length > 1 && _normPlaceName(segs[0]) === leafNorm) pl = segs.slice(1).join(', ');
+      // ev.place == Hof-Blatt → kein eigenständiges Dorf (Adresse IST der Ort)
+      if (!pl || _normPlaceName(pl) === leafNorm) continue;
+      counts[pl] = (counts[pl] || 0) + 1;
+    }
+  }
+  const e = Object.entries(counts);
+  return e.length ? e.sort((a, b) => b[1] - a[1])[0][0] : '';
+}
+
+// Existierendes Nicht-Farm-placeObject per Name finden (für Dorf-Dedup).
+function _findVillagePO(pos, name) {
+  const norm = _normPlaceName(name);
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type === 'Farm' || po.type === 'Building') continue;
+    if (_normPlaceName(po.title) === norm
+      || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) return id;
+  }
+  return null;
+}
+
+// Aus einem Komma-Ortsstring ("München, Bayern, Deutschland") eine echte
+// Enclosure-Kette einzelner placeObjects bauen (München ← Bayern ← Deutschland)
+// und die ID des feinsten Levels zurückgeben. Sonst nähme _buildFormString nur
+// das erste Komma-Segment (_atomic) → "Bayern, Deutschland" ginge verloren.
+// Existierende Orte (GRAMPS, schon typisiert) werden wiederverwendet und NICHT
+// umstrukturiert; nur neu angelegte Glieder bekommen die enclosedBy-Verknüpfung.
+function _ensureVillageChain(pos, villageStr) {
+  const segs = (villageStr || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!segs.length) return null;
+  let parentId = null;  // gröberes (übergeordnetes) Level
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const name = segs[i];
+    let id = _findVillagePO(pos, name), created = false;
+    if (!id) {
+      id = _epId('vil:' + _normPlaceName(name));
+      if (pos[id]) { let suf = 2; while (pos[id + '_' + suf] && suf < 16) suf++; id = pos[id + '_' + suf] ? null : id + '_' + suf; }
+      if (!id) continue;
+      pos[id] = { id, title: name, type: 'Unknown', lat: null, long: null,
+        note: '', pnames: [], enclosedBy: [], parentId: null };
+      created = true;
+    }
+    if (created && parentId && !(pos[id].enclosedBy || []).some(en => en.placeId === parentId)) {
+      pos[id].enclosedBy.push({ placeId: parentId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+    parentId = id;
+  }
+  return parentId;  // feinstes Level (vorderstes Segment)
+}
+
+// Existierendes Farm-placeObject mit gleichem Blatt-Namen UND gleichem Dorf
+// (Scope-Trennung: "Hof Schulze" in Ochtrup ≠ in Borghorst).
+function _findFarmPO(pos, leaf, villageId) {
+  const norm = _normPlaceName(leaf);
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type !== 'Farm' && po.type !== 'Building') continue;
+    const nameMatch = _normPlaceName(po.title) === norm
+      || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm);
+    if (!nameMatch) continue;
+    const encIds = (po.enclosedBy || []).map(en => en.placeId);
+    if (villageId ? encIds.includes(villageId) : encIds.length === 0) return id;
+  }
+  return null;
+}
+
+// Stellt das Farm-placeObject für eine Hof-Adresse sicher (find-or-create).
+// Löst das Dorf auf (existierend oder neue Enclosure-Kette). Setzt KEINE
+// Koords/Notiz — das tun die Aufrufer (Migration aus hofObjects, upsertHofPO).
+// Setzt NICHT ev.placeId — Farm-PO darf nie als ev.placeId landen (ADR-027 P3).
+// Gibt die Farm-placeId zurück (oder null bei unauflösbarer Hash-Kollision).
+function _ensureHofFarmPO(db, addr) {
+  addr = (addr || '').trim();
+  if (!addr) return null;
+  const pos = db.placeObjects || (db.placeObjects = {});
+
+  // Dorf: erst existierendes placeObject, sonst aus ev.place eine Enclosure-Kette.
+  // Typ neuer Glieder bewusst 'Unknown'; existierende (GRAMPS-)Orte unverändert.
+  let villageId = _hofVillageId(db, addr);
+  if (!villageId) {
+    const vStr = _hofVillageString(db, addr);
+    if (vStr) villageId = _ensureVillageChain(pos, vStr);
+  }
+  // Konvention α: Hof-Identität endet vor erstem Komma ODER Zeilenumbruch.
+  // Sichert, dass Farm-PO-Titel ("Oster 82a") gleich dem V2-hof.addrs[].value ist,
+  // damit _migrateFarmPOsToHofObjects über normTitle-Key den bestehenden V2-Hof findet.
+  const leaf = (typeof _extractHofAddr === 'function' ? _extractHofAddr(addr) : addr.split('\n')[0].trim()) || addr;
+
+  let farmId = _findFarmPO(pos, leaf, villageId);
+  if (farmId) {
+    const po = pos[farmId];
+    if (villageId && !(po.enclosedBy || []).some(en => en.placeId === villageId)) {
+      (po.enclosedBy = po.enclosedBy || []).push(
+        { placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+  } else {
+    let id = _epId('hof:' + leaf + '|' + (villageId || ''));
+    if (pos[id]) {
+      let suf = 2;
+      while (pos[id + '_' + suf] && suf < 16) suf++;
+      const candidate = id + '_' + suf;
+      const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
+                  : (typeof console !== 'undefined' && console.log) ? console.log : null;
+      if (pos[candidate]) { _warn && _warn('[HOF] _epId-Kollision unauflösbar — Hof übersprungen:', leaf); return null; }
+      id = candidate;
+    }
+    pos[id] = {
+      id, title: leaf, type: 'Farm', lat: null, long: null, note: '',
+      pnames: [],
+      enclosedBy: villageId
+        ? [{ placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
+        : [],
+      parentId: null,
+    };
+    farmId = id;
+  }
+
+  return farmId;
+}
+
+// UI-Schreibweg (ADR-026 Phase 2C/2b): Hof-Koords/Notiz in das Farm-placeObject
+// schreiben (geräteübergreifend via savePlaceObjects). Legt das PO bei Bedarf an.
+function upsertHofPO(addr, patch) {
+  const farmId = _ensureHofFarmPO(AppState.db, addr);
+  if (!farmId) return null;
+  const po = AppState.db.placeObjects[farmId];
+  if (patch && patch.lat  !== undefined) po.lat  = patch.lat;
+  if (patch && patch.long !== undefined) po.long = patch.long;
+  if (patch && patch.note !== undefined) po.note = patch.note;
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  UIState._hofCache      = null;
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  if (typeof markChanged      === 'function') markChanged();
+  return farmId;
+}
+
+function _migrateHofObjectsToPlaceObjects(db) {
+  const hof = db && db.hofObjects;
+  if (!hof || !Object.keys(hof).length) return;
+  if (!db.placeObjects) db.placeObjects = {};
+  const pos = db.placeObjects;
+  let changed = false;
+
+  for (const [rawAddr, hm] of Object.entries(hof)) {
+    const addr = (rawAddr || '').trim();
+    if (!addr) continue;
+    const hasCoords = hm.lat != null && hm.long != null;
+    const hasNote   = !!hm.note;
+    if (!hasCoords && !hasNote) continue;  // nur echte Höfe (Geodaten/Notiz)
+
+    const farmId = _ensureHofFarmPO(db, addr);
+    if (!farmId) continue;
+    const po = pos[farmId];
+    if (po.lat == null && hasCoords) { po.lat = hm.lat; po.long = hm.long; }
+    if (!po.note && hasNote) po.note = hm.note;
+    changed = true;
+  }
+
+  // ev.place an die placeId-Projektion angleichen (ADR-024-Invariante): sonst
+  // mischt collectPlaces den alten Dorf-String mit dem Farm-Typ (Dorf-Name mit
+  // 🏡-Badge). Nur im Live-Pfad (db === AppState.db), wo getPlaceRegistry() die
+  // gerade angelegten POs sieht; im Unit-Harness (lokales db) ist es no-op.
+  if (changed && typeof getPlaceRegistry === 'function' && typeof _buildFormString === 'function'
+      && typeof AppState !== 'undefined' && db === AppState.db) {
+    UIState._placeRegistry = null;
+    for (const p of Object.values(db.individuals || {})) {
+      for (const ev of (p.events || [])) {
+        if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.placeId
+            && db.placeObjects[ev.placeId] && db.placeObjects[ev.placeId].type === 'Farm') {
+          const proj = _buildFormString(ev.placeId, typeof _placeYear === 'function' ? _placeYear(ev.date) : null);
+          if (proj) ev.place = proj;
+        }
+      }
+    }
+  }
+  if (changed) UIState._placeRegistry = null;
+}
+
+// ─── P2 Item 9: Event-Koordinaten — placeObjects als single source of truth ──
+// Liest Koordinaten eines Events: erst placeObjects via ev.placeId, dann via
+// findByName(ev.place), Fallback ev.lati/long. Damit zeigt nach savePlace die
+// neue Koordinate überall sofort, ohne dass _propagateCoordsToEvents sie eager
+// in alle Events kopieren muss.
+function _eventCoords(ev) {
+  if (!ev) return { lati: null, long: null };
+  // ADR-027 P3: hofId hat Vorrang — Hof-Koords sind spezifischer als Dorf-Koords.
+  // Vor Migration kein-Op (kein ev.hofId), nach Migration Routing-Punkt.
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]
+      && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(AppState.db.hofObjects[ev.hofId])) {
+    const hof = AppState.db.hofObjects[ev.hofId];
+    if (hof.lat != null) return { lati: hof.lat, long: hof.long };
+  }
+  if (typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    let pid = ev.placeId;
+    if (!pid && ev.place) pid = reg.findByName(ev.place);
+    if (pid) {
+      const po = reg.byId[pid];
+      if (po && po.lat != null) return { lati: po.lat, long: po.long };
+    }
+  }
+  // Fallback: Event-eigene Koords (aus GEDCOM-Parser oder Altbeständen)
+  return { lati: ev.lati ?? null, long: ev.long ?? null };
+}
+
+// ─── Stufe 1 (Konzept-Materialisierung): zentraler placeId-Resolver ─────────
+// Spiegelt _eventCoords für die ORTS-IDENTITÄT: Zweig A liest die materialisierte
+// ev.placeId (Wahrheit, eindeutig); Zweig B löst aus dem Projektions-String auf
+// (findByName matcht Titel + alle pnames/Varianten). EIN Chokepoint, damit Liste,
+// Detail und UsageCounts dieselbe Identität sehen — sonst zählt die Liste über
+// Namens-Auflösung Personen, die das Detail (reiner placeId-Vergleich) nicht
+// wiederfindet. Ab Stufe 2 (ev.placeId-Backfill) feuert fast nur noch Zweig A;
+// Zweig B bleibt Auffanglinie für nicht-materialisierte (z.B. frisch importierte)
+// Events. Stadt/Kreis-Mehrdeutigkeit gleichnamiger POs löst erst Stufe 2 auf.
+function _eventPlaceId(ev) {
+  if (!ev) return null;
+  if (ev.placeId) return ev.placeId;                 // Zweig A: Wahrheit
+  if (ev.place && typeof getPlaceRegistry === 'function') {
+    return getPlaceRegistry().findByName(ev.place) || null;  // Zweig B: aus Projektion
+  }
+  return null;
+}
+
+// ADR-028 Phase 3: Lese-Chokepoint für die Frage „welcher Hof gehört zu diesem
+// Event?" Spiegelt _eventPlaceId — Wahrheit primär, Projektion als Fallback.
+// Damit haben Aggregatoren (Hof-Liste, Hofchronik, Map, Statistik) eine einzige
+// Auflösungs-Quelle und müssen nicht selbst findByAddr-Kombinationen bauen.
+//   Zweig A: ev.hofId (Wahrheit)
+//   Zweig B: ev.addr + ev.placeId-Scope → hofReg.findByAddr im Dorf-Scope
+//            (eindeutig, sonst null). Verhindert Cross-Dorf-Fehlzuordnung
+//            gleichnamiger Höfe (mehrere „Schmiede" in verschiedenen Dörfern).
+function _eventHofId(ev) {
+  if (!ev) return null;
+  if (ev.hofId) return ev.hofId;                      // Zweig A: Wahrheit
+  if (!ev.addr || typeof getHofRegistry !== 'function') return null;
+  const villageId = _eventPlaceId(ev);
+  if (!villageId) return null;
+  const year = (typeof _placeYear === 'function') ? _placeYear(ev.date) : null;
+  const hofReg = getHofRegistry();
+  if (!hofReg) return null;
+  const cands = hofReg.findAllByAddr(ev.addr, year)
+    .filter(hid => hofReg.byId[hid] && hofReg.byId[hid].villageId === villageId);
+  return cands.length === 1 ? cands[0] : null;       // strikt eindeutig
+}
+
+// Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
+// Gibt "Ort, Amt, Fürstbistum" zurück (spezifisch→allgemein, keine Leer-Slots).
+// Wichtig: pro Knoten nur das erste Komma-Segment von resolveAsOf verwenden —
+// GRAMPS ptitle ist bereits hierarchisch ("Ochtrup, Kreis Steinfurt, NRW"), würde
+// sonst mit der enclosedBy-Kette doppelt erscheinen.
+// Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
+//
+// ADR-027 P4: einargumentig. Farm/Building-Spezialfall entfällt — Höfe leben
+// nach Phase 3 nicht mehr in placeObjects, sondern in hofObjects V2.
+// `buildPlacForGedcom` handhabt Hof-Routing über ev.hofId.
+function _buildFormString(placeId, year) {
+  if (!placeId || typeof getPlaceRegistry !== 'function') return null;
+  const reg = getPlaceRegistry();
+  const _atomic = s => s ? s.split(',')[0].trim() : '';
+  if (year == null) {
+    return _atomic(reg.resolveAsOf(placeId, null)) || null;
+  }
+  const chain = reg.enclosureChainAsOf(placeId, year).map(_atomic).filter(Boolean);
+  if (chain.length) return chain.join(', ');
+  return _atomic(reg.resolveAsOf(placeId, year)) || null;
+}
+
+// ADR-027 P2/P4: GEDCOM-PLAC-String aus (placeId, hofId, year) bauen.
+// Zwei Pfade orthogonal nach Datenstand:
+//   1. ev.hofId gesetzt + V2-hofObject vorhanden (ADR-027-Welt nach Phase-3-Migration):
+//      Adresse aus hof.addrs (periodengerecht via resolveAddrAsOf) + Dorf-Hierarchie
+//      aus _buildFormString(hof.villageId) — Hof-Blatt erscheint genau einmal in PLAC.
+//   2. ev.hofId fehlt: nur Dorf-Hierarchie. Post-Phase-3 enthält placeObjects keine
+//      Farm/Building-Einträge mehr; Hof-Adressen leben ausschließlich via ev.hofId.
+function buildPlacForGedcom(ev, year) {
+  if (!ev) return null;
+  // Pfad 1 — ADR-027: Hof + Dorf
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    const hof = AppState.db.hofObjects[ev.hofId];
+    if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hof)) {
+      const reg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+      const hofAddrFull = reg ? reg.resolveAddrAsOf(ev.hofId, year) : '';
+      // Komma-Schutz: PLAC nutzt ',' als Hierarchie-Separator. Wenn die Hof-Adresse
+      // selbst ein Komma enthält (Altbestand „Oster 82a, Wester 141"), nur den Teil
+      // bis zum ersten Komma in PLAC schreiben. ADDR trägt den vollen Wert; beim
+      // Re-Import findet Pfad B (ADDR-basiert) den Hof wieder.
+      const hofAddr = hofAddrFull.includes(',')
+        ? (typeof _extractHofAddr === 'function' ? _extractHofAddr(hofAddrFull) : hofAddrFull.split(',')[0].trim())
+        : hofAddrFull;
+      // Dorf-Hierarchie als reine Verwaltungs-Kette. Wenn villageId fehlt oder
+      // unauflösbar: nur Hof-Adresse zurückgeben (besser als nichts).
+      let villagePart = null;
+      if (hof.villageId && typeof _buildFormString === 'function') {
+        villagePart = _buildFormString(hof.villageId, year);
+      }
+      if (hofAddr && villagePart) return hofAddr + ', ' + villagePart;
+      return hofAddr || villagePart || null;
+    }
+  }
+  // Pfad 2 — kein ev.hofId: nur Dorf-Hierarchie. Nach Phase 3 enthält placeObjects
+  // keine Farm/Building-Einträge mehr; Höfe werden ausschließlich über ev.hofId
+  // adressiert. Falls ein Restbestand-Farm-PO doch noch übrig ist (Migration noch
+  // nicht gelaufen), läuft die Kette inkl. Hof-Blatt durch — das ist akzeptable
+  // Übergangs-Semantik (Hof landet in PLAC, Adress-Duplikat zu ev.addr).
+  // GUARD: wenn hofId gesetzt aber hofObject fehlt (stale nach _mergeHofObjects),
+  // NICHT nur placeId schreiben — das würde den Hof-Adressteil ('Gronau') verlieren
+  // und nur die Village-Hierarchie ('Nordrhein-Westfalen, Deutschland') hinterlassen.
+  // Stattdessen null → _resolvedPlaceName fällt auf ev.place zurück.
+  if (!ev.hofId && ev.placeId && typeof _buildFormString === 'function') {
+    return _buildFormString(ev.placeId, year);
+  }
+  return null;
+}
+
+// ADR-028 Phase 1: REPROJECT-Wrapper für die ev.place/ev.addr-Caches nach
+// erfolgreicher Identitäts-Auflösung. Setzt die ADR-024-Projektions-Invariante
+// strukturell durch — bei gesetztem ev.placeId/hofId ist ev.place IMMER die
+// periodengerechte Projektion (`buildPlacForGedcom` für Hof, `_buildFormString`
+// für nur-Ort). Damit verschwinden Stale-Cache-Phantom-Einträge in
+// `collectPlaces` (Bug-Klasse #1) strukturell.
+//
+// ev.addr wird NUR gefüllt wenn leer — User-Wire-Daten (ADDR im Original-GEDCOM)
+// bleiben byte-identisch, sonst Roundtrip-Bruch im ADDR-Feld. Die Hof-eigene
+// addrs[]-Form ist Metadaten; der Wire-ADDR bleibt was die Quelle sagt.
+//
+// Rückgabe: true wenn ev.place mutiert wurde (für recollapsed-Counter +
+// markChanged-Signal — analog Fall 1/2a/2b).
+function _reprojectEvCache(ev, year) {
+  if (!ev) return false;
+  let proj = null;
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    proj = (typeof buildPlacForGedcom === 'function') ? buildPlacForGedcom(ev, year) : null;
+    if (!ev.addr && typeof getHofRegistry === 'function') {
+      const hofReg = getHofRegistry();
+      const a = hofReg && hofReg.resolveAddrAsOf && hofReg.resolveAddrAsOf(ev.hofId, year);
+      if (a) ev.addr = a;
+    }
+  } else if (ev.placeId && typeof _buildFormString === 'function') {
+    proj = _buildFormString(ev.placeId, year);
+  }
+  if (proj && proj !== ev.place) {
+    ev.place = proj;
+    return true;
+  }
+  return false;
+}
+
+// Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
+// Gruppiert alle betroffenen Events nach ihrem resultierenden _buildFormString-Wert.
+// Gibt [{str, count, yearMin, yearMax, noDate}] sortiert nach Jahresminimum zurück.
+function _buildLinkGroups(sourceNames, targetPlaceId) {
+  if (!targetPlaceId || typeof getPlaceRegistry !== 'function') return [];
+  const reg = getPlaceRegistry();
+  const srcSet = new Set(sourceNames.map(n => n.trim()));
+  const groups = new Map();
+  const _visit = ev => {
+    if (!ev || ev.place == null) return;
+    const t = ev.place.trim();
+    if (!srcSet.has(t)) return;
+    const year = _placeYear(ev.date);
+    const str  = _buildFormString(targetPlaceId, year) || reg.resolveAsOf(targetPlaceId, year) || '';
+    if (!groups.has(str)) groups.set(str, { str, count: 0, yearMin: Infinity, yearMax: -Infinity, noDate: 0 });
+    const g = groups.get(str);
+    g.count++;
+    if (year != null) { g.yearMin = Math.min(g.yearMin, year); g.yearMax = Math.max(g.yearMax, year); }
+    else g.noDate++;
+  };
+  const db = AppState.db;
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_visit); (p.events || []).forEach(_visit);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_visit); (f.events || []).forEach(_visit);
+  }
+  return [...groups.values()].sort((a, b) =>
+    (a.yearMin === Infinity ? 1 : 0) - (b.yearMin === Infinity ? 1 : 0) || a.yearMin - b.yearMin);
+}
+
+// Wendet den String→PlaceObject Link an (nur Gruppen in confirmedStrs).
+// Setzt ev.place = periodenkorrekter String + ev.placeId = targetPlaceId.
+// net_delta=0: ev.place wird auf exakt den String gesetzt, den der Writer beim Export reproduziert.
+function applyStringPlaceLink(sourceNames, targetPlaceId, confirmedStrs) {
+  if (!targetPlaceId || typeof getPlaceRegistry !== 'function') return 0;
+  const reg = getPlaceRegistry();
+  const srcSet = new Set(sourceNames.map(n => n.trim()));
+  const confirmed = new Set(confirmedStrs);
+  let linked = 0;
+  const _fix = ev => {
+    if (!ev || ev.place == null) return;
+    const t = ev.place.trim();
+    if (!srcSet.has(t)) return;
+    const year = _placeYear(ev.date);
+    const str  = _buildFormString(targetPlaceId, year) || reg.resolveAsOf(targetPlaceId, year) || '';
+    if (!confirmed.has(str)) return;
+    ev.place = str; ev.placeId = targetPlaceId; linked++;
+  };
+  const db = AppState.db;
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_fix); (p.events || []).forEach(_fix);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_fix); (f.events || []).forEach(_fix);
+  }
+  if (linked) { UIState._placesCache = null; UIState._placeRegistry = null; }
+  return linked;
+}
+
+// Verknüpft GEDCOM-Events mit placeObjects (ADR-024 Link-Pass).
+// Aufruf nach loadPlaceObjectsFromIDB() — nur im GEDCOM-Pfad (GRAMPS setzt placeId via Parser).
+//
+// Modell-Invariante: placeId = Wahrheit, ev.place = periodengerechte Projektion des
+// placeObjects (_buildFormString). In GEDCOM kollabiert das placeObject auf genau diesen
+// einen String. Zwei Fälle:
+//   1. Atomarer Cache-String (kein Komma) → Identitäts-Match via findByName. ev.place wird
+//      zur Projektion neu kollabiert. Weicht sie vom Cache ab (enclosedBy nachträglich
+//      ergänzt), wird ev.place überschrieben + markChanged (ehrliche Konsequenz: das
+//      angereicherte Ortsmodell ist jetzt in der Datei angekommen).
+//   2. Bereits ein Hierarchie-String (mit Komma) → nur verknüpfen wenn die Projektion exakt
+//      passt (Reimport unseres eigenen Exports). Fremde/manuelle Hierarchien werden NICHT
+//      überschrieben → keine ungewollte Datenmutation.
+// Rückgabe: Anzahl neu kollabierter Events (für die Lade-Meldung).
+function _linkGedcomEventsToPlaceObjects(db) {
+  if (!db) return 0;
+  const reg = getPlaceRegistry();
+  // ADR-027 P2: HofRegistry parallel — kann leer sein in Phase 2 (vor Phase-3-Migration);
+  // dann sind alle Hof-Pfade No-Ops und Verhalten ist byte-identisch mit ADR-024.
+  const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+  const hofRegHasData = hofReg && Object.keys(hofReg.byId).length > 0;
+  if (!reg || !Object.keys(reg.byId).length) return 0;
+  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0, linkedHofAtomic = 0, linkedHofTypeBootstrap = 0;
+  const _project = (pid, year) =>
+    (typeof _buildFormString === 'function' && _buildFormString(pid, year))
+    || reg.resolveAsOf(pid, year) || null;
+  // ADR-027 P2: Anker-Check für Pfad A — mindestens ein rest-Segment muss in der
+  // Vorfahren-Hierarchie von hof.villageId auftauchen (Norm-Match). Verhindert
+  // Cross-Dorf-Fehlzuordnung (gleicher Hofname „Schmiede" in zwei Dörfern → ein
+  // Treffer pro Dorf, Anker disambiguiert).
+  const _villageAnchorMatches = (villageId, restSegs, year) => {
+    if (!villageId || !restSegs.length) return false;
+    const tokens = new Set();
+    const _addPo = pid => {
+      const _po = reg.byId[pid]; if (!_po) return;
+      if (_po.title) tokens.add(_normPlaceName(_po.title));
+      for (const pn of _po.pnames || []) if (pn.value) tokens.add(_normPlaceName(pn.value));
+    };
+    _addPo(villageId);                          // Dorf selbst zählt — rest-Segment darf Dorfname sein
+    const seen = new Set([villageId]);
+    let curId = villageId, hops = 0;
+    while (hops++ < 12) {
+      const _po = reg.byId[curId]; if (!_po) break;
+      let nextId = null;
+      if (year != null) {
+        const w = reg.enclosureWinnerAsOf(curId, year);
+        nextId = w.enc && w.enc.placeId;
+      }
+      if (!nextId) {
+        const encs = _po.enclosedBy || [];
+        nextId = (encs[0] && encs[0].placeId) || _po.parentId || null;
+      }
+      if (!nextId || seen.has(nextId)) break;
+      seen.add(nextId); _addPo(nextId); curId = nextId;
+    }
+    for (const seg of restSegs) {
+      if (tokens.has(_normPlaceName(seg))) return true;
+    }
+    return false;
+  };
+  // ADR-027 P2 Pfad A: PLAC-Leitsegment matcht hof.addrs[].value → Hof + Dorf erkannt.
+  // Voraussetzung: ev.place ist Komma-Hierarchie (sonst ist Pfad A nicht anwendbar —
+  // Fall 1 atomar greift im Hauptpfad). Eindeutigkeit: genau ein hofObject darf nach
+  // Anker-Check matchen. Mehrdeutigkeit (zwei Schmiede-Höfe, beide mit passendem Dorf)
+  // blockiert Auto-Link → bewusster Review-Pfad in Phase 5.
+  const _tryHofPlacLink = (ev, year) => {
+    if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    // ADR-024 v1042: Hof-Pfade auf hof-relevante Event-Typen beschränken.
+    // BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN mit rich-PLAC würden sonst Pseudo-
+    // Höfe matchen („Schule für Bauwesen, Münster" → Pfad A picked falschen
+    // Hof). Hof-Geburten/Tode am Hof bleiben via Pfad B (ADDR) möglich.
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // Leeres erstes Segment = kein Hof-Präfix (s. Pfad C).
+    if (!ev.place.split(',')[0].trim()) return false;
+    const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length < 2) return false;
+    const lead = segs[0], rest = segs.slice(1);
+    const cands = hofReg.findAllByAddr(lead, year);
+    if (!cands.length) return false;
+    let winner = null, multi = false;
+    for (const hofId of cands) {
+      const hof = hofReg.byId[hofId];
+      if (!hof) continue;
+      if (!_villageAnchorMatches(hof.villageId, rest, year)) continue;
+      if (winner) { multi = true; break; }
+      winner = hofId;
+    }
+    if (!winner || multi) return false;
+    ev.hofId = winner;
+    ev.placeId = hofReg.byId[winner].villageId;
+    linkedHofPlac++;
+    // ADR-028 Phase 1: REPROJECT — ev.place auf periodengerechte Projektion
+    // (Hof + Dorf-Hierarchie) angleichen; ev.addr füllen wenn leer. Bei reichem
+    // Hof- oder Dorf-Modell ggü. Quell-Snapshot zählt das als recollapsed →
+    // markChanged signalisiert die ehrliche Anreicherung.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  // ADR-027 P2 Pfad B: ev.addr matcht hof.addrs[].value innerhalb des bereits
+  // verlinkten ev.placeId-Dorfs → Hof erkannt ohne PLAC-Leitsegment.
+  // Konvention 2 (MyHeritage/GRAMPS-Export): „PLAC Dorf, … + ADDR Hof". Eindeutigkeit
+  // im Dorf-Scope ist die Regel.
+  const _tryHofAddrLink = (ev, year) => {
+    if (!hofRegHasData || ev.hofId || !ev.placeId || !ev.addr) return false;
+    const candsByAddr = hofReg.findAllByAddr(ev.addr, year);
+    if (!candsByAddr.length) return false;
+    // Intersect: nur Höfe deren villageId === ev.placeId
+    const inVillage = candsByAddr.filter(id => hofReg.byId[id]?.villageId === ev.placeId);
+    if (inVillage.length !== 1) return false;
+    ev.hofId = inVillage[0];
+    linkedHofAddr++;
+    // ADR-028 Phase 1: REPROJECT — bei Konvention 2 (PLAC=Dorf + ADDR=Hof)
+    // wird ev.place jetzt zur vollen Hof-Hierarchie „Hof, Dorf, …". Das ist
+    // der sichtbare Konvention-2→1-Übergang (recollapsed → markChanged →
+    // Toast); idempotent ab Iteration 2.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  // ADR-028 Phase 4 Pfad B' (Bootstrap aus Event-Typ-Semantik, Konvention 2
+  // ohne Hof): Wenn das Event ein RESI/PROP/CENS/OCCU ist, ev.placeId aufgelöst
+  // und ev.addr gesetzt ist, kann der Quell-Bezug eindeutig als Hof gelesen
+  // werden — der Event-Typ ist der Anker (analog rich-PLAC-Struktur bei
+  // Pfad C). Neue hofObjects werden via findOrCreateHofObject deterministisch
+  // angelegt; ID-Schema und Idempotenz wie bei Pfad C.
+  // Reihenfolge im _link: NACH _tryHofAddrLink (Pfad B) — bestehender Hof
+  // gewinnt vor Neuanlage. BIRT/DEAT/MARR/BURI tragen keine Hof-Semantik →
+  // landen ohne Auto-Bootstrap im Review-Pfad (Phase 5).
+  const _tryHofBootstrapFromAddr = (ev, year) => {
+    if (!hofReg || ev.hofId || !ev.placeId || !ev.addr) return false;
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // ADR-024 v1035: kein Pseudo-Hof, wenn ADDR semantisch dasselbe wie der
+    // aufgelöste Ort ist (manche Programme schreiben den Ortsnamen in ADDR
+    // statt der ADDR leer zu lassen).
+    if (_isAddrJustVillage(ev)) return false;
+    // Sicherheits-Check: wenn doch ein bestehender Hof matcht (z.B. weil
+    // hofRegHasData zwischenzeitlich befüllt wurde), darf Pfad B' nicht
+    // dazwischenfunken — Pfad B hat bei dieser Reihenfolge schon gegriffen.
+    if (hofRegHasData) {
+      const existing = hofReg.findAllByAddr(ev.addr, year)
+        .filter(id => hofReg.byId[id] && hofReg.byId[id].villageId === ev.placeId);
+      if (existing.length) return false;
+    }
+    const hofId = (typeof findOrCreateHofObject === 'function')
+      ? findOrCreateHofObject(ev.addr, ev.placeId) : null;
+    if (!hofId) return false;
+    ev.hofId = hofId;
+    linkedHofTypeBootstrap++;
+    // REPROJECT: ev.place wandert von Konvention 2 (Dorf-Hierarchie) auf
+    // Konvention 1 (Hof + Dorf-Hierarchie) — sichtbarer Übergang via
+    // recollapsed → markChanged → Toast, danach idempotent.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  // ADR-028 Phase 2 Pfad A' (atomarer Hof-Lookup, Konvention 3a):
+  // `PLAC Wall 33` allein (kein Komma, kein ADDR) — Pfad A scheitert wegen
+  // Komma-Anforderung, Pfad B braucht placeId, Fall 1 sucht nur in placeObjects.
+  // Lücke: wenn der Hof global eindeutig im hofObjects-Index liegt, soll er
+  // direkt auflösen — keine Quell-Schärfung nötig.
+  // Auflösungs-Reihenfolge: läuft NACH _placeLink — Fall 1 hat Vorrang
+  // (Village-Match in placeObjects schlägt hofObject; ein PO „Berlin" als Stadt
+  // gewinnt gegen einen hypothetischen hofObject „Berlin"). Pfad A' feuert nur,
+  // wenn Fall 1 nichts gefunden hat (ev.placeId noch null).
+  // Eindeutigkeits-Regel: genau ein hofObject mit dieser Norm-Adresse im
+  // gesamten Wissen. Mehrdeutig → blockieren (Review-Pfad in Phase 5).
+  const _tryHofAtomicLink = (ev, year) => {
+    if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place) return false;
+    if (ev.place.includes(',')) return false;        // atomar-Pfad nur für kommafreie PLAC
+    // ADR-024 v1042: nur hof-relevante Event-Typen — verhindert zufällige
+    // Hof-Matches bei GRAD/EDUC mit atomarem PLAC „Schule".
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    const cands = hofReg.findAllByAddr(ev.place, year);
+    if (cands.length !== 1) return false;            // strikt eindeutig (Mehrdeutigkeit blockiert)
+    const hofId = cands[0];
+    const hof = hofReg.byId[hofId];
+    if (!hof || !hof.villageId) return false;
+    ev.hofId = hofId;
+    ev.placeId = hof.villageId;
+    linkedHofAtomic++;
+    // REPROJECT: ev.place wandelt sich von atomarer Adresse zu voller Hof+Dorf-
+    // Hierarchie. Sichtbarer Konvention-3→1-Übergang (recollapsed → markChanged
+    // → Toast); idempotent ab Iteration 2.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  const _placeLink = (ev, year) => {
+    if (ev.placeId || !ev.place) return;
+    if (!ev.place.includes(',')) {
+      // Fall 1: atomarer Cache-String → placeObject per Identität, dann kollabieren.
+      // Farm/Building-POs sind keine Verwaltungseinheiten und dürfen nie als
+      // ev.placeId landen — sie werden via hofId+Pfad A/A'/B referenziert.
+      const pid = reg.findByName(ev.place);
+      if (!pid) return;
+      const _po1 = reg.byId[pid];
+      if (_po1 && (_po1.type === 'Farm' || _po1.type === 'Building')) return;
+      const proj = _project(pid, year);
+      if (!proj) return;
+      ev.placeId = pid; linked++;
+      if (proj !== ev.place) { ev.place = proj; recollapsed++; }
+    } else {
+      // Fall 2a: bereits Hierarchie-String → bei exaktem Projektions-Match sicher verknüpfen.
+      // Stufe 2: ALLE gleichnamigen Kandidaten des Blatts prüfen — die volle Kette
+      // disambiguiert Stadt vs. Kreis (z.B. „Münster, Kreis Münster, …" trifft nur
+      // die Stadt, deren Projektion exakt diesen String reproduziert).
+      const first = ev.place.split(',').map(s => s.trim()).find(s => s) || '';
+      const cands = reg.findAllByName(first);
+      let exact = null;
+      for (const cand of cands) {
+        const proj = _project(cand, year);
+        if (proj && proj === ev.place) { exact = cand; break; }
+      }
+      if (exact) { ev.placeId = exact; linked++; }
+      // Fall 2b: kein exakter Match, aber genau EIN Leitnamen-Kandidat → toleranter
+      // Link. Behebt den bare-vs-reich-Fall: GEDCOM-String trägt moderne Verwaltung
+      // („Ort, Stadt Sehnde, Region Hannover, NDS"), die nicht in die historische
+      // enclosedBy-Kette passt, aber der Leitname trifft eindeutig den reichen PO.
+      // Drei Schutzschichten gegen Fehlzuordnung:
+      //   1. Mehrdeutigkeit blockiert (cands.length === 1) — kein Raten
+      //   2. Existenz-Spanne (existsFrom/existsTo) muss Event-Jahr umfassen
+      //   3. Hierarchie-Anker: mind. EIN weiteres Segment des Event-Strings muss
+      //      in der Ahnen-Hierarchie des Kandidaten als Norm-Match auftauchen.
+      //      Beispiel: "Oldenburg, Franklin County, Indiana, USA" + _po_oldenburg_nds
+      //      → keiner von "Franklin", "Indiana", "USA" matcht die deutsche Kette
+      //      → BLOCKIERT (kein USA-Oldenburg vorhanden, aber nicht raten).
+      // Mutation: ev.place wird auf die periodengerechte Projektion neu kollabiert
+      // (Projektions-Invariante ADR-024), markChanged signalisiert das ehrlich.
+      else if (cands.length === 1) {
+        const cand = cands[0], po = reg.byId[cand];
+        if (po && (po.type === 'Farm' || po.type === 'Building')) return;
+        if (po) {
+          let ok = true;
+          // (2) Existenz-Check
+          if (year != null) {
+            const ef = _placeYear(po.existsFrom), et = _placeYear(po.existsTo);
+            if (ef != null && year < ef) ok = false;
+            else if (et != null && year > et) ok = false;
+          }
+          // (3) Hierarchie-Anker-Check (nur wenn der Event-String weitere Segmente
+          //     enthält — atomare Leitname-Strings würden Fall 1 treffen, nicht hier)
+          const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+          if (ok && segs.length > 1) {
+            // Token-Set aus Titel + pnames aller Vorfahren des Kandidaten zum Stichjahr.
+            const tokens = new Set();
+            const _addPo = pid => {
+              const _po = reg.byId[pid]; if (!_po) return;
+              if (_po.title) tokens.add(_normPlaceName(_po.title));
+              for (const pn of _po.pnames || []) {
+                if (pn.value) tokens.add(_normPlaceName(pn.value));
+              }
+            };
+            // Ahnen-Kette (ohne den Kandidaten selbst — Leitname matcht eh)
+            const seen = new Set([cand]);
+            let curId = cand;
+            let hops = 0;
+            while (hops++ < 12) {
+              const _po = reg.byId[curId]; if (!_po) break;
+              let nextId = null;
+              if (year != null) {
+                const w = reg.enclosureWinnerAsOf(curId, year);
+                nextId = w.enc && w.enc.placeId;
+              }
+              if (!nextId) {
+                const encs = _po.enclosedBy || [];
+                nextId = (encs[0] && encs[0].placeId) || _po.parentId || null;
+              }
+              if (!nextId || seen.has(nextId)) break;
+              seen.add(nextId);
+              _addPo(nextId);
+              curId = nextId;
+            }
+            // Mind. ein weiteres Segment muss in den Tokens stehen
+            let anchorMatch = false;
+            for (let i = 1; i < segs.length; i++) {
+              if (tokens.has(_normPlaceName(segs[i]))) { anchorMatch = true; break; }
+            }
+            if (!anchorMatch) ok = false;
+          }
+          if (ok) {
+            const proj = _project(cand, year);
+            if (proj) {
+              ev.placeId = cand; linked++;
+              if (proj !== ev.place) { ev.place = proj; recollapsed++; }
+            }
+          }
+        }
+      }
+    }
+  };
+  // ADR-027 Pfad C: PLAC-Bootstrap. Greedy-shortest-prefix-Loop für rich-PLAC
+  // Events ohne placeId-Auflösung durch Fall 1/2a/2b (= das Leitsegment ist kein
+  // bekanntes placeObject). Sucht den kürzesten Hof-Präfix [0..i], bei dem
+  // segs[i..N].join(', ') exakt der periodengerechten Projektion eines
+  // findAllByName(segs[i])-Kandidaten entspricht — dann ist segs[0..i] der Hof,
+  // der Kandidat das Dorf.
+  // Mehrdeutigkeits-Schutz (Spec):
+  //   1. Mehrere village-Kandidaten an Position i mit exakter Projektion → blockieren
+  //   2. ≥2 bestehende hofObjects an (norm(lead), winner-villageId) → blockieren
+  //      (mirror Pfad A: wenn Pfad A wegen Hof-Mehrdeutigkeit nicht linken konnte,
+  //      darf Pfad C auch keinen Default picken)
+  // Reihenfolge im _link unten: NACH _placeLink (Fall 2a/2b haben Vorrang für
+  // legitime Verwaltungs-Hierarchien wie „Münster, Münster, Westfalen").
+  // findOrCreateHofObject ist db-direkt + idempotent → keine hofReg-Sync nötig.
+  // maxHofSegs=2: Höfe sind in der Praxis 1, selten 2 Segmente.
+  const MAX_HOF_SEGS_BOOTSTRAP = 2;
+  const _tryHofBootstrapFromPlac = (ev, year) => {
+    if (ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    // ADR-024 v1042: nur hof-relevante Event-Typen bootstrappen. Sonst legt
+    // BIRT „Krankenhaus St. Joseph, Münster" einen Pseudo-Hof „Krankenhaus
+    // St. Joseph" an.
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // Leeres erstes PLAC-Segment („, Hildesheim, , Deutschland") = kein Hof-Präfix;
+    // die Person lebte direkt im Ort, nicht auf einem Hof. GEDCOM 5.5.1: Segment 0
+    // ist die Adresse/Hofstelle, leer = nicht vorhanden.
+    const rawSegs = ev.place.split(',');
+    if (!rawSegs[0].trim()) return false;
+    const segs = rawSegs.map(s => s.trim()).filter(Boolean);
+    if (segs.length < 2) return false;
+    const maxI = Math.min(segs.length - 1, MAX_HOF_SEGS_BOOTSTRAP);
+    for (let i = 1; i <= maxI; i++) {
+      const villageStr = segs.slice(i).join(', ');
+      const cands = reg.findAllByName(segs[i]);
+      if (!cands.length) continue;
+      let winner = null, multi = false;
+      for (const cand of cands) {
+        const proj = _project(cand, year);
+        if (proj === villageStr) {
+          if (winner) { multi = true; break; }
+          winner = cand;
+        }
+      }
+      if (multi) return false;                 // Village-Mehrdeutigkeit blockiert (Spec)
+      if (!winner) continue;                   // an dieser Position kein exakter Match → nächstes i
+      const hofAddr = segs.slice(0, i).join(', ');
+      // Guard 2: Hof-Mehrdeutigkeit — wenn ≥2 bestehende Höfe (lead, winner) matchen,
+      // hat Pfad A bewusst blockiert; Pfad C darf nicht arbiträr einen wählen.
+      if (hofRegHasData) {
+        const existing = hofReg.findAllByAddr(hofAddr, year)
+          .filter(hid => hofReg.byId[hid] && hofReg.byId[hid].villageId === winner);
+        if (existing.length > 1) return false;
+      }
+      const hofId = (typeof findOrCreateHofObject === 'function')
+        ? findOrCreateHofObject(hofAddr, winner) : null;
+      if (!hofId) continue;
+      ev.placeId = winner;
+      ev.hofId   = hofId;
+      if (!ev.addr) ev.addr = hofAddr;
+      linkedHofBootstrap++;
+      // ADR-028 Phase 1: REPROJECT — bei exakter Projektions-Reproduktion
+      // (Pfad-C-Voraussetzung) ist das eine No-Op und damit der Idempotenz-
+      // Beweis für die Wire-Treue der Konvention 1. Sollte das Modell
+      // nachträglich enriched werden (pname am Verwaltungs-Vorfahren), greift
+      // das wie bei Pfad A als legitime Anreicherung.
+      if (_reprojectEvCache(ev, year)) recollapsed++;
+      return true;
+    }
+    return false;
+  };
+  // ADR-027 P2: Top-Level-Link-Funktion. Reihenfolge ist deterministisch:
+  //   1. Pfad A (PLAC-Leitsegment → bestehendes hofObject + Dorf)
+  //   2. Bestehender Place-Link (Fall 1 / Fall 2a / Fall 2b) — legitime Verwaltungs-Hierarchien
+  //   3. Pfad C (PLAC-Bootstrap → neuer hofObject aus rich-PLAC bei exakter Dorf-Projektion);
+  //      greift NUR wenn 1+2 nichts fanden, damit „Münster, Münster, Westfalen" nicht als
+  //      Hof „Münster" im Kreis Münster bootstrapped wird (Fall 2a hat dort exakt @ST@ getroffen)
+  //   4. Pfad B (ADDR im Dorf-Scope → bestehendes hofObject)
+  // Vor Phase-3-Migration sind 1+4 No-Ops; 3 ist seit v1025 die Bootstrap-Quelle.
+  const _link = ev => {
+    if (!ev) return;
+    const year = _placeYear(ev.date);
+    // ADR-028 Phase 1: Durchreich-REPROJECT für bereits gelinkte Events
+    // (GRAMPS-Parser, IDB-Restore, vorige Loads). Pickt Anreicherungen am
+    // Orts-/Hof-Modell auf, ohne die Pfade unnötig durchlaufen zu lassen.
+    // Idempotent: identisches Modell → keine Mutation, kein recollapsed++.
+    if ((ev.placeId || ev.hofId) && _reprojectEvCache(ev, year)) recollapsed++;
+    if (_tryHofPlacLink(ev, year)) return;        // Pfad A: setzt placeId + hofId
+    _placeLink(ev, year);                          // Fall 1/2a/2b: setzt placeId (skip wenn schon gesetzt)
+    if (_tryHofAtomicLink(ev, year)) return;       // Pfad A' (Phase 2): atomar PLAC → globaler hofObject-Match
+    if (_tryHofBootstrapFromPlac(ev, year)) return; // Pfad C: legt hofObject an, setzt placeId+hofId+addr
+    if (_tryHofAddrLink(ev, year)) return;         // Pfad B: setzt hofId wenn ev.addr matcht (existing Hof)
+    _tryHofBootstrapFromAddr(ev, year);            // Pfad B' (Phase 4): Bootstrap aus Event-Typ-Semantik
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_link);
+    (p.events || []).forEach(_link);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_link);
+    (f.events || []).forEach(_link);
+  }
+  // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
+  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
+    const _info = (typeof console !== 'undefined' && console.info) ? console.info
+                : (typeof console !== 'undefined' && console.log) ? console.log : null;
+    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAtomic} Höfe (atomar), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${linkedHofTypeBootstrap} Höfe (TypeBootstrap), ${recollapsed} neu kollabiert`);
+  }
+  // Cache immer invalidieren wenn Links gesetzt wurden (UI muss aktuellen Stand zeigen).
+  if (linked || recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
+    UIState._placesCache = null; UIState._placeRegistry = null;
+    UIState._hofRegistry = null; UIState._hofCache = null;
+  }
+  // markChanged NUR wenn der GEDCOM-Writer tatsächlich anderen Content erzeugen würde:
+  //   recollapsed      → ev.place geändert, Writer schreibt neuen PLAC
+  //   Bootstrap/TypeBootstrap → neues hofObject angelegt, hofId gesetzt, PLAC+ADDR neu
+  // linkedHofPlac/Addr/Atomic = reine Runtime-Re-Links (ev.hofId/placeId runtime-only);
+  // buildPlacForGedcom produziert mit denselben IDs denselben String → kein Delta.
+  if (recollapsed || linkedHofBootstrap || linkedHofTypeBootstrap) {
+    if (typeof markChanged === 'function') markChanged();
+  }
+  // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
+  // Hof-Treffer werden separat gezählt (storage-file.js liest diese Zähler aus AppState).
+  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAtomic, linkedHofBootstrap, linkedHofAddr, linkedHofTypeBootstrap, recollapsed };
+  return recollapsed;
+}
+
+// Baut (lazy, gecacht) die PlaceRegistry über AppState.db.placeObjects:
+//   byId   : placeId → placeObject
+//   byNorm : normalisierter Name (title + alle pnames) → placeId (erste gewinnt)
+//   findByName(str)              → placeId | null
+//   resolveAsOf(placeId, year)   → periodenkorrekter Name (pname gültig im Jahr, sonst title)
+//   enclosureChainAsOf(id, year) → [Ort, übergeordnet, …] als Namen zum Jahr
+function getPlaceRegistry() {
+  if (UIState._placeRegistry) return UIState._placeRegistry;
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  // byNorm: norm → erste id (Rückwärtskompatibilität, deterministisch).
+  // byNormAll: norm → ALLE ids (Stufe 2: Disambiguierung gleichnamiger POs).
+  const byId = {}, byNorm = {}, byNormAll = {};
+  for (const [id, pl] of Object.entries(pos)) {
+    byId[id] = pl;
+    const names = [pl.title].concat((pl.pnames || []).map(p => p.value));
+    const seenForThis = new Set();   // ein PO zählt pro norm nur einmal
+    for (const nm of names) {
+      const k = _normPlaceName(nm);
+      if (!k || seenForThis.has(k)) continue;
+      seenForThis.add(k);
+      if (!(k in byNorm)) byNorm[k] = id;
+      (byNormAll[k] || (byNormAll[k] = [])).push(id);
+    }
+  }
+  // Kandidaten eines Namens nach Spezifität sortiert (Siedlung vor Verwaltung),
+  // bei Gleichstand stabil in Einfüge-Reihenfolge. Leerer/unbekannter Name → [].
+  const _candidatesByName = str => {
+    const k = _normPlaceName(str);
+    const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
+    if (ids.length < 2) return ids.slice();
+    return ids.slice().sort((a, b) =>
+      _placeTypeRank(byId[a] && byId[a].type) - _placeTypeRank(byId[b] && byId[b].type));
+  };
+  const _yearOf = y => (typeof y === 'number' ? y : _placeYear(y));
+  const _dateMatches = (from, to, y) =>
+    (from == null && to == null) ? false
+    : (from == null || y >= from) && (to == null || y <= to);
+  const reg = {
+    byId, byNorm, byNormAll,
+    // Stufe 2: bei Mehrdeutigkeit den spezifischsten (Siedlungs-)Ort wählen statt
+    // Einfüge-Zufall. Für Einzeltreffer identisch zum alten Verhalten.
+    findByName(str) {
+      const c = _candidatesByName(str);
+      return c.length ? c[0] : null;
+    },
+    // Alle POs gleichen Namens, spezifisch→allgemein. Erlaubt dem Aufrufer
+    // (z.B. Hierarchie-Link), per Kontext zu disambiguieren.
+    findAllByName(str) { return _candidatesByName(str); },
+    resolveAsOf(placeId, year) {
+      const pl = byId[placeId];
+      if (!pl) return null;
+      const y = _yearOf(year);
+      if (y != null) {
+        // Bei Überlappungen: neuester Eintrag (höchstes dateFrom) bevorzugen — analog enclosureChainAsOf
+        let bestFrom = -Infinity, bestVal = null;
+        for (const pn of pl.pnames || []) {
+          if (!_dateMatches(_placeYear(pn.dateFrom), _placeYear(pn.dateTo), y)) continue;
+          const f = _placeYear(pn.dateFrom) ?? -Infinity;
+          if (f > bestFrom) { bestFrom = f; bestVal = pn.value; }
+        }
+        if (bestVal) return bestVal;
+      }
+      return pl.title || (pl.pnames && pl.pnames[0] && pl.pnames[0].value) || '';
+    },
+    // Gewinnender enclosedBy-Eintrag eines Knotens zum Stichjahr — die kanonische
+    // Auswahl-Logik. Bei Überlappung gewinnt der Eintrag mit dem höchsten dateFrom
+    // (Beispiel: bis=1946 und ab=1946 → der „ab"-Eintrag „tritt in Kraft"). Undatierte
+    // Einträge sind Fallback (Migration parentId), nur gültig wenn kein datierter passt.
+    // Rückgabe: { enc, truncated } — enc=null + truncated=true wenn der Knoten datierte
+    // Eltern hat, aber keiner zum Jahr passt (Kette wird beim Aufrufer truncated).
+    // y=null: keine Jahres-Constraint → null+false (Aufrufer fällt auf encs[0] zurück).
+    enclosureWinnerAsOf(placeId, year) {
+      const y = _yearOf(year);
+      if (y == null || !byId[placeId]) return { enc: null, truncated: false };
+      const encs = byId[placeId].enclosedBy || [];
+      let bestFrom = -Infinity, bestEnc = null, undatedEnc = null;
+      for (const e of encs) {
+        const ef = _placeYear(e.dateFrom), et = _placeYear(e.dateTo);
+        if (ef == null && et == null) { undatedEnc = e; continue; }
+        if (_dateMatches(ef, et, y)) {
+          const efVal = ef ?? -Infinity;
+          if (efVal > bestFrom) { bestFrom = efVal; bestEnc = e; }
+        }
+      }
+      const enc = bestEnc ?? undatedEnc ?? null;
+      const hasDated = encs.some(e => _placeYear(e.dateFrom) != null || _placeYear(e.dateTo) != null);
+      const truncated = !enc && hasDated;
+      return { enc, truncated };
+    },
+    // opts.meta (optional): wird mit { truncated: true } befüllt wenn die Kette
+    // bei einem Knoten abbricht, der bekannte Eltern hat (encs.length > 0) aber
+    // keiner davon zum angefragten Jahr passt. Erlaubt dem Aufrufer, eine
+    // unvollständige Kette von einer legitim-obersten Kette zu unterscheiden.
+    enclosureChainAsOf(placeId, year, opts) {
+      const out = [], seen = new Set();
+      const y = _yearOf(year);
+      let curId = placeId;
+      while (curId && byId[curId] && !seen.has(curId)) {
+        seen.add(curId);
+        // Existenzgrenzen prüfen: Knoten nicht in Kette aufnehmen wenn außerhalb
+        const _pl = byId[curId];
+        if (y != null && (_pl.existsFrom || _pl.existsTo)) {
+          const ef = _placeYear(_pl.existsFrom), et = _placeYear(_pl.existsTo);
+          if ((ef != null && y < ef) || (et != null && y > et)) break;
+        }
+        out.push(reg.resolveAsOf(curId, year));
+        const encs = byId[curId].enclosedBy || [];
+        let next = null;
+        if (y != null) {
+          const w = reg.enclosureWinnerAsOf(curId, year);
+          next = w.enc?.placeId ?? null;
+          if (w.truncated && opts?.meta) opts.meta.truncated = true;
+        }
+        // Bei spezifischem Jahr kein Fallback auf encs[0]/parentId — beides wäre ein Guess.
+        // parentId == enclosedBy[0].placeId (wird so gesetzt), also würde der Fallback
+        // zeitlich nicht passende Eltern liefern. Kette nur fortsetzen wenn y==null.
+        if (!next) next = y == null ? (encs[0]?.placeId || byId[curId].parentId || null) : null;
+        curId = next;
+      }
+      return out;
+    },
+  };
+  UIState._placeRegistry = reg;
+  return reg;
+}
+
+// Kanonischer Ortsname für Aggregation (Statistik): bildet historische
+// Namensvarianten (placeObject-pnames) auf den Haupttitel des Orts ab, damit
+// derselbe Ort nicht mehrfach gezählt wird. Auflösung über ev.placeId, sonst
+// findByName(place) (matcht Titel + alle pnames). Fallback: compactPlace(place).
+function canonicalPlaceLabel(place, placeId) {
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  let pid = placeId || (reg && place ? reg.findByName(place) : null);
+  if (pid && reg && reg.byId[pid] && reg.byId[pid].title) {
+    return compactPlace(reg.byId[pid].title);
+  }
+  return compactPlace(place);
+}
+
+// ─── PLACE-HIST (ADR-024, P2): zentraler Mutations-Helper ───────────────────
+// Wendet fn auf das placeObject mit der gegebenen id an, invalidiert beide
+// UIState-Caches und persistiert. Ersetzt das 4-Schritt-Ritual
+//   <po mutieren>; UIState._placeRegistry=null; UIState._placesCache=null;
+//   markChanged(); savePlaceObjects();
+// das vorher an ~20 Stellen wiederholt war (mit Vergesser-Risiko, vgl. v847).
+// Gibt true zurück wenn fn ausgeführt wurde, false wenn placeObject fehlt.
+function mutatePlaceObject(id, fn) {
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  if (!pos[id]) return false;
+  fn(pos[id]);
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  if (typeof markChanged       === 'function') markChanged();
+  if (typeof savePlaceObjects  === 'function') savePlaceObjects();
+  return true;
+}
+
+// Pendant für Anlegen (oder Update) — wenn id schon existiert, wie mutatePlaceObject;
+// sonst legt es ein neues placeObject an und übergibt es an fn. Gibt die placeId zurück.
+// Sinnvoll für Pfade wie applyGovText/saveNewPlace, die je nach Zustand anlegen ODER mutieren.
+function upsertPlaceObject(id, makeNew, fn) {
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  let po = pos[id];
+  if (!po) {
+    po = makeNew ? makeNew() : { id, title:'', type:'Unknown', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null };
+    pos[po.id || id] = po;
+    if (!po.id) po.id = id;
+  }
+  if (typeof fn === 'function') fn(po);
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  return po.id;
+}
+
+// ─── ADR-027 Phase 3: Migration Farm/Building-placeObjects → V2-hofObjects ───
+// Destruktive (aber idempotente) Daten-Migration. Wird beim Load nach
+// _migrateHofObjectsToPlaceObjects (ADR-026) gerufen — ADR-026 hebt Legacy-Sidecar
+// in Farm-POs, ADR-027 hebt Farm-POs in V2-hofObjects + repointet Events auf
+// villageId. Endzustand: keine Farm/Building mehr in placeObjects, Hof-Identität
+// vollständig in hofObjects.
+//
+// Idempotenz: db._migration_pre_adr027-Flag verhindert Doppelläufe; ohne Flag
+// erkennt der Existenz-Match (norm(addr) + villageId) bestehende V2-Höfe und
+// repointet nur die Events. Damit ist die Funktion auch sicher bei „Migration
+// teilweise gelaufen, Tab geschlossen, neuer Load"-Szenarien.
+//
+// Returns { hofsCreated, eventsRepointed, posDeleted, alreadyDone }.
+function _migrateFarmPOsToHofObjects(db) {
+  if (!db) return { hofsCreated: 0, eventsRepointed: 0, posDeleted: 0 };
+  const pos  = db.placeObjects || (db.placeObjects = {});
+  const hofs = db.hofObjects   || (db.hofObjects   = {});
+  // 1. Existenz-Index der V2-Höfe nach (norm-addr, villageId) — für Idempotenz.
+  const existingByKey = {};
+  for (const [hid, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h) || !h.villageId) continue;
+    for (const a of h.addrs || []) {
+      const k = _normHofAddr(a.value) + '|' + h.villageId;
+      if (!existingByKey[k]) existingByKey[k] = hid;
+    }
+  }
+  // 2. Pass 1: Farm/Building-PO → hofObject (neu oder bestehend wiederverwenden).
+  const _farmIdToHofId = {};
+  let hofsCreated = 0;
+  for (const [pid, pl] of Object.entries(pos)) {
+    if (pl.type !== 'Farm' && pl.type !== 'Building') continue;
+    // ADR-028 Phase 1: Skip-Lücke schließen. Bei fehlendem villageId zuerst
+    // aus den Events promovieren (`_hofVillageString` liefert das häufigste
+    // ev.place der RESI/PROP-Events dieser Adresse), Enclosure-Kette
+    // aufbauen, villageId nachtragen → Migration läuft regulär weiter.
+    // Bisher war hier `continue` — das hinterließ Farm/Building-POs als
+    // Zombies in `placeObjects` (Quelle Bug #1, Teil 2).
+    let villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
+      || pl.parentId || null;
+    if (!villageId) {
+      const villageStr = _hofVillageString(db, pl.title || '');
+      if (villageStr) {
+        villageId = _ensureVillageChain(pos, villageStr);
+        if (villageId) {
+          pl.enclosedBy = [{ placeId: villageId, dateFrom: null, dateTo: null,
+                             dateType: null, _dateRaw: null }];
+        }
+      }
+    }
+    if (!villageId) {
+      // Echter Orphan: kein Event referenziert diesen PO → keine Dorf-
+      // Promotion möglich. Markieren statt überspringen, damit
+      // `collectPlaces` ihn aus der Ortsliste ausblendet (sichtbares Symptom
+      // verschwindet, Daten bleiben für späteren User-Eingriff erhalten).
+      pl._orphan = true;
+      continue;
+    }
+    const normTitle  = _normHofAddr(pl.title || '');
+    const existKey   = normTitle + '|' + villageId;
+    let hofId = existingByKey[existKey];
+    if (!hofId) {
+      const slug  = normTitle.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+      hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
+      let n = 1;
+      while (hofs[hofId]) hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v') + '_' + (++n);
+      const addrs = [{ value: pl.title || '', lang: 'deu',
+        dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
+      for (const pn of (pl.pnames || [])) {
+        if (pn.value && pn.value !== pl.title) {
+          addrs.push({ value: pn.value, lang: pn.lang || 'deu',
+            dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+            dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null });
+        }
+      }
+      hofs[hofId] = {
+        id: hofId, villageId, addrs,
+        lat: pl.lat ?? null, long: pl.long ?? null, note: pl.note || '',
+        existsFrom: pl.existsFrom || null, existsTo: pl.existsTo || null,
+        predecessor: null, successor: null,
+        _govId: pl._govId || null, _govTypes: pl._govTypes || null,
+        schemaVersion: 1,
+      };
+      existingByKey[existKey] = hofId;
+      hofsCreated++;
+    } else {
+      // Idempotenter Pfad: bestehender V2-Hof gewinnt fehlende Felder additiv.
+      const h = hofs[hofId];
+      if (h.lat == null && pl.lat != null) { h.lat = pl.lat; h.long = pl.long; }
+      if (!h.note && pl.note) h.note = pl.note;
+      if (!h.existsFrom && pl.existsFrom) h.existsFrom = pl.existsFrom;
+      if (!h.existsTo   && pl.existsTo)   h.existsTo   = pl.existsTo;
+    }
+    _farmIdToHofId[pid] = hofId;
+  }
+  // 3. Pass 2: Events repointen — hofId neu setzen, placeId auf villageId.
+  // Primärer Lookup über _farmIdToHofId[ev.placeId]: für GEDCOM-Daten toter
+  // Code nach v1055 (ev.placeId nie Farm), aber für GRAMPS-Daten aktiv
+  // (GRAMPS-Parser setzt ev.placeId direkt auf Farm-PO vor der Migration).
+  // Fallback: ev.addr-Norm-Match für GEDCOM-Events ohne ev.placeId-Farm-Link.
+  const _addrNormToHofId = {};
+  for (const [farmPid, hofId] of Object.entries(_farmIdToHofId)) {
+    const farmPo = pos[farmPid];
+    if (farmPo) {
+      const n = _normHofAddr(farmPo.title || '');
+      if (n && !_addrNormToHofId[n]) _addrNormToHofId[n] = hofId;
+    }
+  }
+  let eventsRepointed = 0;
+  const _repoint = ev => {
+    if (!ev) return;
+    let newHofId = ev.placeId ? _farmIdToHofId[ev.placeId] : null;
+    if (!newHofId && ev.addr) {
+      const n = _normHofAddr(typeof _extractHofAddr === 'function'
+        ? _extractHofAddr(ev.addr) : ev.addr);
+      if (n) newHofId = _addrNormToHofId[n];
+    }
+    if (!newHofId) return;
+    ev.placeId = hofs[newHofId].villageId;
+    ev.hofId   = newHofId;
+    eventsRepointed++;
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_repoint);
+    (p.events || []).forEach(_repoint);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_repoint);
+    (f.events || []).forEach(_repoint);
+  }
+  // 4. Pass 3: Farm/Building-POs löschen (nur die mit erfolgreicher villageId-Migration).
+  // Farm/Building OHNE villageId bleiben absichtlich erhalten — keine Daten verlieren.
+  let posDeleted = 0;
+  for (const pid of Object.keys(_farmIdToHofId)) {
+    if (pos[pid]) { delete pos[pid]; posDeleted++; }
+  }
+  if (hofsCreated || eventsRepointed || posDeleted) {
+    UIState._placeRegistry = null;
+    UIState._hofRegistry   = null;
+    UIState._placesCache   = null;
+    UIState._hofCache      = null;
+  }
+  if (hofsCreated || eventsRepointed) db._migration_pre_adr027 = true;
+  return { hofsCreated, eventsRepointed, posDeleted };
+}
+
+// ─── ADR-027 Phase 1: Hof-Entität — Registry + Mutations-Helper ──────────────
+// Hof-Adressen werden mit derselben Norm-Form wie Ortsnamen identifiziert,
+// damit „Wall 33" und „wall 33 " als gleich erkannt werden. Unicode-NFC +
+// casefold + ws-Squeeze; verlustfrei für Anzeige (Original bleibt in addrs[].value).
+function _normHofAddr(s) {
+  if (!s) return '';
+  return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// ADR-024 v1034 (Konvention α): extrahiert aus einem Adress-String die
+// Hof-Identität — alles VOR dem ersten Komma ODER Zeilenumbruch.
+// Beispiele:
+//   „Wall 33"                                → „Wall 33"
+//   „Wall 33\nHinterhaus"                    → „Wall 33"
+//   „Wall 33, 48607 Ochtrup, Deutschland"    → „Wall 33"
+//   „Wall 33, Hinterhaus"                    → „Wall 33"
+//   „Schulze-Hof"                            → „Schulze-Hof"
+// Wer mehrere Wohneinheiten an derselben Adresse als distinkte Höfe trennen
+// will, nutzt einen anderen Separator (Klammer, Schrägstrich) oder mehrere
+// `addrs[]`-Varianten am Hof.
+//
+// Wire-Daten (`ev.addr`) bleiben unverändert — die Extraktion gilt NUR für
+// Hof-Identitäts-Operationen (Norm-Lookup + Bootstrap). User-explizite Varianten
+// via `addHofAddrVariantAndLink` durchlaufen den Extract NICHT — der Intent
+// „diese Schreibweise speichern" bleibt erhalten.
+function _extractHofAddr(addr) {
+  if (!addr) return '';
+  const m = String(addr).match(/^[^\n,]+/);
+  return m ? m[0].trim() : '';
+}
+
+// ADR-024 v1035: erkennt redundante ADDR-Einträge, in denen die Adresse
+// semantisch der bereits aufgelöste Ort ist. Manche Programme (MyHeritage u.a.)
+// schreiben bei leerer Adresse den Ortsnamen in ADDR — daraus darf KEIN Pseudo-
+// Hof entstehen.
+//
+//   ev.placeId='_po_ochtrup', ev.addr='Ochtrup'    → true  (Pseudo-Hof verhindern)
+//   ev.placeId='_po_ochtrup', ev.addr='Wall 33'    → false (echte Hof-Adresse)
+//   ev.placeId='_po_ochtrup', ev.addr='Sassenbergk' → true wenn pname-Variante
+//
+// Match-Quellen konservativ: nur Village-Titel + pnames des aufgelösten Dorfes.
+// Vorfahren-PO werden NICHT gematcht — „Westfalen" in ADDR bei Ort „Ochtrup"
+// bleibt im Review, weil semantisch ungewöhnlich und User-Entscheidung wert.
+function _isAddrJustVillage(ev) {
+  if (!ev || !ev.placeId || !ev.addr) return false;
+  if (typeof getPlaceRegistry !== 'function') return false;
+  const reg = getPlaceRegistry();
+  if (!reg) return false;
+  const po = reg.byId[ev.placeId];
+  if (!po) return false;
+  const cleanAddr = _extractHofAddr(ev.addr);
+  if (!cleanAddr) return false;
+  const addrNorm = _normPlaceName(cleanAddr);
+  if (po.title && _normPlaceName(po.title) === addrNorm) return true;
+  for (const pn of po.pnames || []) {
+    if (pn.value && _normPlaceName(pn.value) === addrNorm) return true;
+  }
+  return false;
+}
+
+// Phase-1-Shape-Filter: nur ADR-027-konforme Einträge (id-keyed mit villageId
+// + addrs[]). Legacy-ADR-026-Einträge (addr-keyed mit {addr,lat,long,note})
+// werden ignoriert, weil sie keine gültigen hofObject-IDs sind. Trennt die
+// neue Welt sauber, bis die Phase-3-Migration die Legacy-Einträge ersetzt.
+function _isHofObjectV2(o) {
+  return !!(o && typeof o === 'object' && typeof o.villageId === 'string' && Array.isArray(o.addrs));
+}
+
+// Lazy gecachte HofRegistry über AppState.db.hofObjects (nur V2-Shape):
+//   byId           : hofId → hofObject
+//   byVillageId    : villageId → [hofId, ...]
+//   byNorm         : norm(addr) → erste hofId (Rückwärtskompat)
+//   byNormAll      : norm(addr) → ALLE hofIds (Disambiguierung gleicher Adresse)
+//   findByAddr(addr, year)              → hofId | null (erste eindeutige Auflösung zum Jahr)
+//   findAllByAddr(addr, year)           → hofIds[] (alle Kandidaten mit zum Jahr passender addrs[]-Bezeichnung)
+//   resolveAddrAsOf(hofId, year)        → periodenkorrekte Adress-Bezeichnung (analog placeRegistry.resolveAsOf)
+function getHofRegistry() {
+  if (UIState._hofRegistry) return UIState._hofRegistry;
+  const hofs = (AppState.db && AppState.db.hofObjects) || {};
+  const byId = {}, byVillageId = {}, byNorm = {}, byNormAll = {};
+  for (const [id, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h)) continue;          // Legacy-Einträge ignorieren
+    byId[id] = h;
+    (byVillageId[h.villageId] || (byVillageId[h.villageId] = [])).push(id);
+    const seen = new Set();
+    for (const a of h.addrs) {
+      const k = _normHofAddr(a && a.value);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      if (!(k in byNorm)) byNorm[k] = id;
+      (byNormAll[k] || (byNormAll[k] = [])).push(id);
+    }
+  }
+  const _yearOf = y => (typeof y === 'number' ? y : _placeYear(y));
+  const _dateMatches = (from, to, y) =>
+    (from == null && to == null) ? true              // undatiert = jederzeit gültig
+    : (from == null || y >= from) && (to == null || y <= to);
+  // Existenzspanne-Check (analog placeRegistry-Knoten): Hof außerhalb seiner Lebenszeit
+  // matcht nicht — verhindert Auto-Link auf nicht-existente Höfe (ADR-027 „Was als
+  // mehrdeutig gilt", Adress-Wiederverwendung über Zeit).
+  const _hofAliveAt = (h, y) => {
+    if (y == null) return true;
+    const ef = _placeYear(h.existsFrom), et = _placeYear(h.existsTo);
+    if (ef != null && y < ef) return false;
+    if (et != null && y > et) return false;
+    return true;
+  };
+  const reg = {
+    byId, byVillageId, byNorm, byNormAll,
+    findByAddr(addr, year) {
+      const all = reg.findAllByAddr(addr, year);
+      return all.length === 1 ? all[0] : null;       // strikt eindeutig — Mehrdeutigkeit → Review-Pfad
+    },
+    findAllByAddr(addr, year) {
+      // ADR-024 v1036: Read-Tolerance — erst voll-Norm Lookup (matcht
+      // historische Höfe mit Komma in der Bezeichnung wie „Oster 82a, Wester
+      // 141", entstanden via Pfad C vor Konvention α v1034), dann Extract als
+      // Fallback (matcht Adressbuch-Übernahmen mit Stadt/Land-Suffix wie
+      // „Wall 33, 48607 Ochtrup" gegen Hof „Wall 33"). Damit funktionieren
+      // Alt-Daten und neue Adressbuch-Daten beide.
+      const _lookup = (k) => {
+        const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
+        if (!ids.length) return [];
+        const y = _yearOf(year);
+        const out = [];
+        for (const id of ids) {
+          const h = byId[id];
+          if (!_hofAliveAt(h, y)) continue;
+          if (y != null) {
+            const okAddr = h.addrs.some(a =>
+              _normHofAddr(a.value) === k && _dateMatches(_placeYear(a.dateFrom), _placeYear(a.dateTo), y));
+            if (!okAddr) continue;
+          }
+          out.push(id);
+        }
+        return out;
+      };
+      const fullKey = _normHofAddr(addr);
+      const fullHits = _lookup(fullKey);
+      if (fullHits.length) return fullHits;
+      const extractKey = _normHofAddr(_extractHofAddr(addr));
+      if (extractKey && extractKey !== fullKey) return _lookup(extractKey);
+      return [];
+    },
+    resolveAddrAsOf(hofId, year) {
+      const h = byId[hofId];
+      if (!h) return null;
+      const y = _yearOf(year);
+      if (y != null) {
+        // Bei Überlappungen: neuester Eintrag (höchstes dateFrom) gewinnt — analog placeRegistry.resolveAsOf
+        let bestFrom = -Infinity, bestVal = null;
+        for (const a of h.addrs) {
+          const fromY = _placeYear(a.dateFrom), toY = _placeYear(a.dateTo);
+          if (fromY == null && toY == null) continue;       // undatiert nur als Fallback
+          if (!_dateMatches(fromY, toY, y)) continue;
+          const f = fromY ?? -Infinity;
+          if (f > bestFrom) { bestFrom = f; bestVal = a.value; }
+        }
+        if (bestVal) return bestVal;
+      }
+      // Fallback: erste undatierte Bezeichnung, sonst erste überhaupt
+      const undated = h.addrs.find(a => a.dateFrom == null && a.dateTo == null);
+      return (undated && undated.value) || (h.addrs[0] && h.addrs[0].value) || '';
+    },
+  };
+  UIState._hofRegistry = reg;
+  return reg;
+}
+
+// Mutations-Helper analog mutatePlaceObject — verriegelt das 4-Schritt-Ritual
+// (mutate + Cache-Invalidate + markChanged + Persistenz). Gibt true zurück, wenn
+// fn ausgeführt wurde, false wenn hofObject fehlt oder nicht V2-Shape ist.
+function mutateHofObject(id, fn) {
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  if (!_isHofObjectV2(hofs[id])) return false;
+  fn(hofs[id]);
+  UIState._hofRegistry = null;
+  UIState._hofCache    = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof saveHofObjectsV2 === 'function') saveHofObjectsV2();
+  return true;
+}
+
+// Pendant zu upsertPlaceObject — wenn id schon existiert, wie mutateHofObject;
+// sonst legt es ein neues hofObject an und übergibt es an fn. Gibt die hofId zurück.
+function upsertHofObject(id, makeNew, fn) {
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  let h = _isHofObjectV2(hofs[id]) ? hofs[id] : null;
+  if (!h) {
+    h = makeNew ? makeNew() : {
+      id, villageId: '', addrs: [], lat: null, long: null, note: '',
+      existsFrom: null, existsTo: null, predecessor: null, successor: null,
+      _govId: null, _govTypes: null, schemaVersion: 1,
+    };
+    hofs[h.id || id] = h;
+    if (!h.id) h.id = id;
+  }
+  if (typeof fn === 'function') fn(h);
+  UIState._hofRegistry = null;
+  UIState._hofCache    = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof saveHofObjectsV2 === 'function') saveHofObjectsV2();
+  return h.id;
+}
+
+// ADR-027 Pfad C: deterministische Hof-Anlage aus (Adresse, villageId).
+// Idempotent: bestehender V2-Hof mit gleicher norm(addr) im selben Dorf wird
+// wiederverwendet (gibt seine ID zurück). Sonst neuer hofObject mit ID-Schema
+// `_hof_<addrSlug>_<vSlug>` (Suffix bei Kollision). Dient als Bootstrap-Helfer
+// für Link-Pass Pfad C und als Extraktion aus `_migrateFarmPOsToHofObjects`,
+// damit dieselbe ID-Logik an beiden Stellen identisch greift.
+function findOrCreateHofObject(addr, villageId) {
+  if (!addr || !villageId) return null;
+  // ADR-024 v1034: eingehende Adress-Strings aus Adressbüchern enthalten oft
+  // Stadt/PLZ/Land — extract zieht die hof-relevante Identität heraus, bevor
+  // Norm + ID + addrs[].value entstehen. „Wall 33, 48607 Ochtrup, Deutschland"
+  // → Hof bekommt addrs[0].value = „Wall 33", ID-Slug aus „wall 33".
+  const cleanAddr = _extractHofAddr(addr);
+  if (!cleanAddr) return null;
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  const normAddr = _normHofAddr(cleanAddr);
+  if (!normAddr) return null;
+  // 1. Idempotenz: ADR-024 v1036 Read-Tolerance — erst voll-Norm prüfen
+  //    (matcht historische Höfe mit Komma im Namen), dann extract-Norm.
+  //    Damit wird bei ev.addr=„Oster 82a, Wester 141" der bestehende Hof
+  //    „Oster 82a, Wester 141" wiedergefunden statt einen zweiten
+  //    „Oster 82a"-Hof anzulegen.
+  const fullNorm = _normHofAddr(addr);
+  for (const [hid, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h) || h.villageId !== villageId) continue;
+    for (const a of h.addrs || []) {
+      const aNorm = _normHofAddr(a && a.value);
+      if (aNorm === fullNorm) return hid;
+      if (aNorm === normAddr) return hid;
+    }
+  }
+  // 2. Neue ID deterministisch erzeugen
+  const slug  = normAddr.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  let hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
+  let n = 1;
+  while (hofs[hofId]) hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v') + '_' + (++n);
+  // 3. Über upsertHofObject anlegen (verriegelt Cache + markChanged + Persistenz)
+  return upsertHofObject(hofId, () => ({
+    id: hofId, villageId,
+    addrs: [{ value: cleanAddr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
+    lat: null, long: null, note: '',
+    existsFrom: null, existsTo: null, predecessor: null, successor: null,
+    _govId: null, _govTypes: null, schemaVersion: 1,
+  }));
+}
+
+// ─── ADR-027 P5 / ADR-028 P5: „Hof-Zuweisungen prüfen" — Daten-Anreicherungs-UI
+// Permanente Sicht auf Events mit Hof-Verdacht ohne Auflösung. Wird vom Höfe-Tab
+// als Badge-Zähler + Tabellen-Modal angeboten.
+//
+// ADR-028 P5: per-Event-„Ignorieren"-Pfad ENTFERNT. Im Determinismus-Modell ist
+// jeder Review-Eintrag eine Daten-Lücke, die durch Quell-Schärfung oder
+// Wissen-Anreicherung geschlossen wird — nicht durch Verstecken. Wenn eine
+// Adresse tatsächlich kein Hof ist (Krankenhaus etc.), legt der User ein
+// placeObject Typ Hospital an und schärft PLAC → Event landet in Fall 2a und
+// fällt automatisch aus dem Review heraus.
+const _IGNORED_HOF_STORAGE_KEY_LEGACY = 'stammbaum_hof_review_ignored';
+
+// Migrations-Check: alte localStorage-Ignorier-Markierungen für die aktuelle
+// Datei detektieren und entfernen. Gibt die Anzahl der gelöschten Markierungen
+// zurück — der Aufrufer (storage-file.js Lade-Pfad) toast't dem User.
+function _migrateLegacyIgnoredHofKeys() {
+  try {
+    const fname = (AppState._currentFilename || '').replace(/[^\w.\-]/g, '_');
+    const k = _IGNORED_HOF_STORAGE_KEY_LEGACY + '_' + fname;
+    const raw = localStorage.getItem(k);
+    if (!raw) return 0;
+    const arr = JSON.parse(raw);
+    localStorage.removeItem(k);
+    return Array.isArray(arr) ? arr.length : 0;
+  } catch(_) { return 0; }
+}
+
+// Stabiler Event-Identifikator: pid + evType + addr/place + date. Bei größerer
+// Editierung (addr/date geändert) verfällt der Eintrag automatisch → Event
+// taucht wieder im Review auf. Bewusst nicht über eventIdx, damit Verschieben/
+// Sortieren im Events-Array den Status nicht zerstört.
+function _eventReviewKey(pid, evType, addr, date) {
+  return [pid, evType || '', (addr || '').trim(), date || ''].join('|');
+}
+
+// ADR-028 P5: Klassifizierung der Hof-Daten-Lücke. Drei Klassen, alle mit
+// ev.addr (PLAC-ohne-Auflösung ist KEIN Hof-Thema → eigener Orts-Review).
+//
+//   A — Adresse mit non-Hof-Event-Typ + aufgelöstes Dorf + kein Hof-Match:
+//       BIRT/DEAT/MARR/BURI mit ADDR. Konnte nicht via Pfad B' bootstrapped
+//       werden (Event-Typ trägt keine Hof-Semantik — typisch Krankenhaus/
+//       Kirche/Friedhof). User: „Hof anlegen" wenn doch Hof, oder „Quelle
+//       schärfen" (PO Typ Hospital anlegen + PLAC anpassen).
+//   C — Mehrdeutigkeit: ≥2 Höfe gleicher addr-Norm im Dorf-Scope.
+//       User: „Hof wählen" oder Quelle schärfen.
+//   D — Norm-Drift: ADDR matcht kein hofObject im Dorf, aber Höfe existieren
+//       im Dorf — und Event-Typ ist hof-tragend. Die ADDR ist vermutlich eine
+//       Variante eines bestehenden Hofs.
+//       User: „Variante zum Hof hinzufügen" oder Hof wählen.
+function _classifyUnresolvedHofEvent(ev) {
+  if (!ev) return 'A';
+  const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+  const addr   = (ev.addr  || '').trim();
+  const year   = (typeof _placeYear === 'function') ? _placeYear(ev.date) : null;
+
+  // Klassifizierung läuft ausschließlich auf Hof-Verdachts-Events (ev.addr).
+  if (ev.placeId && addr && hofReg) {
+    const cands = hofReg.findAllByAddr(addr, year)
+      .filter(id => hofReg.byId[id] && hofReg.byId[id].villageId === ev.placeId);
+    if (cands.length >= 2) return 'C';
+    if (cands.length === 1) return 'A';          // defensiv — sollte Pfad B gelinkt haben
+    const isHofType = ev.type && HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type);
+    const hofsInVillage = (hofReg.byVillageId && hofReg.byVillageId[ev.placeId]) || [];
+    if (isHofType && hofsInVillage.length > 0) return 'D';
+    return 'A';
+  }
+  return 'A';
+}
+
+// Listet ungelöste Hof-Kandidaten. ADR-028 P5 (v1033): strikt auf Events mit
+// ev.addr eingegrenzt. Unaufgelöste PLAC-Strings (Klassen B/E) sind keine
+// Hof-Lücken — sie gehören in einen Orts-Review-Workflow (offen). User-Befund:
+// EDUC/GRAD/EVEN mit fremden PLAC-Hierarchien (Shenyang, Beijing, Paris …)
+// dominierten die Liste; das verfehlte den Hof-Fokus des Modals.
+function _findUnresolvedHofEvents(db) {
+  if (!db) return [];
+  const out = [];
+  const _check = (pid, personName, ev) => {
+    if (!ev || ev.hofId) return;
+    const addr = (ev.addr || '').trim();
+    if (!addr) return;                            // ohne ADDR kein Hof-Verdacht
+    // ADR-024 v1035: ADDR=Village-Redundanz aus dem Hof-Review ausfiltern.
+    // Manche Programme schreiben den Ortsnamen in ADDR statt leerer ADDR;
+    // das ist kein Hof-Verdacht, sondern reine Daten-Redundanz.
+    if (_isAddrJustVillage(ev)) return;
+    const key = _eventReviewKey(pid, ev.type || ev.eventType || '',
+      addr, ev.date || '');
+    out.push({
+      pid, personName,
+      evType:    ev.type || ev.eventType || '',
+      evDate:    ev.date || '',
+      addr,
+      place:     ev.place || '',
+      placeId:   ev.placeId || null,
+      _class:    _classifyUnresolvedHofEvent(ev),
+      key, ev,
+    });
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    const name = p.name || p.id;
+    [p.birth, p.chr, p.death, p.buri].forEach(ev => _check(p.id, name, ev));
+    (p.events || []).forEach(ev => _check(p.id, name, ev));
+  }
+  for (const f of Object.values(db.families || {})) {
+    const label = f.id;
+    [f.marr, f.engag, f.div, f.divf].forEach(ev => _check(label, label, ev));
+    (f.events || []).forEach(ev => _check(label, label, ev));
+  }
+  return out;
+}
+
+function _countUnresolvedHofEvents(db) {
+  return _findUnresolvedHofEvents(db || AppState.db).length;
+}
+
+// ADR-028 P5: Anreicherungs-Helfer „Variante zum Hof hinzufügen" — für Klasse D
+// (Norm-Drift). Fügt ev.addr als neue undatierte addrs[]-Bezeichnung an einen
+// bestehenden Hof an + setzt ev.hofId. Nächster Load: Pfad B findet den Hof
+// deterministisch über die neue Variante.
+function addHofAddrVariantAndLink(ev, hofId) {
+  if (!ev || !hofId) return false;
+  const hofs = AppState.db.hofObjects || {};
+  const h = hofs[hofId];
+  if (!_isHofObjectV2(h)) return false;
+  const addr = (ev.addr || '').trim();
+  if (!addr) return false;
+  // Idempotenz: existiert die Variante schon (norm-Form)?
+  const norm = _normHofAddr(addr);
+  const exists = (h.addrs || []).some(a => _normHofAddr(a && a.value) === norm);
+  if (typeof mutateHofObject === 'function') {
+    mutateHofObject(hofId, fn => {
+      if (!exists) {
+        fn.addrs.push({ value: addr, lang: 'deu',
+          dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+      }
+    });
+  } else if (!exists) {
+    h.addrs.push({ value: addr, lang: 'deu',
+      dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+  }
+  ev.hofId = hofId;
+  if (!ev.placeId) ev.placeId = h.villageId;
+  if (typeof markChanged === 'function') markChanged();
+  return true;
+}
+
+// Setzt ev.hofId auf einen bestehenden Hof (manuelle Review-Zuweisung).
+// Wenn ev.placeId leer ist (z.B. Event nur mit Adresse, ohne Dorf-Verlinkung),
+// wird ev.placeId zusätzlich auf hof.villageId gesetzt — die Hof-Auswahl
+// impliziert das Dorf. markChanged + Cache-Invalidate für sofortige UI-Aktualisierung.
+function applyHofToEvent(ev, hofId) {
+  if (!ev || !hofId) return false;
+  const hof = AppState.db.hofObjects?.[hofId];
+  if (!_isHofObjectV2(hof)) return false;
+  ev.hofId = hofId;
+  if (!ev.placeId) ev.placeId = hof.villageId;
+  UIState._placeRegistry = null;
+  UIState._hofRegistry   = null;
+  UIState._hofCache      = null;
+  if (typeof markChanged === 'function') markChanged();
+  return true;
+}
+
+// ─── PLACE-HIST (ADR-024, P0b-2): Dubletten-Erkennung + Merge ────────────────
+// Aggressive Normalisierung NUR für die Dubletten-KANDIDATEN-Suche (faltet
+// Umlaute/ae-oe-ue zusammen, wie der Validator _placeNorm). Strenger als
+// _normPlaceName (das nur fürs exakte Alias-Matching dient) → bewusst getrennt.
+function _placeFold(s) {
+  if (!s) return '';
+  return String(s).toLowerCase().trim()
+    .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 's')
+    .replace(/ae(?=[a-z])/g, 'a').replace(/oe(?=[a-z])/g, 'o').replace(/ue(?=[a-z])/g, 'u')
+    .replace(/\s+/g, ' ');
+}
+
+// Haversine-Distanz in km (für Koordinaten-Nähe-Heuristik).
+function _placeDistKm(aLat, aLon, bLat, bLon) {
+  if (aLat == null || aLon == null || bLat == null || bLon == null) return Infinity;
+  const R = 6371, rad = d => d * Math.PI / 180;
+  const dLat = rad(bLat - aLat), dLon = rad(bLon - aLon);
+  const x = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(x)));
+}
+
+// Findet Gruppen wahrscheinlich identischer placeObjects.
+// Kriterien (ODER): gleicher Fold-Key von title ODER irgendeinem pname;
+// oder Koordinaten < toleranceKm voneinander (nur bei vorhandenen Koords).
+// Liefert [{ key, ids:[…], titles:[…] }] mit ≥2 Mitgliedern. Rein lesend.
+// kind: 'places' (default) → Farm/Building ausgeschlossen, Bare-PO-Cross-Axis aktiv
+//       'farms'             → nur Farm/Building (für Hof-Dubletten-UI im Höfe-Tab),
+//                             Bare-PO-Cross-Axis übersprungen (für Höfe irrelevant).
+//       'all'               → alle PlaceObjects (für Tests/Migrations-Tools).
+function findPlaceDuplicates(toleranceKm = 1, kind = 'places') {
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const isFarm = po => po && (po.type === 'Farm' || po.type === 'Building');
+  const inScope = po => kind === 'all' || (kind === 'farms' ? isFarm(po) : !isFarm(po));
+  const entries = Object.values(pos).filter(inScope);
+  // 1) Gruppierung über Fold-Key (title + alle pnames)
+  const byKey = new Map();   // foldKey → Set(id)
+  for (const pl of entries) {
+    const keys = new Set();
+    keys.add(_placeStringCoreFold(pl.title));
+    for (const pn of pl.pnames || []) keys.add(_placeStringCoreFold(pn.value));
+    for (const k of keys) {
+      if (!k) continue;
+      if (!byKey.has(k)) byKey.set(k, new Set());
+      byKey.get(k).add(pl.id);
+    }
+  }
+  // union-find über Fold-Key-Kollisionen + Koordinaten-Nähe
+  const parent = {};
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const union = (a, b) => { parent[find(a)] = find(b); };
+  for (const pl of entries) parent[pl.id] = pl.id;
+  for (const set of byKey.values()) {
+    const ids = [...set];
+    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
+  }
+  // Koordinaten-Nähe (O(n²) — placeObjects sind typ. wenige hundert)
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      const a = entries[i], b = entries[j];
+      if (find(a.id) === find(b.id)) continue;
+      if (a.lat != null && b.lat != null
+        && _placeDistKm(a.lat, a.long, b.lat, b.long) <= toleranceKm
+        && _placeStringCoreFold(a.title) === _placeStringCoreFold(b.title)) {
+        union(a.id, b.id);
+      }
+    }
+  }
+  // Cross-Achse bare↔reich: ein PO ohne enclosedBy/pnames mit Komma-Titel
+  // („Dolgen, Stadt Sehnde, …") und ein reicher PO mit passendem Leitsegment
+  // („Dolgen") sind faktisch dieselbe Identität, fielen aber durch den Fold-Pass
+  // (verschiedene Title-Keys) und den Koord-Pass (Titel-Fold ungleich). Wird hier
+  // als Dublettenvorschlag gemeldet, damit der User per Merge-UI verlustfrei
+  // konsolidieren kann (mergePlaceObjects hängt ev.placeId um, übernimmt Koords).
+  // Für 'farms'-Modus übersprungen — Hof-Identität läuft über Adresse + Dorf,
+  // nicht über Komma-Titel mit Verwaltungs-Suffix.
+  if (kind !== 'farms') for (const bare of entries) {
+    if ((bare.enclosedBy || []).length) continue;
+    if (!bare.title || !bare.title.includes(',')) continue;
+    const lead = bare.title.split(',').map(s => s.trim()).find(s => s) || '';
+    const leadKey = _placeStringCoreFold(lead);
+    if (!leadKey) continue;
+    for (const rich of entries) {
+      if (rich.id === bare.id) continue;
+      if (find(rich.id) === find(bare.id)) continue;
+      if (!(rich.enclosedBy || []).length) continue;
+      if (_placeStringCoreFold(rich.title) === leadKey) {
+        union(bare.id, rich.id);
+        break;
+      }
+    }
+  }
+  // Cluster sammeln
+  const clusters = new Map();
+  for (const pl of entries) {
+    const root = find(pl.id);
+    if (!clusters.has(root)) clusters.set(root, []);
+    clusters.get(root).push(pl);
+  }
+  const out = [];
+  for (const members of clusters.values()) {
+    if (members.length < 2) continue;
+    out.push({
+      key: _placeFold(members[0].title),
+      ids: members.map(m => m.id),
+      titles: members.map(m => m.title),
+    });
+  }
+  return out;
+}
+
+// Stufe 3 (Fehler #3): Gewinner-Hof unter mehreren gleichnamigen wählen.
+// Heuristik: meiste Event-Nutzung → hat Koords → hat Notiz → kleinste id
+// (deterministisch). So bleibt der „reichste"/meistgenutzte Hof erhalten.
+function _pickFarmWinner(ids, pos) {
+  const usage = {};
+  for (const id of ids) usage[id] = 0;
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    for (const ev of (p.events || [])) if (ev.placeId && usage[ev.placeId] != null) usage[ev.placeId]++;
+  }
+  return ids.slice().sort((a, b) => {
+    const ua = usage[a] || 0, ub = usage[b] || 0;
+    if (ub !== ua) return ub - ua;
+    const ca = pos[a].lat != null ? 1 : 0, cb = pos[b].lat != null ? 1 : 0;
+    if (cb !== ca) return cb - ca;
+    const na = (pos[a].note ? 1 : 0), nb = (pos[b].note ? 1 : 0);
+    if (nb !== na) return nb - na;
+    return String(a).localeCompare(String(b));
+  })[0];
+}
+
+// Stufe 3 (Fehler #3): nach einem Dorf-Merge gleichnamige Höfe, die jetzt UNTER
+// DEMSELBEN (zusammengeführten) Dorf hängen, zusammenführen. Hof-Identität =
+// Blattname + Dorf-Identität. Beim Einlesen entstehen Hof-Dubletten, wenn dieselbe
+// Adresse je nach historischer Ortssicht (anderer Kreis-String) auf verschiedene
+// Dörfer auflöst → zwei Farm-POs. Werden die Dörfer gemergt, hängt enclosedBy
+// beider Höfe danach am Gewinner-Dorf (s. mergePlaceObjects-Repoint) — DANN sind
+// sie eindeutig dieselbe Identität und werden hier konsolidiert. Gibt die Anzahl
+// zusammengeführter Höfe zurück.
+function _reconcileFarmsUnderVillage(villageId) {
+  if (!villageId) return 0;
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const groups = {};   // normLeaf → [farmId, …]
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type !== 'Farm' && po.type !== 'Building') continue;
+    if (!(po.enclosedBy || []).some(en => en.placeId === villageId)) continue;
+    const k = _normPlaceName(po.title);
+    if (!k) continue;
+    (groups[k] || (groups[k] = [])).push(id);
+  }
+  let farmsMerged = 0;
+  for (const ids of Object.values(groups)) {
+    if (ids.length < 2) continue;
+    const winner = _pickFarmWinner(ids, pos);
+    const losers = ids.filter(x => x !== winner);
+    const r = mergePlaceObjects(winner, losers, /* _noReconcile = */ true);
+    farmsMerged += r.merged;
+  }
+  return farmsMerged;
+}
+
+// Führt loserIds in winnerId zusammen — VERLUSTFREI:
+//   • Titel + pnames der Verlierer werden zu winner.pnames (dedupliziert per
+//     _normPlaceName; behält Datierung/lang/_dateRaw der ersten Fundstelle).
+//   • enclosedBy der Verlierer werden ergänzt (dedupliziert per placeId).
+//   • Koordinaten: nur übernehmen wenn der Gewinner noch keine hat.
+//   • Jede ev.placeId-Referenz (INDI birth/chr/death/buri/events, FAM marr/
+//     engag/div/divf) wird vom Verlierer auf den Gewinner umgehängt.
+//   • Verlierer-placeObjects werden gelöscht.
+//   • Stufe 3: Ist der Gewinner ein Dorf, werden danach gleichnamige Höfe darunter
+//     reconciled (_noReconcile unterdrückt das in der Rekursion).
+// Gibt { merged, repointed, farmsMerged } zurück. Invalidiert die Registry.
+function mergePlaceObjects(winnerId, loserIds, _noReconcile) {
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const winner = pos[winnerId];
+  if (!winner) return { merged: 0, repointed: 0, farmsMerged: 0 };
+  if (!Array.isArray(winner.pnames)) winner.pnames = [];
+  if (!Array.isArray(winner.enclosedBy)) winner.enclosedBy = [];
+  const haveName = new Set(winner.pnames.map(p => _normPlaceName(p.value)));
+  haveName.add(_normPlaceName(winner.title));
+  const haveEnc = new Set(winner.enclosedBy.map(e => e.placeId));
+
+  let merged = 0, repointed = 0;
+  const losers = loserIds.filter(id => id !== winnerId && pos[id]);
+
+  for (const lid of losers) {
+    const loser = pos[lid];
+    // Namen sammeln: Titel + pnames des Verlierers
+    const cand = [{ value: loser.title }].concat(loser.pnames || []);
+    for (const pn of cand) {
+      const k = _normPlaceName(pn.value);
+      if (!k || haveName.has(k)) continue;
+      haveName.add(k);
+      winner.pnames.push({
+        value: pn.value, lang: pn.lang || '',
+        dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+        dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null,
+      });
+    }
+    // Zugehörigkeit ergänzen
+    for (const e of loser.enclosedBy || []) {
+      if (e.placeId && e.placeId !== winnerId && !haveEnc.has(e.placeId)) {
+        haveEnc.add(e.placeId);
+        winner.enclosedBy.push({ ...e });
+      }
+    }
+    // Koordinaten nur wenn Gewinner keine hat
+    if (winner.lat == null && loser.lat != null) { winner.lat = loser.lat; winner.long = loser.long; }
+    // Skalar-Reichtum gap-fill: fehlende Felder des Gewinners aus dem Verlierer
+    // auffüllen (Notiz/Typ/Existenz-Spanne/GOV). Macht den Merge richtungs-
+    // unabhängig verlustfrei — sonst entscheidet die Hauptort-Wahl über
+    // Datenverlust, weil der Vorschlag nach Verwendungszahl rankt, nicht nach
+    // Strukturtiefe. Spiegelt _mergePlaceObjectsFromImport.
+    if ((!winner.type || winner.type === 'Unknown') && loser.type && loser.type !== 'Unknown') winner.type = loser.type;
+    if (!winner._govId        && loser._govId)        winner._govId        = loser._govId;
+    if (!winner.note          && loser.note)          winner.note          = loser.note;
+    if (!winner.existsFrom     && loser.existsFrom)    winner.existsFrom     = loser.existsFrom;
+    if (!winner.existsTo       && loser.existsTo)      winner.existsTo       = loser.existsTo;
+    if (!winner.parentId       && loser.parentId)      winner.parentId       = loser.parentId;
+    if (loser._govUnresolved && winner._govUnresolved !== false && !winner._govId) winner._govUnresolved = true;
+    delete pos[lid];
+    merged++;
+  }
+
+  if (merged) {
+    const loserSet = new Set(losers);
+    const _fix = obj => { if (obj && obj.placeId && loserSet.has(obj.placeId)) { obj.placeId = winnerId; repointed++; } };
+    for (const p of Object.values(AppState.db.individuals || {})) {
+      _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
+      for (const ev of p.events || []) _fix(ev);
+    }
+    for (const f of Object.values(AppState.db.families || {})) {
+      _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
+      for (const ev of f.events || []) _fix(ev);
+    }
+    // andere placeObjects, die auf einen Verlierer als parent/enclosedBy zeigen, umhängen
+    for (const pl of Object.values(pos)) {
+      if (pl.parentId && loserSet.has(pl.parentId)) pl.parentId = winnerId;
+      for (const e of pl.enclosedBy || []) if (e.placeId && loserSet.has(e.placeId)) e.placeId = winnerId;
+    }
+    UIState._placeRegistry = null;
+    UIState._placesCache = null;
+  }
+  // Stufe 3: Höfe unter dem Gewinner-Dorf konsolidieren (nicht in der Rekursion,
+  // nicht wenn der Gewinner selbst ein Hof ist — dann gibt es keine Hof-Kinder).
+  let farmsMerged = 0;
+  if (merged && !_noReconcile && winner.type !== 'Farm' && winner.type !== 'Building') {
+    farmsMerged = _reconcileFarmsUnderVillage(winnerId);
+    if (farmsMerged) { UIState._placeRegistry = null; UIState._placesCache = null; UIState._hofCache = null; }
+  }
+  return { merged, repointed, farmsMerged };
+}
+
+// ─── PLACE-HIST (ADR-024, Item 15/B6): JSON-Import-Dedup ────────────────────
+// Importiert Place-Entitäten aus einem Fremdbestand (z.B. orte.json-Export eines
+// anderen Geräts) verlustfrei in db.placeObjects. Identity-Matching via
+// _normPlaceName(title) — gleicher logischer Ort mit anderem Handle (z.B.
+// GRAMPS @P0017@ vs lokales _ep_<hash>) wird zusammengeführt statt dupliziert.
+//
+// Strategie:
+//   1. Remap-Tabelle bauen: jedes import_id auf final_id mappen
+//        — Title-Match → vorhandenes target_id (Merge-Ziel)
+//        — Sonst → eigenes import_id (oder Suffix bei id-Kollision mit anderem Titel)
+//   2. Apply: Nicht-Matches einfügen (enclosedBy/parentId remappen), Matches
+//      verlustfrei mergen (pnames-Dedup, enclosedBy union, fehlende Felder ergänzen).
+//
+// Gibt { added, merged } zurück. Mutiert targetDb.placeObjects. Lässt _placeRegistry
+// dem Aufrufer (der die übliche Invalidation+Save fährt).
+function _mergePlaceObjectsFromImport(targetDb, importedPos) {
+  if (!targetDb || !importedPos) return { added: 0, merged: 0 };
+  const pos = targetDb.placeObjects || (targetDb.placeObjects = {});
+
+  // Index: norm(title) → target_id (existierend)
+  const byTitleNorm = {};
+  for (const [tid, po] of Object.entries(pos)) {
+    const k = _normPlaceName(po.title);
+    if (k && !(k in byTitleNorm)) byTitleNorm[k] = tid;
+  }
+
+  // Pass 1: Remap-Tabelle
+  const remap = {}; // import_id → final_id
+  for (const [iid, ipo] of Object.entries(importedPos)) {
+    const k = _normPlaceName(ipo.title);
+    let target = k && byTitleNorm[k];
+    if (!target) {
+      // Title nicht vorhanden — eigenes iid behalten, außer Kollision mit anderem Titel
+      target = iid;
+      if (pos[target]) {
+        // ID-Kollision: existierendes pos[iid] hat anderen Titel → Suffix
+        let suf = 2;
+        while (pos[target + '_imp' + suf] && suf < 32) suf++;
+        target = target + '_imp' + suf;
+      }
+      // In den byTitleNorm-Index aufnehmen, damit nachfolgende Importe mit gleichem Titel
+      // (importierte Datei kann interne Dubletten haben) auf denselben target zeigen
+      if (k) byTitleNorm[k] = target;
+    }
+    remap[iid] = target;
+  }
+
+  // Helfer: enclosedBy[] mit Remap rewriten
+  const _remapEnc = (encArr) => (encArr || []).map(e => ({
+    ...e,
+    placeId: remap[e.placeId] || e.placeId,
+  }));
+
+  let added = 0, merged = 0;
+  for (const [iid, ipo] of Object.entries(importedPos)) {
+    const tid = remap[iid];
+    const existing = pos[tid];
+    if (!existing) {
+      // Neu einfügen — mit remapptem enclosedBy/parentId und tid als finaler id
+      pos[tid] = {
+        ...ipo,
+        id: tid,
+        enclosedBy: _remapEnc(ipo.enclosedBy),
+        parentId: ipo.parentId ? (remap[ipo.parentId] || ipo.parentId) : null,
+        pnames: Array.isArray(ipo.pnames) ? ipo.pnames.slice() : [],
+      };
+      added++;
+      continue;
+    }
+    // Merge in bestehenden PO — verlustfrei
+    if (!Array.isArray(existing.pnames))    existing.pnames    = [];
+    if (!Array.isArray(existing.enclosedBy)) existing.enclosedBy = [];
+    const haveName = new Set(existing.pnames.map(p => _normPlaceName(p.value)));
+    haveName.add(_normPlaceName(existing.title));
+    // Auch der Importtitel ist eine potenzielle Schreibweise (falls anders als existing.title)
+    const titleKey = _normPlaceName(ipo.title);
+    if (titleKey && !haveName.has(titleKey)) {
+      haveName.add(titleKey);
+      existing.pnames.push({ value: ipo.title, lang: '',
+        dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+    for (const pn of (ipo.pnames || [])) {
+      const k = _normPlaceName(pn.value);
+      if (!k || haveName.has(k)) continue;
+      haveName.add(k);
+      existing.pnames.push({
+        value: pn.value, lang: pn.lang || '',
+        dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+        dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null,
+      });
+    }
+    const haveEnc = new Set(existing.enclosedBy.map(e => e.placeId));
+    for (const e of _remapEnc(ipo.enclosedBy)) {
+      if (!e.placeId || e.placeId === tid || haveEnc.has(e.placeId)) continue;
+      haveEnc.add(e.placeId);
+      existing.enclosedBy.push(e);
+    }
+    if (existing.lat == null && ipo.lat != null) { existing.lat = ipo.lat; existing.long = ipo.long; }
+    if ((!existing.type || existing.type === 'Unknown') && ipo.type && ipo.type !== 'Unknown') existing.type = ipo.type;
+    if (!existing._govId   && ipo._govId)   existing._govId   = ipo._govId;
+    if (!existing.parentId && ipo.parentId) existing.parentId = remap[ipo.parentId] || ipo.parentId;
+    // Übernahme _govUnresolved nur wenn existing keinen GovId und Import-PO noch ungelöst ist
+    if (ipo._govUnresolved && existing._govUnresolved !== false && !existing._govId) {
+      existing._govUnresolved = true;
+    }
+    merged++;
+  }
+  return { added, merged };
+}
+
+// ─── String-Orts-Dubletten (GEDCOM ohne placeObjects) ────────────────────────
+// Normiert den ersten Namensteil für Dubletten-Vergleich:
+//   • alles nach erstem Komma entfernen
+//   • Klammer-Zusätze:  "Gronau (Westf.)" → "Gronau"
+//   • Slash-Suffixe:    "Emsdetten/Westf" → "Emsdetten"
+//   • Abkürzungen:      "Rheine i.W."     → "Rheine"
+//   • "?", Ziffernblöcke, dann _placeFold
+function _placeStringCoreFold(name) {
+  // Ersten nicht-leeren Teil nehmen (GEDCOM-Orte können führende Leerfelder haben: ", Ochtrup, , ,")
+  const parts = String(name).split(',');
+  let s = (parts.find(p => p.trim()) || parts[0]);
+  s = s.replace(/\(.*?\)/g, '');          // (Westf.) entfernen
+  s = s.replace(/\/.*/, '');              // /Westf entfernen
+  s = s.replace(/\s+\S*\.\S*\.?\s*$/, ''); // i.W. o.ä. am Ende entfernen
+  s = s.replace(/[?]/g, '').replace(/\b\d+\b/g, '').trim();
+  return _placeFold(s);
+}
+
+// Gruppiert String-Orte aus collectPlaces() nach _placeStringCoreFold.
+// Gibt [{ key, names:[…], counts:{name→personCount} }] mit ≥2 Mitgliedern zurück.
+// Rein lesend — kein Zustand.
+function findStringPlaceDuplicates() {
+  if (typeof collectPlaces !== 'function') return [];
+  const places = collectPlaces();
+  const byKey = new Map();   // coreFold → [name, …]
+  for (const [name, pl] of places) {
+    const k = _placeStringCoreFold(name);
+    if (!k) continue;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push({ name, count: pl.personIds.size });
+  }
+  const out = [];
+  for (const [key, arr] of byKey) {
+    if (arr.length < 2) continue;
+    const counts = {};
+    arr.forEach(e => { counts[e.name] = e.count; });
+    out.push({ key, names: arr.map(e => e.name), counts });
+  }
+  return out;
+}
+
+// Ersetzt alle Vorkommen der loserNames durch winnerName in INDI/FAM-Events.
+// Gibt { repointed } zurück. Invalidiert _placesCache.
+function mergeStringPlaces(winnerName, loserNames) {
+  if (!loserNames.length) return { repointed: 0 };
+  // loserSet enthält getrimte Namen (aus collectPlaces-Keys); obj.place ist Roh-String
+  const loserSet = new Set(loserNames);
+  // Winner selbst auch in den Replace-Set damit abweichende Whitespace-Varianten
+  // des Winners (z.B. " Ochtrup " statt "Ochtrup") ebenfalls auf winnerName normiert werden
+  const allReplace = new Set([...loserNames, winnerName]);
+  const ep  = AppState.db.extraPlaces || {};
+  const pos = AppState.db.placeObjects;
+  const loserNorms = loserNames.map(_normPlaceName);
+  const loserNormSet = new Set(loserNorms);
+
+  // Welche placeObject-IDs werden gleich gelöscht? Diese müssen wir ev.placeId-seitig
+  // umhängen (oder, falls kein Winner-PO existiert, nullen) — sonst Leiche.
+  // Subtilität: Winner-Name und Loser-Name können zur GLEICHEN _normPlaceName-Form
+  // kollabieren (z.B. "Berlin" vs "Berlin "). Der Winner-PO muss daher zuerst
+  // identifiziert und vom Lösch-Set ausgeschlossen werden.
+  const losingIds = new Set();
+  let winnerPoId = null;
+  if (pos) {
+    const winnerNorm = _normPlaceName(winnerName);
+    // Pass 1: Winner-PO (exakter Titel bevorzugt vor normalisiertem Match)
+    for (const [id, po] of Object.entries(pos)) {
+      if (po.title === winnerName) { winnerPoId = id; break; }
+    }
+    if (!winnerPoId) {
+      for (const [id, po] of Object.entries(pos)) {
+        if (_normPlaceName(po.title) === winnerNorm) { winnerPoId = id; break; }
+      }
+    }
+    // Pass 2: Verlierer (außer winnerPoId)
+    for (const [id, po] of Object.entries(pos)) {
+      if (id === winnerPoId) continue;
+      if (id.startsWith('_ep_') && loserNormSet.has(_normPlaceName(po.title))) losingIds.add(id);
+    }
+  }
+
+  let repointed = 0;
+  const _fix = obj => {
+    if (!obj) return;
+    if (obj.place != null) {
+      const trimmed = String(obj.place).trim();
+      if (loserSet.has(trimmed)) { obj.place = winnerName; repointed++; }
+      else if (trimmed !== obj.place && allReplace.has(trimmed)) { obj.place = trimmed; } // Whitespace normieren
+    }
+    // ev.placeId mit-repointen (Bug B2): zeigt der Event auf ein gleich gelöschtes
+    // Verlierer-placeObject, dann auf Winner umhängen — oder, falls Winner keinen
+    // placeObject-Eintrag hat, auf null setzen (sonst Leiche → Render-Fehler).
+    if (obj.placeId && losingIds.has(obj.placeId)) {
+      obj.placeId = winnerPoId || null;
+    }
+  };
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
+    for (const ev of p.events || []) _fix(ev);
+  }
+  for (const f of Object.values(AppState.db.families || {})) {
+    _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
+    for (const ev of f.events || []) _fix(ev);
+  }
+
+  // Koordinaten aus Verlierer-extraPlaces auf Winner übertragen BEVOR gelöscht wird (Bug #9)
+  if (pos && winnerPoId && pos[winnerPoId] && pos[winnerPoId].lat == null) {
+    for (const loser of loserNames) {
+      const lep = ep[loser];
+      if (lep?.lati != null) { pos[winnerPoId].lat = lep.lati; pos[winnerPoId].long = lep.long; break; }
+    }
+  }
+
+  // extraPlaces-Einträge der Verlierer entfernen
+  for (const loser of loserNames) delete ep[loser];
+
+  // _ep_-generierte placeObjects der Verlierer entfernen (Bug #9)
+  if (pos) {
+    for (const id of losingIds) delete pos[id];
+  }
+
+  // Durabilität über GEDCOM-Reload: Winner-PO anlegen (falls noch keiner existiert)
+  // und alle Verlierer-Namen als undatierte Alias-pnames eintragen.
+  // Beim nächsten Einlesen findet _linkGedcomEventsToPlaceObjects die Verlierer-Strings
+  // via findByName (matcht pnames) → setzt ev.place automatisch auf den Winner.
+  if (pos !== undefined) {
+    if (!winnerPoId) {
+      const newId = (typeof _epId === 'function') ? _epId(winnerName) : ('_ep_' + Math.random().toString(36).slice(2));
+      pos[newId] = { id: newId, title: winnerName, type: 'Unknown', lat: null, long: null, pnames: [], enclosedBy: [], parentId: null };
+      winnerPoId = newId;
+      // Events auf das neue PO zeigen lassen
+      const _setId = ev => { if (ev && ev.place === winnerName && !ev.placeId) ev.placeId = winnerPoId; };
+      for (const p of Object.values(AppState.db.individuals || {})) {
+        _setId(p.birth); _setId(p.chr); _setId(p.death); _setId(p.buri);
+        for (const ev of p.events || []) _setId(ev);
+      }
+      for (const f of Object.values(AppState.db.families || {})) {
+        _setId(f.marr); _setId(f.engag); _setId(f.div); _setId(f.divf);
+        for (const ev of f.events || []) _setId(ev);
+      }
+    }
+    const winnerPo = pos[winnerPoId];
+    if (winnerPo) {
+      if (!Array.isArray(winnerPo.pnames)) winnerPo.pnames = [];
+      const haveNorm = new Set([_normPlaceName(winnerPo.title), ...winnerPo.pnames.map(p => _normPlaceName(p.value))]);
+      for (const loser of loserNames) {
+        const k = _normPlaceName(loser);
+        if (!k || haveNorm.has(k)) continue;
+        haveNorm.add(k);
+        winnerPo.pnames.push({ value: loser, lang: '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+      }
+    }
+  }
+
+  UIState._placesCache  = null;
+  UIState._placeRegistry = null; // Bug #2: Registry nach placeObjects-Änderung invalidieren
+  return { repointed };
 }
 
 // Parst Koordinaten-Eingabe — unterstützt:
@@ -411,7 +2989,7 @@ function togglePlaceMode(placeId) {
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
   if ((UIState._placeModes[placeId] || 'free') === 'free') {
     const rawVal = (document.getElementById(placeId)?.value || '').trim();
-    partsEl.innerHTML = buildPlacePartsHtml(placeId);
+    _buildPlaceParts(placeId, partsEl);
     fillPlaceParts(placeId, rawVal);
     freeEl.hidden  = true;
     partsEl.hidden = false;
@@ -434,13 +3012,156 @@ function debounce(fn, ms) {
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
+// Place-Autocomplete für alle Ort-Eingabefelder.
+// Im GRAMPS-Modus (db.placeObjects vorhanden) werden strukturierte Orte angeboten
+// und placeIdFieldId mit der passenden ID befüllt; im GEDCOM-Modus nur Freitext-Vorschläge.
+// placeIdFieldId kann null sein (kein placeId-Tracking).
+function initPlaceAutocomplete(placeInputId, ddId, placeIdFieldId) {
+  const input = document.getElementById(placeInputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+
+  const _run = debounce(() => {
+    const q  = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+
+    const po       = AppState.db?.placeObjects;
+    const isGramps = po && Object.keys(po).length > 0;
+    let items;
+
+    if (isGramps) {
+      items = Object.values(po)
+        .filter(p => p.title.toLowerCase().includes(q))
+        .sort((a, b) => a.title.localeCompare(b.title, 'de'))
+        .slice(0, 15);
+    } else {
+      items = [...collectPlaces().values()]
+        .filter(p => p.name.toLowerCase().includes(q))
+        .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+        .slice(0, 15);
+    }
+    if (!items.length) { dd.style.display = 'none'; return; }
+
+    const idField = placeIdFieldId ? document.getElementById(placeIdFieldId) : null;
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'place-dropdown-item';
+      if (isGramps) {
+        el.textContent = item.title;
+        if (item.type && item.type !== 'Unknown') {
+          const badge = document.createElement('span');
+          badge.className = 'ac-meta';
+          badge.textContent = ' · ' + item.type;
+          el.appendChild(badge);
+        }
+        el.addEventListener('mousedown', () => {
+          input.value = item.title;
+          if (idField) idField.value = item.id;
+          dd.innerHTML = ''; dd.style.display = 'none';
+        });
+      } else {
+        el.textContent = item.name;
+        el.addEventListener('mousedown', () => {
+          input.value = item.name;
+          if (idField) idField.value = '';
+          dd.innerHTML = ''; dd.style.display = 'none';
+        });
+      }
+      dd.appendChild(el);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _run();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
 // ─────────────────────────────────────
 //  F4b — Citation-Datenmodell
 // ─────────────────────────────────────
 
 // Factory für ein einzelnes Citation-Objekt (neues Datenmodell)
 function citationObj(sid = '', page = '', quay = '', note = null, extra = [], media = []) {
-  return { sid, page, quay, note, extra: [...extra], media: [...media] };
+  return { sid, page, quay, note, extra: [...extra], media: [...media], eval: null };
+}
+
+// ─── RES-EVAL (ADR-022): 3-Achsen-Evidenzmodell pro Zitat ──────────────────────
+// Speicherung als _-Tag-Subtree unter SOUR (_EVAL/_STYP/_INFO/_EVID/_INFM),
+// vom Parser modelliert herausgelöst (kein Doppel-Schreiben, vgl. _REPO_MODELLED, T0-TEST-2).
+const EVAL_AXES = {
+  srcType:  { tag: '_STYP', label: 'Quellentyp',  hint: 'Originalität',
+    values: [['original', 'Original'], ['derivative', 'Abschrift/Transkript'], ['authored', 'Autorenwerk']] },
+  infoQual: { tag: '_INFO', label: 'Information',  hint: 'Nähe zum Ereignis',
+    values: [['primary', 'primär'], ['secondary', 'sekundär'], ['undetermined', 'unbestimmt']] },
+  evidence: { tag: '_EVID', label: 'Evidenz',      hint: 'zur Aussage',
+    values: [['direct', 'direkt'], ['indirect', 'indirekt'], ['negative', 'negativ']] },
+};
+
+function _newEval() { return { srcType: '', infoQual: '', evidence: '', informant: '' }; }
+
+function evalIsEmpty(e) {
+  return !e || (!e.srcType && !e.infoQual && !e.evidence && !e.informant);
+}
+
+// Abgeleiteter QUAY-Vorschlag (0–3) aus dem Evidenzmodell, an die GEDCOM-QUAY-
+// Semantik angelehnt. Nur Vorschlag — QUAY bleibt unabhängig editierbar.
+// '' = keine Aussage möglich.
+function _evalToQuay(e) {
+  if (evalIsEmpty(e)) return '';
+  // 3 = direkte Primärevidenz: Original + primär (sofern nicht indirekt/negativ)
+  if (e.srcType === 'original' && e.infoQual === 'primary'
+      && e.evidence !== 'indirect' && e.evidence !== 'negative') return '3';
+  // 0 = Negativ-Evidenz (Abwesenheit)
+  if (e.evidence === 'negative') return '0';
+  // 1 = schwach: Autorenwerk / unbestimmte Information / indirekte Evidenz
+  if (e.srcType === 'authored' || e.infoQual === 'undetermined' || e.evidence === 'indirect') return '1';
+  // 2 = dazwischen (Abschrift, sekundär, primär ohne Original …)
+  return '2';
+}
+
+// ─── RES-HYPO (ADR-023): Hypothesen-System (leichte Variante) ──────────────────
+// Statusbehaftete Annotation (offen/verworfen/bestätigt) an Person/Familie, mit
+// Forscher-Konfidenz (weight) + Evidenz-Verknüpfung (SID-Ref, kein eigener
+// Zitatkörper). Bewusst KEIN Alternativ-Baum / Zwei-Schichten-Modell.
+// Speicherung als _HYPO-Subtree (modelliert herausgelöst, vgl. _REPO_MODELLED).
+const HYPO_STATUSES = [
+  ['open',      'offen'],
+  ['confirmed', 'bestätigt'],
+  ['rejected',  'verworfen'],
+];
+// weight = Forscher-Konfidenz in die Hypothese (NICHT Quellqualität/QUAY/eval, ADR-022)
+const HYPO_WEIGHTS = [
+  ['low',    'gering'],
+  ['medium', 'mittel'],
+  ['high',   'hoch'],
+];
+
+function _newHypo() {
+  return { id: '', text: '', status: 'open', weight: '', rationale: '',
+           conclusion: '', evidence: [], created: '' };
+}
+
+// Status lesen — migriert Bestands-Hypothesen ohne status auf 'open'
+function _hypoStatus(h) {
+  if (h && (h.status === 'open' || h.status === 'confirmed' || h.status === 'rejected')) return h.status;
+  return 'open';
+}
+
+function hypoIsEmpty(h) {
+  return !h || (!h.text && !h.rationale && !h.conclusion
+    && (!Array.isArray(h.evidence) || h.evidence.length === 0));
+}
+
+function _hypoStatusLabel(s) {
+  const f = HYPO_STATUSES.find(x => x[0] === s); return f ? f[1] : s;
+}
+function _hypoWeightLabel(w) {
+  const f = HYPO_WEIGHTS.find(x => x[0] === w); return f ? f[1] : w;
 }
 
 // Konvertiert Altformat (sources[]+sourcePages{}+...) in-place zu citations[]
@@ -461,6 +3182,77 @@ function _migrateLegacyCitations(obj) {
   delete obj.sourceNote;
   delete obj.sourceExtra;
   delete obj.sourceMedia;
+}
+
+// ─────────────────────────────────────
+//  PAGE→Media/Note-Migration (Deeplink aus PAGE lösen)
+// ─────────────────────────────────────
+// Hintergrund: Früher landeten Fundstellen-URLs (z.B. Matrikula-Scan) im
+// citation.page-Feld. Korrekter GEDCOM-Träger ist OBJE/FILE (Digitalisat) bzw.
+// NOTE. Diese Migration verschiebt URLs aus page → media[] (Default) oder note,
+// und lässt den menschenlesbaren Lokator ("fol. 12r") in page stehen.
+
+// Rein + testbar: trennt URL(s) vom Lokator-Text.
+// → { page: <Rest ohne URL>, urls: [<bereinigte URLs>] }
+function _splitPageUrl(page) {
+  const s = String(page == null ? '' : page);
+  const re = /\bhttps?:\/\/[^\s]+/g;
+  const found = s.match(re);
+  if (!found) return { page: s, urls: [] };
+  const urls = found.map(u => u.replace(/[).,;]+$/, ''));   // angehängte Satzzeichen weg
+  const rest = s.replace(re, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .replace(/^[\s,;–-]+/, '')
+                .replace(/[\s,;–-]+$/, '')
+                .trim();
+  return { page: rest, urls };
+}
+
+// Besucht jedes Citation-Objekt im db-Graphen (host-unabhängig: birth/death/…,
+// events[], marr/engag, nameCitations, extraNames, childRelations, associations).
+// Citation = Objekt mit string `page` + `sid` + array `media`.
+function _forEachCitation(root, fn) {
+  const seen = new Set();
+  (function walk(node) {
+    if (!node || typeof node !== 'object' || seen.has(node) || node instanceof Set) return;
+    seen.add(node);
+    if (Array.isArray(node)) { for (const v of node) walk(v); return; }
+    if (typeof node.page === 'string' && 'sid' in node && Array.isArray(node.media)) fn(node);
+    for (const k in node) {
+      if (!Object.prototype.hasOwnProperty.call(node, k)) continue;
+      const v = node[k];
+      if (v && typeof v === 'object') walk(v);
+    }
+  })(root);
+}
+
+// Verschiebt URLs aus allen citation.page → media[] (Default) oder note.
+// opts: { target:'media'|'note', titl }. Idempotent. Gibt Report (für Vorschau).
+function migratePageUrls(db, opts = {}) {
+  const target = opts.target === 'note' ? 'note' : 'media';
+  const report = { scanned: 0, migrated: 0, urls: 0, samples: [] };
+  if (!db) return report;
+  _forEachCitation(db, c => {
+    report.scanned++;
+    const { page, urls } = _splitPageUrl(c.page);
+    if (!urls.length) return;
+    const before = c.page;
+    c.page = page;
+    if (target === 'note') {
+      const add = urls.join('\n');
+      c.note = c.note ? (c.note + '\n' + add) : add;
+    } else {
+      if (!Array.isArray(c.media)) c.media = [];
+      for (const u of urls) {
+        if (c.media.some(m => m && m.file === u)) continue;   // idempotent
+        c.media.push({ file: u, titl: opts.titl || '', _extra: [] });
+      }
+    }
+    report.migrated++;
+    report.urls += urls.length;
+    if (report.samples.length < 5) report.samples.push({ before, after: c.page, urls });
+  });
+  return report;
 }
 
 // ─────────────────────────────────────
@@ -518,47 +3310,118 @@ function evDateKey(d) {
 
 // Aggregiert RESI- und PROP-Ereignisse nach Adresse → Map<addr, {addr, entries[], propEntries[]}>
 // Cache in UIState._hofCache; wird von markChanged() geleert.
+// True, wenn placeId auf ein Farm/Building-placeObject zeigt (ADR-026 Hof-Ort).
+function _isFarmPlaceId(placeId) {
+  const po = placeId && AppState.db.placeObjects?.[placeId];
+  return !!po && (po.type === 'Farm' || po.type === 'Building');
+}
+
+// Koordinaten/Notiz eines Hofs: ADR-027 P3 erweitert um V2-hofObject-Lookup.
+// Reihenfolge: V2-hofObject (Phase 3+) > Farm-PO (Pre-Phase-3 ADR-026) > Legacy-
+// addr-keyed-Sidecar (ADR-026 vor Migration). Nach Phase-3-Migration sind die
+// Farm-POs entfernt; V2-Pfad ist single source.
+// hof = { addr, place?, placeId?, hofId? } aus buildHofIndex.
+function hofMeta(hof) {
+  // ADR-027 V2-Hof per ID (gesetzt durch Phase-3-Migration oder Phase-2-Backfill)
+  let v2 = null;
+  if (hof && hof.hofId && AppState.db?.hofObjects?.[hof.hofId]
+      && _isHofObjectV2(AppState.db.hofObjects[hof.hofId])) {
+    v2 = AppState.db.hofObjects[hof.hofId];
+  }
+  const po   = hof && _isFarmPlaceId(hof.placeId) ? AppState.db.placeObjects[hof.placeId] : null;
+  const side = hof && AppState.db.hofObjects?.[hof.addr];
+  // Legacy-Sidecar nur wenn nicht zufällig ein V2-Eintrag (Shape-Check) — verhindert
+  // Cross-Talk zwischen V2-id-Keys und Legacy-addr-Keys.
+  const sideOk = side && !_isHofObjectV2(side);
+  return {
+    lat:  v2 && v2.lat  != null ? v2.lat
+        : po && po.lat  != null ? po.lat
+        : sideOk && side.lat  != null ? side.lat  : null,
+    long: v2 && v2.long != null ? v2.long
+        : po && po.long != null ? po.long
+        : sideOk && side.long != null ? side.long : null,
+    note: v2 && v2.note ? v2.note
+        : po && po.note ? po.note
+        : sideOk && side.note ? side.note : '',
+  };
+}
+
 function buildHofIndex() {
   if (UIState._hofCache) return UIState._hofCache;
-  const hoefe = new Map(); // addr → { addr, place, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
+  // ADR-028 Phase 3: id-keyed primary. Map<hofId | addr-string, Entry>:
+  //   - _eventHofId(ev) auflöst → Key = hofId (mehrere addr-Varianten desselben
+  //     Hofs kollabieren auf einen Index-Eintrag, periodengerechte Adress-Anzeige
+  //     via hofRegistry.resolveAddrAsOf).
+  //   - Sonst → Key = ev.addr.trim() (Fallback-Bucket für Events ohne Hof-Link).
+  // byAddr-Index parallel für Lookup-Kompatibilität (ui-views-hof ruft
+  // buildHofIndex().get(addr) für Detail/Rename/Statistik).
+  const hoefe = new Map();
+  const byAddr = new Map();
+  const _ensureHof = (key, addr) => {
+    if (!hoefe.has(key)) hoefe.set(key, {
+      addr, place: '', placeId: null, hofId: null,
+      entries: [], propEntries: [],
+    });
+    return hoefe.get(key);
+  };
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of (p.events || [])) {
-      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        // Ersten nicht-leeren Ort aus RESI-Events übernehmen
-        if (!hof.place && ev.place) hof.place = ev.place.trim();
-        hof.entries.push({
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-        });
-      }
-      if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        if (!hof.place && ev.place) hof.place = ev.place.trim();
-        hof.propEntries.push({
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-          desc:    ev.value || '',
-        });
-      }
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP')) continue;
+      const addr = (ev.addr || '').trim();
+      const hofId = (typeof _eventHofId === 'function') ? _eventHofId(ev) : (ev.hofId || null);
+      // Skip wenn weder Adresse noch Hof-Link vorhanden — Event hat keinen Hof-Bezug.
+      if (!addr && !hofId) continue;
+      const key = hofId || addr;
+      const hof = _ensureHof(key, addr || key);
+      if (!hof.propEntries) hof.propEntries = [];
+      // Ersten nicht-leeren Ort aus RESI/PROP-Events übernehmen (Anzeige in Höfe-Liste)
+      if (!hof.place && ev.place) hof.place = ev.place.trim();
+      // LEGACY ADR-026: Farm-placeId aus dem Event — nach v1055 toten Code, da
+      // ev.placeId nie mehr Farm-PO ist (GEDCOM: nie; GRAMPS: vor buildHofIndex
+      // durch _migrateFarmPOsToHofObjects auf villageId umgestellt). Behalten
+      // damit Altdaten-Snapshots in Tests weiterhin durchlaufen.
+      if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
+      // ADR-027 P3: hofId aus dem Event (Post-Migration) — V2-Hof-Pointer
+      if (!hof.hofId && hofId) hof.hofId = hofId;
+      // byAddr-Index: jede unterschiedliche ev.addr-Schreibweise mappen, damit
+      // alte Lookups buildHofIndex().get(addr) den Eintrag finden (auch wenn er
+      // intern hofId-keyed ist).
+      if (addr && !byAddr.has(addr)) byAddr.set(addr, hof);
+      const entry = {
+        pid:     p.id,
+        name:    p.name || p.id,
+        date:    ev.date || '',
+        dateKey: evDateKey(ev.date || ''),
+      };
+      if (ev.type === 'RESI') hof.entries.push(entry);
+      else { entry.desc = ev.value || ''; hof.propEntries.push(entry); }
     }
   }
   for (const hof of hoefe.values()) {
     hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
     (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    // ADR-024 v1034: Display-Adresse aus dem hofObject (kanonische, extrahierte
+    // Form) — nicht aus dem ersten rohen ev.addr, der Stadt/Land enthalten kann.
+    if (hof.hofId && AppState.db?.hofObjects?.[hof.hofId]) {
+      const h = AppState.db.hofObjects[hof.hofId];
+      if (_isHofObjectV2(h) && h.addrs && h.addrs[0] && h.addrs[0].value) {
+        hof.addr = h.addrs[0].value;
+      }
+    }
   }
-  UIState._hofCache = hoefe;
-  return hoefe;
+  // Wrapper simuliert Map-API; .get(addr) findet id-keyed Einträge via byAddr.
+  const wrapper = {
+    get size() { return hoefe.size; },
+    has(key) { return hoefe.has(key) || byAddr.has(key); },
+    get(key) { return hoefe.get(key) || byAddr.get(key); },
+    values() { return hoefe.values(); },
+    keys() { return hoefe.keys(); },
+    entries() { return hoefe.entries(); },
+    forEach(fn, thisArg) { return hoefe.forEach(fn, thisArg); },
+    [Symbol.iterator]() { return hoefe[Symbol.iterator](); },
+  };
+  UIState._hofCache = wrapper;
+  return wrapper;
 }
 
 // ─────────────────────────────────────
@@ -569,6 +3432,7 @@ function buildHofIndex() {
 function _dedupNormName(str) {
   if (!str) return '';
   return str.toLowerCase().trim()
+    .replace(/,/g, ' ')
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .replace(/\s+/g, ' ');
 }
@@ -603,57 +3467,127 @@ function _dedupYearFromGed(dateStr) {
 
 // Berechnet Ähnlichkeits-Score zwischen zwei Personen (0..100)
 // Gibt { score, reasons[] } zurück
+// Gewichte: Nachname ×24 + Vorname ×20 + Sex ±11/−15 + Geburtsjahr max 16 +
+//           Geburtsort ×7 + Vater max 7 + Mutter max 7 + Partner max 8 = 100
 function _dedupScorePair(pA, pB) {
   const reasons = [];
   let score = 0;
 
-  // Nachname (max 30)
+  // Nachname (max 24) — Doppelnamen (Bindestrich/Leerzeichen) komponentenweise vergleichen
   const snA = _dedupNormName(pA.surname || '');
   const snB = _dedupNormName(pB.surname || '');
   if (snA && snB) {
-    const r = _dedupLevenshtein(snA, snB);
-    score += r * 30;
-    if (r >= 0.9) reasons.push('Nachname identisch');
-    else if (r >= 0.7) reasons.push('Nachname ähnlich');
+    const partsA = snA.split(/[-\s]+/).filter(Boolean);
+    const partsB = snB.split(/[-\s]+/).filter(Boolean);
+    let bestR = _dedupLevenshtein(snA, snB);
+    for (const a of partsA) for (const b of partsB) {
+      const r = _dedupLevenshtein(a, b);
+      if (r > bestR) bestR = r;
+    }
+    score += bestR * 24;
+    if (bestR >= 0.9) reasons.push('Nachname identisch');
+    else if (bestR >= 0.7) reasons.push('Nachname ähnlich');
   }
 
-  // Vorname (max 25)
+  // Vorname (max 20)
   const gnA = _dedupNormName(pA.given || '');
   const gnB = _dedupNormName(pB.given || '');
   if (gnA && gnB) {
     const r = _dedupLevenshtein(gnA, gnB);
-    score += r * 25;
+    score += r * 20;
     if (r >= 0.9) reasons.push('Vorname identisch');
     else if (r >= 0.7) reasons.push('Vorname ähnlich');
   }
 
-  // Geschlecht (max 15, Malus -20)
+  // Geschlecht (max +11, Malus −15)
   if (pA.sex !== 'U' && pB.sex !== 'U') {
-    if (pA.sex === pB.sex) { score += 15; }
-    else { score -= 20; reasons.push('Geschlecht verschieden'); }
+    if (pA.sex === pB.sex) { score += 11; }
+    else { score -= 15; reasons.push('Geschlecht verschieden'); }
   }
 
-  // Geburtsjahr (max 20)
+  // Geburtsjahr (max 16)
   const yA = _dedupYearFromGed(pA.birth?.date);
   const yB = _dedupYearFromGed(pB.birth?.date);
   if (yA && yB) {
     const diff = Math.abs(yA - yB);
-    if      (diff === 0) { score += 20; reasons.push('Geburtsjahr identisch'); }
-    else if (diff <= 1)  { score += 15; reasons.push('Geburtsjahr ±1'); }
-    else if (diff <= 2)  { score +=  8; }
-    else if (diff <= 5)  { score +=  3; }
+    if      (diff === 0) { score += 16; reasons.push('Geburtsjahr identisch'); }
+    else if (diff <= 1)  { score += 12; reasons.push('Geburtsjahr ±1'); }
+    else if (diff <= 2)  { score +=  6; }
+    else if (diff <= 5)  { score +=  2; }
   } else {
-    score += 5; // neutral wenn kein Datum bekannt
+    score += 4; // neutral wenn kein Datum bekannt
   }
 
-  // Geburtsort (max 10)
+  // Geburtsort (max 7)
   const plA = compactPlace(pA.birth?.place || '').toLowerCase().slice(0, 40);
   const plB = compactPlace(pB.birth?.place || '').toLowerCase().slice(0, 40);
   if (plA && plB) {
     const r = _dedupLevenshtein(plA, plB);
-    score += r * 10;
+    score += r * 7;
     if (r >= 0.9) reasons.push('Geburtsort identisch');
     else if (r >= 0.7) reasons.push('Geburtsort ähnlich');
+  }
+
+  // Eltern (max +14: Vater max 7 + Mutter max 7)
+  const db = AppState.db;
+  if (db) {
+    const famcIdA = pA.famc?.[0]?.famId;
+    const famcIdB = pB.famc?.[0]?.famId;
+    if (famcIdA && famcIdB) {
+      const fA = db.families[famcIdA];
+      const fB = db.families[famcIdB];
+      if (fA && fB) {
+        // Vater (max 7)
+        const vatA = fA.husb && db.individuals[fA.husb];
+        const vatB = fB.husb && db.individuals[fB.husb];
+        if (vatA && vatB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(vatA.surname || ''), _dedupNormName(vatB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(vatA.given   || ''), _dedupNormName(vatB.given   || ''));
+          score += rSn * 5 + rGn * 2;
+          if (rSn >= 0.9 && rGn >= 0.85) reasons.push('Vater identisch');
+          else if (rSn >= 0.75)           reasons.push('Vater ähnlich');
+        }
+        // Mutter (max 7)
+        const mutA = fA.wife && db.individuals[fA.wife];
+        const mutB = fB.wife && db.individuals[fB.wife];
+        if (mutA && mutB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(mutA.surname || ''), _dedupNormName(mutB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(mutA.given   || ''), _dedupNormName(mutB.given   || ''));
+          score += rSn * 5 + rGn * 2;
+          if (rSn >= 0.9 && rGn >= 0.85) reasons.push('Mutter identisch');
+          else if (rSn >= 0.75)           reasons.push('Mutter ähnlich');
+        }
+      }
+    }
+
+    // Partner / Ehegatten (max +8, bestes Paar)
+    const _spouseList = p => (p.fams || []).map(fid => {
+      const f = db.families[fid];
+      if (!f) return null;
+      const sid = f.husb === p.id ? f.wife : f.husb;
+      return sid ? db.individuals[sid] : null;
+    }).filter(Boolean);
+
+    const spousesA = _spouseList(pA);
+    const spousesB = _spouseList(pB);
+    if (spousesA.length && spousesB.length) {
+      let bestPts = 0; let bestLabel = '';
+      for (const sA of spousesA) {
+        for (const sB of spousesB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(sA.surname || ''), _dedupNormName(sB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(sA.given   || ''), _dedupNormName(sB.given   || ''));
+          const pts = rSn * 5 + rGn * 3;
+          if (pts > bestPts) {
+            bestPts   = pts;
+            bestLabel = (rSn >= 0.9 && rGn >= 0.85) ? 'Partner identisch'
+                      : (rSn >= 0.75)                ? 'Partner ähnlich'
+                      : '';
+          }
+        }
+      }
+      score += bestPts;
+      if (bestLabel) reasons.push(bestLabel);
+    }
   }
 
   return { score: Math.round(score), reasons };

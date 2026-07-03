@@ -24,7 +24,7 @@ body  (index.html — Hauptapp)
 │   └── #tab-search     Globale Suche (alle Entitätstypen)
 │
 ├── #v-detail           Detailansicht (Person / Familie / Quelle / Ort)
-│   ├── .topbar         ← Zurück · Titel · ⧖ Sanduhr · Bearbeiten
+│   ├── .topbar         ← Zurück · Titel · [⌂ navigate] … [⌂▢ set] [✎ Bearbeiten]
 │   └── #detailContent  dynamisch gerendert
 │       ├── .fact-row + inline §N Quellen-Badges
 │       └── .family-nav-row  (⚭ Familie › in Person-Detail)
@@ -100,7 +100,9 @@ v-detail           (BottomNav versteckt)
 - **Kein Konflikt** mit vertikalem Scrollen (dy-Check) und Modals (früher Abbruch)
 
 ### Bottom-Nav Highlight
-`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'search' }`
+`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'tasks' }`
+
+`#bnav-tasks` (☑ Aufgaben) ist der sechste Tab; Proband-Navigation über `menuProband` im ☰-Menü.
 
 ### Desktop-Zweispalten (ab 900px)
 ```
@@ -196,8 +198,12 @@ body.desktop-mode:
 | `.tree-card-half` | Halbgeschwister-Karte (gestrichelter Rahmen, gold-dim) |
 | `.tree-half-badge` | „½"-Badge auf Halbgeschwister-Karten (bottom-right) |
 | `.tree-card-empty` | Ghost-Karte für unbekannte Vorfahren (opacity 0.18, gestrichelt) |
+| `.tree-card-peek` | Geschwister-Karte im Peek-Stapel (Sanduhr) |
 | `.tree-name` | Name in Tree-Karte (2-zeilig via -webkit-line-clamp) |
 | `.tree-yr` | Geburts-/Sterbejahr in Tree-Karte (0.68rem) |
+| `.tree-desc-more` | `▼`-Badge auf Karte mit abgeschnittenen Nachkommen |
+| `.tree-marr-btn` | Klickbarer ⚭-Button zwischen Proband und erstem Ehepartner |
+| `.tree-marr-badge` | ⚭-Symbol-Span innerhalb des Marr-Buttons |
 | `.landing-tagline` | Tagline auf Landing-Screen |
 | `.btn-link` | Textlink-Button (Hilfe-Link auf Landing-Screen) |
 
@@ -205,21 +211,74 @@ body.desktop-mode:
 
 Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 
+#### Baum-Badges
+
 | Symbol / Klasse | Bedeutung | Kontext |
 |---|---|---|
 | `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
-| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title`; QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
+| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID (z.B. `@S042@` → `§42`); Tooltip = `s.abbr \|\| s.title` (max. 60 Z.); QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
 | `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
 | `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
-| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
-| `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
+| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Sanduhr-Baum |
+| `⚭` (`.tree-marr-btn`) | Heirats-Navigation — öffnet Familien-Detail; zwischen Proband und Ehepartner | Nachkommen-Baum |
+| `▼` (`.tree-desc-more`) | Abgeschnittene Nachkommen — mehr vorhanden, Klick lädt tiefere Gens | Nachkommen-Baum-Karte |
+
+#### Topbar-Aktionen
+
+| Symbol / Klasse | Bedeutung | Position in Topbar | Kontext |
+|---|---|---|---|
+| `⌂` (plain) | Zum Probanden navigieren — ohne Rahmenstil | Ganz links (Diagramme) / nach Zurück-Button (Person-Detail) | Alle Diagramm-Topbars, Person-Detail |
+| `⤢` / `⤡` | Vollbild ein / aus | Zweite Position von links, vor Separator | Sanduhr, Fächer, Nachkommen, Zeitleiste |
+| `◑` | Fan-Chart-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars |
+| `⇩` | Nachkommen-Baum-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars |
+| `⟷` | Zeitleiste-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars + Person-Detail |
+| `🗺` | Kartenansicht-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars + Person-Detail |
+| `☰` | Menü öffnen | Immer **ganz rechts** | Alle Topbars |
+| `⌂` (`.proband-set-btn`) | Proband setzen / aufheben — Rahmen-Stil (`box-shadow: inset 0 0 0 1.5px currentColor`); goldene Füllung im aktiven Zustand | Direkt vor `✎` | Person-Detail-Topbar |
+| `✎` | Bearbeiten — öffnet Formular des aktuellen Datensatzes | Direkt vor `☰` | Person-/Familien-/Quellen-Detail-Topbar |
+| `←` | Zurück — `goBack()`; Swipe-Right auf Mobile hat dieselbe Wirkung | Ganz links | Detail-Topbar |
+
+**Topbar-Layout** (unveränderlich):
+```
+Diagramm:      [⌂] [⤢]  |  [◑][⇩][⟷][🗺]  [☰]
+Person-Detail: [←] [⌂]  …  [⌂▢] [✎]  [☰]
+```
+
+#### Aktions-Buttons (Tab-Header, Modals, Listen)
+
+| Symbol / Klasse | Bedeutung | Kontext |
+|---|---|---|
+| `＋` (FAB, `.fab`) | Neu erstellen — öffnet `#modalAdd` (Person/Familie/Quelle); ausgeblendet auf Orte-Tab + Baum | Floating Action Button (unten rechts) |
+| `↓` (`.act-btn-icon`) | Exportieren / Herunterladen — Download der aktuellen Ansicht | Tab-Header `action-btns` (z.B. `↓ MD` Aufgaben, `↓ PNG` Diagramm) |
+| `⊕` | Person zur Mehrpersonen-Zeitleiste hinzufügen — öffnet modalRelPicker im Modus `'tlmulti'`; max. 5 Personen | **Nur** Zeitleiste Filterleiste (TL-MULTI) |
+| `⧉` | Kopieren — Quelle/Zitat in Zwischenablage legen | QuickAdd Quellen-Zwischenablage, src-Widget |
+| `📋` | Einfügen (Paste) — Quelle/Zitat aus Zwischenablage übernehmen | QuickAdd Quellen-Zwischenablage, src-Widget |
+
+#### Import-Vergleich (3-Wege-Entscheidung)
+
+Diese drei Symbole sind **ausschließlich** im Merge-Assistenten als Gruppe definiert:
+
+| Symbol | Bedeutung |
+|---|---|
+| `✓` | Feld / Person übernehmen |
+| `📝` | Als Forschungseintrag anlegen — erstellt `_rlog`-Eintrag mit `result:'pending'` |
+| `✗` | Ablehnen / nicht übernehmen |
+
+In anderen Kontexten einzeln: `✓` = Aufgabe erledigt (Aufgaben-Liste); `✗` / `×` = Modal schließen oder Tag entfernen.
+
+---
 
 **Regeln:**
 - `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
-- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
+- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — N ist der numerische Teil der GEDCOM-ID; in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
 - Tooltip auf `.src-badge` zeigt immer den Quellentitel (`s.abbr || s.title`, max. 60 Zeichen), nicht die GEDCOM-ID
 - Click auf `.src-badge` öffnet je nach Kontext `showSourceDetail(sid)` (fact-row) oder den zugehörigen Dialog (z.B. `showChildRelDialog`)
 - `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
+- `☰` steht **immer ganz rechts** in jeder Topbar — kein anderer Button darf rechts davon stehen
+- `✎` steht **direkt links von `☰`** in der Detail-Topbar — nie an anderer Position
+- `⊕` erscheint **nur in der Zeitleiste** als „Person hinzufügen" — nicht als allgemeines Hinzufügen-Symbol (dafür: `＋` FAB oder `.section-add`)
+- Die vier Diagramm-Wechsel-Symbole (`◑ ⇩ ⟷ 🗺`) stehen **immer nach dem Separator** und **immer vor `☰`** — keine andere Reihenfolge
+- Die 3-Wege-Gruppe `✓ / 📝 / ✗` wird **ausschließlich** im Import-Vergleich als Gruppe eingesetzt
 - `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
 - **ExtraNames** (zweite+ Namenangaben) sind in Personendetail klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Formular
 
@@ -296,3 +355,69 @@ Ebene +1:         [K0] [K1] [K2] [K3]       ← max. 4 Kinder/Zeile, mehrzeilig
 **Mehrfach-Ehen:**
 - `⚭N`-Badge auf Zentrum-Karte wenn Person >1 Ehe hat
 - Alle Ehe-Familien navigierbar; aktive Familie in `_activeSpouseMap` gespeichert
+
+---
+
+## Nachkommen-Ansicht: Layout-Algorithmus
+
+`ui-desc-tree.js` — Toggle `⇩` in Baum-Topbar; `body.desc-tree-mode` aktiv.
+
+```
+Ebene 0:  [Geschwister-Stapel←]  [Proband★]  [⚭]  [Ehepartner1] [Ehepartner2…]
+Ebene 1:      [Kind1]  [Kind2½]  [Kind3]           ← ½ = Halbkind (andere Ehe)
+Ebene 2:    [Enkel1]  [Enkel2]     [Enkel3]
+     …
+```
+
+**Konstanten** (Portrait / Landscape):
+- Reguläre Karte: W=80/96 px, H=54/64 px
+- Proband-Karte: CW=124/160 px, CH=72/80 px
+- HGAP=8/10, VGAP=38/48, MGAP=8/10 (Proband↔Ehepartner-Gruppe), SIB_GAP=8/10
+- `SLOT = W + HGAP` — Breite einer Kind-Einheit (kein Ehepartner-Platz pro Kind)
+
+**Layout-Berechnung (`_descLayout`):**
+- Bottom-up: `slots` = Summe der Kinder-Slots (mind. 1)
+- `spouseId` = erster Ehepartner mit vollständiger Familie → bestimmt `mainKidSet`
+- `isHalf: true` auf Kindern außerhalb der Hauptfamilie (andere Ehe)
+- `hasMore: true` wenn `depth=0` aber Kinder vorhanden (→ `▼`-Badge)
+
+**Ehepartner-Gruppe (Proband-Ebene):**
+- `rootSpouseIds[]` = alle Ehepartner in Familien-Reihenfolge
+- `spouseStep = min(W+HGAP, f(treeSpan))` — Überlapp bei schmalem Baum, max. normaler Abstand
+- Ein ⚭-Button zwischen Proband-Karte und erster Ehepartner-Karte (öffnet Familien-Detail)
+- `rootSpouseW = MGAP + spouseStep × (n−1) + W`
+
+**Geschwister-Stapel (Proband-Ebene links):**
+- Aus `p.famc[0]` ohne Proband selbst
+- Horizontal gestapelt; `sibStep = min(W+HGAP, (availW−W)/(n−1))`, mind. 16 px sichtbar
+- T-Linie horizontal: rechte Stapelkante → linke Proband-Kante
+
+**Verbindungslinien (T-Linien):**
+- Proband → `juncY` (40% von VGAP): vertikale Linie
+- `juncY`: horizontale Linie über alle Kinder-CXs
+- Jeder Kind-CX: vertikale Linie nach unten
+
+**Interaktion:**
+- Klick auf Proband → `showDetail(id)`
+- Klick auf alle anderen Karten (Kinder, Ehepartner, Geschwister) → `showDescTree(id)`
+- Gen-Buttons 2–7 in Topbar (`#descGenBtns`, `data-dgen`): `setDescTreeGens(n)`
+- `⇩`-Button: Toggle zwischen Sanduhr und Nachkommen-Baum (`toggleDescTree()`)
+- Tastatur: `↑`=Vater, `↓`=erstes Kind, `→`=erster Ehepartner, `←`=History-Back
+
+**Auto-Fit + Scroll (Desktop):**
+- `fit = min(1, clientW/totalW, clientH/totalH)` — Zoom wenn Baum größer als Fenster
+- Scroll zentriert auf Proband-X; Scroll-Top = 0
+
+---
+
+## Einheitliche Diagramm-Topbar-Struktur (ab sw v591)
+
+Alle vier Diagramme — Sanduhr (`#v-tree`), Fächer (`ui-fanchart.js`), Nachkommen-Baum (`ui-desc-tree.js`) und Zeitleiste (`ui-timeline.js`) — folgen demselben Topbar-Muster:
+
+```
+[⌂ Proband]  [⤢ Vollbild]  |  [Diagramm-Wechsel-Buttons]  [☰ Menü]
+```
+
+- **Vor dem Separator:** `⌂ tlProbandBtn` (navigiert zur aktuellen Person im Probanden-Fokus) + `⤢ tlFsBtn` (Vollbild-Toggle)
+- **Nach dem Separator:** Diagramm-spezifische Wechsel-Buttons (`⧖ ◑ ⇩ ⟷`) + `☰ Menü`
+- **Person-Detail-Topbar:** zwei `⌂`-Buttons — `probandBtn` (plain, navigiert zum Probanden) + `probandSetBtn` (`.proband-set-btn`, setzt/hebt Proband, steht direkt vor `✎ Bearbeiten`)

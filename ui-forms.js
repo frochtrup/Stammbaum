@@ -3,6 +3,9 @@
 //  srcWidgetState[prefix] = { mode:'new', citations:[{sid,page,quay,...}] }
 // ─────────────────────────────────────
 const srcWidgetState = {};
+// RES-EVAL 2b: Aufklapp-Zustand der Bewertungszeile je Widget (prefix → Set<citIdx>).
+// Bewusst NICHT am Zitat-Objekt (würde via {...c} beim Speichern in db leaken).
+const _srcEvalOpen = {};
 
 function updateSrcPage(prefix, citIdx, value) {
   const s = srcWidgetState[prefix];
@@ -16,11 +19,89 @@ function updateSrcQuay(prefix, citIdx, value) {
   if (s?.citations[i]) s.citations[i].quay = value;
 }
 
+// ─── RES-EVAL 2b: Evidenzbewertung pro Zitat (ADR-022) ────────────────────────
+function toggleSrcEval(prefix, citIdx) {
+  const i = +citIdx;
+  if (!_srcEvalOpen[prefix]) _srcEvalOpen[prefix] = new Set();
+  const set = _srcEvalOpen[prefix];
+  set.has(i) ? set.delete(i) : set.add(i);
+  renderSrcTags(prefix);
+}
+
+function updateSrcEval(prefix, citIdx, axis, value) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  if (!c.eval) c.eval = _newEval();
+  if (axis in c.eval) c.eval[axis] = value;
+  if (evalIsEmpty(c.eval)) c.eval = null;
+  renderSrcTags(prefix);   // aktualisiert QUAY-Vorschlag + ⚖-Markierung
+}
+
+function updateSrcInformant(prefix, citIdx, value) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  if (!c.eval) c.eval = _newEval();
+  c.eval.informant = value;
+  if (evalIsEmpty(c.eval)) c.eval = null;
+  // kein Re-Render: würde den Tippfokus im Informant-Feld verlieren
+}
+
+function applyEvalQuay(prefix, citIdx) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  const q = _evalToQuay(c.eval);
+  if (q === '') { showToast('Keine Bewertung gesetzt', 'warn'); return; }
+  c.quay = q;
+  renderSrcTags(prefix);
+  showToast(`QUAY ${q} aus Bewertung übernommen`, 'success');
+}
+
+// Bewertungszeile (3 Achsen-Selects + Informant + QUAY-Übernahme)
+function _srcEvalRowHtml(prefix, idx, c) {
+  const e = c.eval || {};
+  let selects = '';
+  for (const axis of Object.keys(EVAL_AXES)) {
+    const def = EVAL_AXES[axis];
+    const cur = e[axis] || '';
+    let opts = `<option value="">${esc(def.label)} –</option>`;
+    for (const [v, lbl] of def.values)
+      opts += `<option value="${v}" ${cur === v ? 'selected' : ''}>${esc(lbl)}</option>`;
+    selects += `<select class="src-eval-select" data-change="updateSrcEval" data-prefix="${prefix}" data-citidx="${idx}" data-axis="${axis}" title="${esc(def.label)} — ${esc(def.hint)}">${opts}</select>`;
+  }
+  const sug    = _evalToQuay(c.eval);
+  const sugBtn = sug !== ''
+    ? `<button type="button" class="src-eval-applyq" data-action="applyEvalQuay" data-prefix="${prefix}" data-citidx="${idx}" title="QUAY-Vorschlag ${sug} übernehmen">→Q${sug}</button>`
+    : '';
+  return `<div class="src-eval-row">
+    ${selects}
+    <input type="text" class="src-eval-informant" value="${esc(e.informant || '')}" placeholder="Informant…"
+      data-input="updateSrcInformant" data-prefix="${prefix}" data-citidx="${idx}">
+    ${sugBtn}
+  </div>`;
+}
+
+function updateSrcUrl(prefix, citIdx, value) {
+  const s = srcWidgetState[prefix];
+  const i = +citIdx;
+  if (!s?.citations[i]) return;
+  const c = s.citations[i];
+  if (!Array.isArray(c.media)) c.media = [];
+  const url = value.trim();
+  // Erstes media-Entry ist der Deeplink (OBJE/FILE); ggf. anlegen oder entfernen
+  if (url) {
+    if (c.media[0]) c.media[0].file = url;
+    else c.media.push({ file: url, titl: '', _extra: [] });
+  } else {
+    if (c.media[0] && /^https?:\/\//.test(c.media[0].file || '')) c.media.splice(0, 1);
+  }
+}
+
 function initSrcWidget(prefix, citationsOrIds) {
   const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
+  delete _srcEvalOpen[prefix];   // RES-EVAL 2b: Aufklapp-Zustand für frisches Formular zurücksetzen
   srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
     (c && typeof c === 'object' && 'sid' in c)
-      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }
+      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])], eval: c.eval ? { ...c.eval } : null }
       : citationObj(String(c))
   )};
   renderSrcTags(prefix);
@@ -36,35 +117,52 @@ function renderSrcTags(prefix) {
   const cits = s.citations;
   if (!cits.length) {
     const pasteBtn = UIState._citClipboard
-      ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+      ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">📋</button>`
       : '';
     container.innerHTML = `<span class="fs-08 c-muted italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
     return;
   }
   const tags = cits.map((c, idx) => {
     const src = AppState.db.sources[c.sid];
-    const label = src ? (src.abbr || src.title || c.sid) : c.sid;
+    const orphan = !src && !!c.sid;
+    const label = src ? (src.abbr || src.title || c.sid) : (c.sid || '?');
     const pageVal = c.page || '';
     const quayVal = String(c.quay ?? '');
-    return `<span class="src-tag">
-      ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-      <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-        data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
-      <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}"
-        style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
-        <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
-        <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
-        <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
-        <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
-        <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
-      </select>
-      <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
-        style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
+    // URL aus erstem media-Entry (OBJE/FILE) lesen
+    const urlVal  = (Array.isArray(c.media) && c.media[0] && /^https?:\/\//.test(c.media[0].file || ''))
+      ? (c.media[0].file || '') : '';
+    const hasEval  = !evalIsEmpty(c.eval);   // RES-EVAL 2b
+    const evalOpen = _srcEvalOpen[prefix]?.has(idx);
+    const orphanAttrs = orphan ? ` src-tag--orphan" title="Quelle nicht vorhanden (${esc(c.sid)}) — bitte entfernen` : '';
+    return `<span class="src-tag${orphanAttrs}">
+      <span class="src-tag-row">
+        ${orphan ? '<span class="src-orphan-icon" title="Quelle fehlt">⚠</span>' : ''}
+        <span class="src-tag-label">${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}</span>
+        <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite/Folio…"
+          data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
+        <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}">
+          <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
+          <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
+          <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
+          <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
+          <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
+        </select>
+        <button type="button" data-action="toggleSrcEval" data-prefix="${prefix}" data-citidx="${idx}"
+          title="Quellenbewertung (Evidenz)" aria-expanded="${evalOpen ? 'true' : 'false'}"
+          class="src-tag-icon-btn src-eval-toggle${hasEval ? ' src-eval-active' : ''}">⚖</button>
+        <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
+          title="Foto zur Quelle" class="src-tag-icon-btn">📷</button>
+        <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
+          class="src-tag-icon-btn src-tag-remove" title="Quelle entfernen">✕</button>
+      </span>
+      <input type="url" class="src-url-input" value="${esc(urlVal)}" placeholder="↗ URL (Scan/Fundstelle)…"
+        data-input="updateSrcUrl" data-prefix="${prefix}" data-citidx="${idx}">
+      ${evalOpen ? _srcEvalRowHtml(prefix, idx, c) : ''}
     </span>`;
   }).join('');
-  const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">Kopieren</button>`;
+  const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">⧉</button>`;
   const pasteBtn = UIState._citClipboard
-    ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+    ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">📋</button>`
     : '';
   container.innerHTML = tags + copyBtn + pasteBtn;
 }
@@ -80,7 +178,7 @@ function renderSrcPicker(prefix) {
     const label = src.abbr || src.title || src.id;
     const cnt = counts[src.id] || 0;
     return `<div class="src-picker-item" data-action="addSrc" data-prefix="${prefix}" data-sid="${src.id}">
-      + ${esc(label)}${cnt ? `<span style="font-size:0.75rem;opacity:0.6;margin-left:4px">(${cnt}×)</span>` : ''}
+      + ${esc(label)}${cnt ? `<span class="src-cnt">(${cnt}×)</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -103,6 +201,7 @@ function removeSrc(prefix, citIdx) {
   if (!s) return;
   const i = parseInt(citIdx);
   if (!isNaN(i)) s.citations.splice(i, 1);
+  delete _srcEvalOpen[prefix];   // RES-EVAL 2b: Indizes verschieben sich → Aufklapp-Zustand verwerfen
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }
@@ -174,6 +273,46 @@ function _readMediaList(prefix, existingMedia) {
   return result;
 }
 
+function _renderDataEvens(evens) {
+  const container = document.getElementById('sf-data-evens-list');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < (evens || []).length; i++) {
+    const de = evens[i];
+    _appendDataEvenRow(container, de.evens, de.date, de.plac);
+  }
+}
+
+function _appendDataEvenRow(container, evens, date, plac) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;padding:4px 0;border-bottom:1px solid var(--border)';
+  row.innerHTML = `
+    <input class="form-input" placeholder="BIRT, MARR, DEAT" value="${esc(evens||'')}" data-de="evens">
+    <input class="form-input" placeholder="FROM 1750 TO 1850" value="${esc(date||'')}" data-de="date">
+    <input class="form-input" placeholder="Ort" value="${esc(plac||'')}" data-de="plac">
+    <button type="button" class="btn btn-danger btn-danger--sm">&times;</button>`;
+  row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
+  container.appendChild(row);
+}
+
+function _readDataEvens() {
+  const container = document.getElementById('sf-data-evens-list');
+  if (!container) return [];
+  const result = [];
+  for (const row of container.children) {
+    const evens = row.querySelector('[data-de="evens"]')?.value.trim() || '';
+    const date  = row.querySelector('[data-de="date"]')?.value.trim()  || '';
+    const plac  = row.querySelector('[data-de="plac"]')?.value.trim()  || '';
+    if (evens || date || plac) result.push({evens, date, plac});
+  }
+  return result;
+}
+
+function addDataEven() {
+  const container = document.getElementById('sf-data-evens-list');
+  if (container) _appendDataEvenRow(container, '', '', '');
+}
+
 function _addMediaEntry(prefix) {
   const fileInput = document.getElementById(prefix + '-media-add-file');
   const file = (fileInput?.value || '').trim();
@@ -203,27 +342,42 @@ function _addMediaEntry(prefix) {
 // ─────────────────────────────────────
 //  FORMS: SOURCE
 // ─────────────────────────────────────
+const _SOUR_TEMPLATES = {
+  'kb-tauf':    { abbr: 'KB Taufen …',      title: 'Kirchenbuch …, Taufen',       auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'kb-heir':    { abbr: 'KB Heiraten …',    title: 'Kirchenbuch …, Heiraten',     auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'kb-beer':    { abbr: 'KB Beerdigungen …',title: 'Kirchenbuch …, Beerdigungen', auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'sta-geb':    { abbr: 'StA Geburten …',   title: 'Geburtsregister …, …',        auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'sta-heir':   { abbr: 'StA Heiraten …',   title: 'Heiratsregister …, …',        auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'sta-sterb':  { abbr: 'StA Sterbefälle …',title: 'Sterberegister …, …',         auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'volkszaehl': { abbr: 'Volkszählung …',   title: 'Volkszählung …',              auth: 'Statistisches Amt',       publ: '', medi: 'manuscript' },
+  'grabstein':  { abbr: 'Grabstein …',      title: 'Grabstein …',                 auth: '',                        publ: '', medi: 'tombstone'  },
+  'totenzettel':{ abbr: 'Totenzettel …',    title: 'Totenzettel …',               auth: '',                        publ: '', medi: 'card'       },
+  'militaer':   { abbr: 'Militärakte …',    title: 'Militärakte …',               auth: 'Bundesarchiv-Militärarchiv', publ: '', medi: 'manuscript' },
+};
+
 function _applySourceTemplate(type) {
-  const abbr  = document.getElementById('sf-abbr');
-  const title = document.getElementById('sf-title');
-  const auth  = document.getElementById('sf-auth');
-  const date  = document.getElementById('sf-date');
-  const text  = document.getElementById('sf-text');
-  const templates = {
-    kirchenbuch:  { abbr: 'KB ', title: 'Kirchenbuch ', auth: 'Pfarramt', text: 'Tauf-/Heirats-/Sterbebuch' },
-    standesamt:   { abbr: 'SA ', title: 'Standesamt ', auth: 'Standesamt', text: 'Geburts-/Heirats-/Sterbeurkunde' },
-    volkszaehlung:{ abbr: 'VZ ', title: 'Volkszählung ', auth: 'Statistisches Amt', text: '' },
-    familienbuch: { abbr: 'FSB ', title: 'Familienstammbuch ', auth: '', text: '' },
-    zeitung:      { abbr: 'Ztg ', title: 'Zeitungsartikel: ', auth: '', text: '' },
-  };
-  const t = templates[type];
+  if (!type) return;
+  const t = _SOUR_TEMPLATES[type];
   if (!t) return;
-  if (!abbr.value)  abbr.value  = t.abbr;
-  if (!title.value) title.value = t.title;
-  if (!auth.value && t.auth)  auth.value  = t.auth;
-  if (!text.value && t.text)  text.value  = t.text;
+  document.getElementById('sf-abbr').value  = t.abbr;
+  document.getElementById('sf-title').value = t.title;
+  document.getElementById('sf-auth').value  = t.auth;
+  document.getElementById('sf-publ').value  = t.publ;
+  document.getElementById('sf-medi').value  = t.medi;
+  // Optional-Felder aufklappen damit Nutzer alles sieht
+  const opt = document.getElementById('sf-optional-fields');
+  const btn = document.getElementById('sf-more-btn');
+  if (opt.style.display === 'none') {
+    opt.style.display = '';
+    if (btn) btn.textContent = 'Weniger Felder ▲';
+  }
+  // Signatur-Gruppe einblenden (Archiv/CALN)
+  document.getElementById('sf-caln-group').hidden = false;
+  // Cursor ans Ende von sf-abbr, vor „…" damit Nutzer direkt Ort eintippt
+  const abbr = document.getElementById('sf-abbr');
   abbr.focus();
-  abbr.setSelectionRange(abbr.value.length, abbr.value.length);
+  const pos = abbr.value.indexOf('…');
+  abbr.setSelectionRange(pos >= 0 ? pos : abbr.value.length, abbr.value.length);
 }
 
 function showSourceForm(id) {
@@ -239,8 +393,10 @@ function showSourceForm(id) {
   document.getElementById('sf-date').value  = s?.date   || '';
   document.getElementById('sf-publ').value  = s?.publ   || '';
   document.getElementById('sf-repo').value  = s?.repo         || '';
-  document.getElementById('sf-caln').value  = s?.repoCallNum  || '';
+  document.getElementById('sf-caln').value  = s?.repoCalns?.[0]?.num  || s?.repoCallNum  || '';
+  document.getElementById('sf-medi').value  = s?.repoCalns?.[0]?.medi || s?.repoCallMedi || '';
   document.getElementById('sf-text').value  = s?.text         || '';
+  _renderDataEvens(s?.dataEvens || []);
   sfRepoUpdateDisplay();
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
 
@@ -287,7 +443,14 @@ function saveSource() {
     date:        document.getElementById('sf-date').value.trim(),
     publ:        document.getElementById('sf-publ').value.trim(),
     repo:        document.getElementById('sf-repo').value.trim(),
-    repoCallNum: document.getElementById('sf-caln').value.trim(),
+    repoCalns: (() => {
+      const _n = document.getElementById('sf-caln').value.trim();
+      const _m = document.getElementById('sf-medi').value;
+      const _prev = existing.repoCalns || (existing.repoCallNum ? [{num:existing.repoCallNum, medi:existing.repoCallMedi||'', extra:[]}] : []);
+      const _first = {num:_n, medi:_m, extra:_prev[0]?.extra || []};
+      return _n ? [_first, ..._prev.slice(1)] : _prev.slice(1);
+    })(),
+    dataEvens:    _readDataEvens(),
     text:        document.getElementById('sf-text').value.trim(),
     media:       _readMediaList('sf', existing.media || []),
     lastChanged:     gedcomDate(_now),
@@ -307,9 +470,56 @@ async function deleteSource() {
   if (!await confirmModal('Quelle wirklich löschen?', 'Löschen')) return;
   pushUndo('Quelle gelöscht', { sourceIds: [id] });
   delete AppState.db.sources[id];
+  _removeSourceRefs(id, AppState.db);
   closeModal('modalSource');
   markChanged();
   showMain(); showToast('✓ Quelle gelöscht');
+}
+
+// Entfernt alle Zitate mit sid===id aus der gesamten DB (Personen + Familien).
+function _removeSourceRefs(id, db) {
+  const rmCits = arr => { if (arr) { const i = arr.filter(c => c.sid !== id); arr.length = 0; arr.push(...i); } };
+  const rmEv   = ev  => { if (ev) rmCits(ev.citations); };
+
+  for (const p of Object.values(db.individuals || {})) {
+    rmEv(p.birth); rmEv(p.chr); rmEv(p.death); rmEv(p.buri);
+    (p.events || []).forEach(rmEv);
+    rmCits(p.nameCitations);
+    (p.extraNames || []).forEach(en => rmCits(en.citations));
+    (p.associations || []).forEach(a => rmCits(a.citations));
+    // topSources (SID-Array + keyed Dicts)
+    if (p.topSources) {
+      const idx = p.topSources.indexOf(id);
+      if (idx !== -1) {
+        p.topSources.splice(idx, 1);
+        delete p.topSourcePages?.[id];
+        delete p.topSourceQUAY?.[id];
+        delete p.topSourceExtra?.[id];
+      }
+    }
+    p.sourceRefs?.delete(id);
+  }
+
+  for (const f of Object.values(db.families || {})) {
+    rmEv(f.marr); rmEv(f.engag); rmEv(f.div); rmEv(f.divf);
+    (f.events || []).forEach(rmEv);
+    for (const cref of Object.values(f.childRelations || {})) rmCits(cref.citations);
+    f.sourceRefs?.delete(id);
+  }
+}
+
+// Entfernt einen einzelnen verwaisten Quellbezug (sid) aus der aktuellen Person/Familie
+// und re-rendert die Detailansicht. Wird vom ✕-Button im citTagsHtml-Badge aufgerufen.
+function _removeOrphanCitBySid(sid) {
+  if (!sid || !AppState.db) return;
+  _removeSourceRefs(sid, AppState.db);
+  markChanged();
+  // Detail-Ansicht neu rendern (je nach aktivem Tab)
+  if (AppState.currentTab === 'persons' && AppState.currentPersonId)
+    showDetail(AppState.currentPersonId);
+  else if (AppState.currentTab === 'families' && AppState.currentFamilyId)
+    showFamilyDetail(AppState.currentFamilyId);
+  showToast('✓ Verwaister Quellbezug entfernt');
 }
 
 // (Archiv-Formular + Picker + Detail: ui-forms-repo.js)
@@ -353,7 +563,7 @@ function closeModal(id) {
   if (_trapHandler) { document.removeEventListener('keydown', _trapHandler); _trapHandler = null; }
   if (_trapPrevFocus?.focus) { _trapPrevFocus.focus(); _trapPrevFocus = null; }
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson')  UIState._pendingRelation = null;
+  if (id === 'modalPerson')  { UIState._pendingRelation = null; UIState._pendingFfState = null; }
   if (id === 'modalRepo')    UIState._pendingRepoLink  = null;
   // confirmModal-Promise mit false auflösen (Escape / Backdrop / Cancel)
   if (id === 'modalConfirm') { _confirmResolve?.(false); _confirmResolve = null; }
@@ -554,14 +764,361 @@ document.addEventListener('keydown', e => {
 // ─────────────────────────────────────
 
 // ── Extra-Places Persistenz ──────────
+function _extraPlacesKey() {
+  const fn = AppState._currentFilename || '';
+  return fn ? 'stammbaum_extraplaces_' + fn : 'stammbaum_extraplaces';
+}
 function loadExtraPlaces() {
   try {
-    const r = localStorage.getItem('stammbaum_extraplaces');
+    const r = localStorage.getItem(_extraPlacesKey());
     return r ? JSON.parse(r).reduce((o, p) => { o[p.name] = p; return o; }, {}) : {};
   } catch(e) { return {}; }
 }
 function saveExtraPlaces() {
-  try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
+  try { localStorage.setItem(_extraPlacesKey(), JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
+}
+
+// ── PlaceObjects-Persistenz (IDB-Cache + JSON-Export, Muster quickTemplates) ──
+// IDB-Key global (wie quickTemplates): Ortshierarchie ist appweit, nicht dateigebunden.
+//
+// Item 10: Wrapper-Format mit Revision + Geräte-ID für Konflikt-Erkennung.
+//   v1: { schemaVersion: 1, _rev, _device, _ts, placeObjects }
+//   v2: { schemaVersion: 2, _rev, _device, _ts, placeObjects, hofObjects } (ADR-027)
+// Beim Laden: lokales _rev gegen remote vergleichen. Gleiche _rev + andere
+// _device + abweichender Content → Konflikt (Toast).
+//
+// Backwards-kompat: stored/odData ohne schemaVersion = altes Format
+// (nacktes placeObjects-Object) → unwrap als schemaVersion=0, _rev=0.
+// v1-Dateien werden gelesen (hofObjects fehlt → leer); Save schreibt IMMER v2.
+// Schema-Refusal (ADR-027): wenn datei._schemaVersion > APP_KNOWN_SCHEMA_VERSION
+// → AppState._schemaLocked = true, Save gesperrt, Modal mit Update-Hinweis.
+const PLACES_SCHEMA_VERSION = APP_KNOWN_SCHEMA_VERSION;
+
+function _placeDeviceId() {
+  let id = null;
+  try { id = localStorage.getItem('stammbaum_device_id'); } catch(_) {}
+  if (!id) {
+    id = 'd_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+    try { localStorage.setItem('stammbaum_device_id', id); } catch(_) {}
+  }
+  return id;
+}
+
+// Unwrappt das gespeicherte Format. Gibt { wrapper, pos, hofs } zurück.
+// wrapper = {schemaVersion, _rev, _device, _ts}; pos = placeObjects; hofs = hofObjects.
+// Schema-Refusal (ADR-027 P1): wenn schemaVersion > APP_KNOWN_SCHEMA_VERSION,
+// markiert das Ergebnis als _refusal=true; der Caller setzt AppState._schemaLocked
+// und zeigt das Refusal-Modal, ohne die Datei in db zu mergen.
+function _unwrapPlacesData(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const sv = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : null;
+  // v1/v2: Wrapper-Format mit placeObjects-Slot. v2 hat zusätzlich hofObjects.
+  if (sv != null && sv >= 1 && raw.placeObjects && typeof raw.placeObjects === 'object') {
+    const wrapper = { schemaVersion: sv, _rev: raw._rev || 0,
+      _device: raw._device || null, _ts: raw._ts || null };
+    if (sv > APP_KNOWN_SCHEMA_VERSION) {
+      return { wrapper, pos: raw.placeObjects, hofs: raw.hofObjects || {}, _refusal: true };
+    }
+    return {
+      wrapper,
+      pos: raw.placeObjects,
+      hofs: (raw.hofObjects && typeof raw.hofObjects === 'object') ? raw.hofObjects : {},
+    };
+  }
+  // Altes Format: nacktes Object {id1: po1, id2: po2, ...}
+  return { wrapper: { schemaVersion: 0, _rev: 0, _device: null, _ts: null }, pos: raw, hofs: {} };
+}
+
+// ADR-027 P1: filtert hofObjects auf die V2-Shape (id-keyed, mit villageId + addrs).
+// Verhindert, dass Legacy-ADR-026-Einträge (addr-keyed {addr,lat,long,note}) in die
+// orte.json v2 oder den IDB-V2-Key gelangen. Phase 3 wird Legacy → V2 migrieren;
+// bis dahin koexistieren beide Shapes im Slot db.hofObjects, getrennt durch Filter.
+function _filterHofObjectsV2(hofs) {
+  const out = {};
+  if (!hofs || typeof hofs !== 'object') return out;
+  for (const [id, h] of Object.entries(hofs)) {
+    if (h && typeof h === 'object' && typeof h.villageId === 'string' && Array.isArray(h.addrs)) {
+      out[id] = h;
+    }
+  }
+  return out;
+}
+
+// ADR-027 P1: Schema-Refusal-Modal (Read-Only-Modus). Wird einmal pro Session
+// gezeigt. Sperrt savePlaceObjects + saveHofObjectsV2 hart gegen das versehent-
+// liche Zerschießen einer Datei aus „der Zukunft" durch ein offline-eingefrorenes
+// Gerät. Auto-Reload (sw v1019) bringt online genutzte Geräte ohnehin zeitnah
+// auf die neueste Version — die Refusal ist Schutz für den Offline-Fall.
+let _schemaRefusalShown = false;
+function _showSchemaRefusalModal(fileVersion) {
+  if (_schemaRefusalShown) return;
+  _schemaRefusalShown = true;
+  AppState._schemaLocked = true;
+  AppState._schemaLockedVersion = fileVersion;
+  const msg = '⚠ Die geladene Orts-/Hof-Datei wurde mit einer neueren App-Version erstellt '
+    + '(Schema v' + fileVersion + ', diese App kennt v' + APP_KNOWN_SCHEMA_VERSION + '). '
+    + 'Speichern ist gesperrt, bis du die App aktualisierst — sonst gingen neue Felder verloren.';
+  // Sichtbare, blockierende Meldung: bevorzugt confirmModal, sonst Toast als Fallback.
+  // (confirmModal hat aktuell keinen hideCancel-Schalter — User kann beliebigen Button drücken,
+  // die Sperre bleibt durch AppState._schemaLocked unabhängig vom Modal-Ergebnis bestehen.)
+  if (typeof confirmModal === 'function') {
+    try { confirmModal(msg, 'Verstanden').catch?.(() => {}); } catch(_) {}
+  } else if (typeof showToast === 'function') {
+    showToast(msg, 'error');
+  } else {
+    console.warn(msg);
+  }
+}
+
+// Track local revision in-memory (loaded from IDB at startup, bumped on save)
+let _placesLocalRev = 0;
+
+async function loadPlaceObjectsFromIDB() {
+  try {
+    // 1) IDB (lokal, schnell)
+    const raw = await idbGet('stammbaum_placeobjects');
+    const stored = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+    const localUnwrapped = _unwrapPlacesData(stored);
+    // 2) OneDrive Konfig-Ordner (falls verbunden)
+    let odRaw = null;
+    if (typeof _odReadAppData === 'function') {
+      odRaw = await _odReadAppData('stammbaum-orte.json').catch(() => null);
+    }
+    const remoteUnwrapped = _unwrapPlacesData(odRaw);
+
+    // ADR-027 P1: Schema-Refusal — wenn eine der Quellen aus der Zukunft kommt,
+    // App in Read-Only-Modus + Modal. Wir mergen NICHT, damit wir den User nicht
+    // versehentlich mit halben Daten konfrontieren.
+    if (localUnwrapped?._refusal || remoteUnwrapped?._refusal) {
+      const fileV = Math.max(
+        localUnwrapped?._refusal ? localUnwrapped.wrapper.schemaVersion : 0,
+        remoteUnwrapped?._refusal ? remoteUnwrapped.wrapper.schemaVersion : 0
+      );
+      _showSchemaRefusalModal(fileV);
+      return;
+    }
+
+    // Konflikt-Erkennung: beide existieren, gleiche _rev, verschiedene _device
+    // mit abweichendem Content → mehrere Geräte haben unabhängig geändert.
+    let conflict = false;
+    if (localUnwrapped && remoteUnwrapped
+        && localUnwrapped.wrapper._rev === remoteUnwrapped.wrapper._rev
+        && localUnwrapped.wrapper._rev > 0
+        && localUnwrapped.wrapper._device && remoteUnwrapped.wrapper._device
+        && localUnwrapped.wrapper._device !== remoteUnwrapped.wrapper._device) {
+      try {
+        const a = JSON.stringify(localUnwrapped.pos);
+        const b = JSON.stringify(remoteUnwrapped.pos);
+        if (a !== b) conflict = true;
+      } catch(_) {}
+    }
+
+    // Entscheidung: höhere _rev gewinnt. Bei Konflikt verwenden wir den Union-Merge
+    // (alles aus beiden Quellen einlesen, kein Datenverlust) und melden den Konflikt.
+    let primary = localUnwrapped, secondary = remoteUnwrapped;
+    if (remoteUnwrapped && (!localUnwrapped
+        || (remoteUnwrapped.wrapper._rev > localUnwrapped.wrapper._rev))) {
+      primary = remoteUnwrapped; secondary = localUnwrapped;
+    }
+
+    const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+    const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+    // Primary first
+    if (primary) {
+      for (const [id, po] of Object.entries(primary.pos)) {
+        if (!pos[id]) pos[id] = po;
+      }
+      // ADR-027 P1: V2-hofObjects-Sektion aus dem Wrapper mergen (id-keyed Einträge).
+      // Legacy-addr-keyed-Einträge im Slot db.hofObjects bleiben unangetastet —
+      // sie existieren parallel bis zur Phase-3-Migration.
+      for (const [id, h] of Object.entries(primary.hofs || {})) {
+        if (!hofs[id]) hofs[id] = h;
+      }
+      _placesLocalRev = primary.wrapper._rev || 0;
+    }
+    // Konflikt: secondary auch einlesen (Union-Merge)
+    if (conflict && secondary) {
+      for (const [id, po] of Object.entries(secondary.pos)) {
+        if (!pos[id]) pos[id] = po;
+      }
+      for (const [id, h] of Object.entries(secondary.hofs || {})) {
+        if (!hofs[id]) hofs[id] = h;
+      }
+      setTimeout(() => {
+        if (typeof showToast === 'function')
+          showToast('⚠ Orts-Daten: Konflikt zwischen Geräten erkannt — beide Stände wurden zusammengeführt. Bei Bedarf Orte-Tab prüfen.', 'warn');
+      }, 1800);
+    }
+
+    // OneDrive-Daten auch in IDB sichern (Offline-Fallback aktuell halten)
+    if (remoteUnwrapped && remoteUnwrapped.wrapper._rev >= (localUnwrapped?.wrapper._rev || 0)) {
+      idbPut('stammbaum_placeobjects', JSON.stringify(odRaw)).catch(() => {});
+    }
+    // Migration + pname-Dedup nach dem Laden ausführen (setDb läuft VOR diesem Aufruf,
+    // daher muss _migratePlaceObjects hier nochmals laufen um Altdaten aus der JSON zu bereinigen).
+    if (typeof _migratePlaceObjects === 'function') _migratePlaceObjects(AppState.db);
+    UIState._placeRegistry = null;
+    UIState._hofRegistry   = null;
+    // ADR-027 P1: zusätzlicher IDB-V2-Key als zweite lokale Quelle für hofObjects.
+    // Mirrort die V2-Sektion (für künftige Phase-3-Migration eine bequeme separate
+    // Laderoute — heute reiner Pass-through). Failt nie hart (additiv).
+    if (typeof loadHofObjectsV2FromIDB === 'function') {
+      try { await loadHofObjectsV2FromIDB(); } catch(_) {}
+    }
+  } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
+}
+
+// ADR-027 P1: Lädt die V2-hofObjects-Sektion aus dem dedizierten IDB-Key
+// `stammbaum_hofobjects_v2`. Mirror zum Wrapper-Pfad in loadPlaceObjectsFromIDB;
+// Phase-3-Migration wird diesen Pfad nutzen, um die migrierten Einträge separat
+// zu cachen. Heute additiv (existierende Einträge in db.hofObjects überschreibt nicht).
+async function loadHofObjectsV2FromIDB() {
+  try {
+    const raw = await idbGet('stammbaum_hofobjects_v2');
+    if (!raw) return;
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const stored = (data && typeof data === 'object' && data.hofObjects) ? data.hofObjects : data;
+    if (!stored || typeof stored !== 'object') return;
+    const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+    for (const [id, h] of Object.entries(stored)) {
+      if (!hofs[id]) hofs[id] = h;
+    }
+    UIState._hofRegistry = null;
+  } catch(e) { console.warn('loadHofObjectsV2FromIDB:', e); }
+}
+
+// Item 11: Toast-Once-Flags — verhindern Spam bei wiederholten Fehlern (z.B. IDB-Quota).
+// Reset bei jedem Page-Reload (per Definition Session-scoped).
+let _savePoIDBErrored = false;
+let _savePoODErrored  = false;
+let _saveSchemaLockedToastShown = false;
+function savePlaceObjects() {
+  // ADR-027 P1: Schema-Refusal — wenn die geladene Datei aus der Zukunft ist,
+  // schreiben wir nichts, damit v1-Code keine v3-Datei zerschießt.
+  if (AppState._schemaLocked) {
+    if (!_saveSchemaLockedToastShown) {
+      _saveSchemaLockedToastShown = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ Speichern gesperrt: Datei stammt aus neuerer App-Version (Schema v'
+          + (AppState._schemaLockedVersion || '?') + '). App-Update erforderlich.', 'error');
+    }
+    return;
+  }
+  let payload;
+  try {
+    const toSavePos  = AppState.db.placeObjects || {};
+    // ADR-027 P1: nur V2-Shape-hofObjects (id-keyed mit villageId/addrs) in den
+    // Wrapper. Legacy-addr-keyed-Einträge in db.hofObjects bleiben weiterhin via
+    // ihrem alten localStorage-Pfad (saveHofObjects) gespeichert und gelangen nicht
+    // in die orte.json v2.
+    const toSaveHofs = _filterHofObjectsV2(AppState.db.hofObjects || {});
+    _placesLocalRev = (_placesLocalRev || 0) + 1;
+    payload = {
+      schemaVersion: PLACES_SCHEMA_VERSION,
+      _rev: _placesLocalRev,
+      _device: _placeDeviceId(),
+      _ts: new Date().toISOString(),
+      placeObjects: toSavePos,
+      hofObjects:   toSaveHofs,
+    };
+  } catch(e) {
+    if (!_savePoIDBErrored) {
+      _savePoIDBErrored = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ Orts-Daten nicht serialisierbar: ' + (e?.message || e), 'error');
+    }
+    return;
+  }
+  const serialized = JSON.stringify(payload);
+  idbPut('stammbaum_placeobjects', serialized).catch(err => {
+    if (_savePoIDBErrored) return;
+    _savePoIDBErrored = true;
+    if (typeof showToast === 'function')
+      showToast('⚠ Orts-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
+  });
+  // ADR-027 P1: zusätzlicher IDB-Mirror der V2-hofObjects-Sektion in dediziertem Key.
+  // Same payload-Wrapper, aber nur die hofObjects-Sektion — Phase-3-Migration und
+  // künftige Hof-spezifische Lade-Pfade können diesen Key isoliert nutzen.
+  // Teilt _savePoIDBErrored-Flag mit dem placeobjects-Write: IDB-Quota/Permission-
+  // Probleme treffen beide Keys gleichzeitig, ein Toast genügt.
+  idbPut('stammbaum_hofobjects_v2', JSON.stringify({
+    schemaVersion: PLACES_SCHEMA_VERSION,
+    _rev: payload._rev, _device: payload._device, _ts: payload._ts,
+    hofObjects: payload.hofObjects,
+  })).catch(err => {
+    if (_savePoIDBErrored) return;
+    _savePoIDBErrored = true;
+    if (typeof showToast === 'function')
+      showToast('⚠ Hof-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
+  });
+  if (typeof _odWriteAppData === 'function') {
+    _odWriteAppData('stammbaum-orte.json', payload).catch(err => {
+      if (_savePoODErrored) return;
+      _savePoODErrored = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ OneDrive-Sync der Orts-Daten fehlgeschlagen: ' + (err?.message || err), 'warn');
+    });
+  }
+}
+
+// ADR-027 P1: Public-API für Mutationen, die nur hofObjects betreffen
+// (mutateHofObject/upsertHofObject). Funktional ein Alias auf savePlaceObjects,
+// weil die orte.json v2 BEIDE Sektionen atomar enthält und ein hofObjects-only-Save
+// dieselben Konflikt-Erkennungs-Garantien wie ein placeObjects-Save braucht.
+// Eigener Name macht die Aufruf-Intention an den Mutations-Helpern selbst-dokumentierend
+// und erlaubt späteres Debouncing/Splitting ohne API-Umbau.
+function saveHofObjectsV2() { savePlaceObjects(); }
+
+function exportPlaceData() {
+  const pos = AppState.db.placeObjects || {};
+  const ep  = AppState.db.extraPlaces  || {};
+  const blob = new Blob([JSON.stringify({ version: 1, placeObjects: pos, extraPlaces: ep }, null, 2)],
+    { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stammbaum-orte.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('Ortsdaten exportiert', 'success');
+}
+
+function importPlaceDataFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      // P2 Item 15/B6: Dedup über _normPlaceName(title) statt nur id —
+      // gleicher Ort mit anderem Handle (z.B. GRAMPS @P0017@ vs lokales _ep_<hash>)
+      // wird in vorhandenes PO gemerged statt dupliziert.
+      const stats = _mergePlaceObjectsFromImport(AppState.db, data.placeObjects || {});
+
+      // extraPlaces: title-basierte Dedup (Legacy-Pfad; nach Item 7 nur noch
+      // Migrationsquelle — wird beim nächsten setDb in placeObjects gezogen).
+      const dbEp = AppState.db.extraPlaces || (AppState.db.extraPlaces = {});
+      const epByNorm = {};
+      for (const k of Object.keys(dbEp)) epByNorm[_normPlaceName(k)] = k;
+      let addedE = 0;
+      for (const [name, epEntry] of Object.entries(data.extraPlaces || {})) {
+        const norm = _normPlaceName(name);
+        if (!epByNorm[norm]) { dbEp[name] = epEntry; epByNorm[norm] = name; addedE++; }
+      }
+
+      savePlaceObjects();
+      saveExtraPlaces();
+      UIState._placeRegistry = null;
+      UIState._placesCache   = null;
+      markChanged();
+      if (typeof renderTab === 'function') renderTab();
+      const parts = [];
+      if (stats.added)  parts.push(`${stats.added} Ort${stats.added !== 1 ? 'e' : ''} hinzugefügt`);
+      if (stats.merged) parts.push(`${stats.merged} mit bestehenden zusammengeführt`);
+      if (addedE)       parts.push(`${addedE} Koord${addedE !== 1 ? 'inaten' : 'inate'}`);
+      showToast(parts.length ? '✓ ' + parts.join(', ') : 'Nichts zu importieren', 'success');
+    } catch(e) { showToast('⚠ Fehler beim Import: ' + e.message, 'error'); }
+  };
+  r.readAsText(file);
 }
 
 // ── Hof-Objects Persistenz ──────────
@@ -574,12 +1131,26 @@ function loadHofObjects() {
 function saveHofObjects() {
   try { localStorage.setItem('stammbaum_hofobjects', JSON.stringify(AppState.db.hofObjects)); } catch(e) {}
 }
+// Nur gespeicherte Hof-Koordinaten für Adressen übernehmen, die in der
+// aktuell geladenen Datei auch vorkommen — verhindert dateiübergreifende Leckage.
+function _mergeHofObjects(derived, saved) {
+  const result = { ...derived };
+  for (const [addr, data] of Object.entries(saved)) {
+    if (derived[addr]) result[addr] = { ...derived[addr], ...data };
+  }
+  // note-Fallback aus derived wiederherstellen
+  for (const [a, h] of Object.entries(result)) {
+    if (!h.note && derived[a]?.note) h.note = derived[a].note;
+  }
+  return result;
+}
 
-const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace) => filterPersons(q, from, to, sex, birthPlace), 200);
-const filterFamiliesDebounced = debounce(filterFamilies, 200);
-const filterSourcesDebounced  = debounce(filterSources,  200);
-const filterPlacesDebounced   = debounce(filterPlaces,   200);
-const filterHoefeDebounced    = debounce(filterHoefe,    200);
+const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace, flags) => filterPersons(q, from, to, sex, birthPlace, flags), 200);
+const filterFamiliesDebounced     = debounce(filterFamilies,  200);
+const filterSourcesDebounced      = debounce(filterSources,   200);
+const filterPlacesDebounced       = debounce(filterPlaces,    200);
+const filterHoefeDebounced        = debounce(filterHoefe,     200);
+const runGlobalSearchDebounced    = debounce(runGlobalSearch, 200);
 
 let toastTimer;
 // type: 'success' | 'error' | 'warn' | 'info' (default)
@@ -591,8 +1162,14 @@ function showToast(msg, type) {
   const resolved = type
     || (msg.startsWith('✓') ? 'success' : msg.startsWith('⚠') ? 'warn' : 'info');
   if (resolved !== 'info') t.classList.add('toast-' + resolved);
+  // ADR-028 v1030-fix: mehrzeilige oder lange Toasts brauchen pre-line +
+  // max-width, sonst sprengt nowrap den Viewport (Beispiel: aggregierte
+  // Load-Meldung „Orte/Höfe/Reviews"). Heuristik: Newline-Char ODER >100 chars.
+  if (msg.includes('\n') || msg.length > 100) t.classList.add('toast-multi');
   t.classList.add('show');
-  const dur = { success: 2500, warn: 4000, error: 5000, info: 2800 }[resolved] ?? 2800;
+  // Lange Texte länger anzeigen — User muss sie lesen können.
+  const baseDur = { success: 2500, warn: 4000, error: 5000, info: 2800 }[resolved] ?? 2800;
+  const dur = (msg.length > 100) ? Math.max(baseDur, 5500) : baseDur;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
@@ -602,36 +1179,171 @@ function showLoadingOverlay(msg) {
 }
 function hideLoadingOverlay() {
   document.getElementById('loadingOverlay').classList.remove('active');
+  updateLoadingProgress(null);
+}
+function updateLoadingProgress(pct) {
+  const bar  = document.getElementById('loadingBar');
+  const fill = document.getElementById('loadingBarFill');
+  if (!bar || !fill) return;
+  if (pct == null) { bar.classList.remove('active'); fill.style.width = '0%'; return; }
+  bar.classList.add('active');
+  fill.style.width = Math.min(100, pct) + '%';
 }
 
 // ─────────────────────────────────────
 //  PLACE AUTOCOMPLETE
 // ─────────────────────────────────────
-function initPlaceAutocomplete(inputId, ddId) {
+
+// Liest eine Jahreszahl aus einem Datumsfeld (Freitext oder separates JJJJ-Feld)
+function _yearFromDateField(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return null;
+  const y = parseInt(el.value);
+  return (!isNaN(y) && y > 0) ? y : null;
+}
+
+// placeIdFieldId: optionales Hidden-Input für placeId
+// getDateYear:    optionale Funktion () → Jahreszahl (für periodengerechte Auflösung)
+function initPlaceAutocomplete(inputId, ddId, placeIdFieldId, getDateYear) {
   initAutocomplete(inputId, ddId, {
-    getItems: q => [...collectPlaces().values()]
-      .map(p => p.name)
-      .filter(n => n.toLowerCase().includes(q))
-      .sort((a, b) => {
-        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+    getItems: q => {
+      const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+      const seen = new Set();
+      const items = [];
+      for (const pl of collectPlaces().values()) {
+        // PlaceObjects: einmalig per placeId, nur po.title anbieten
+        if (pl.placeId && reg) {
+          if (seen.has(pl.placeId)) continue;
+          seen.add(pl.placeId);
+          const title = reg.byId[pl.placeId]?.title || pl.name;
+          if (!title.toLowerCase().includes(q)) continue;
+          items.push({ label: title, placeId: pl.placeId });
+        } else {
+          // Reine String-Orte ohne PlaceObject
+          if (!pl.name.toLowerCase().includes(q)) continue;
+          items.push({ label: pl.name, placeId: null });
+        }
+      }
+      return items.sort((a, b) => {
+        const aS = a.label.toLowerCase().startsWith(q), bS = b.label.toLowerCase().startsWith(q);
         if (aS !== bS) return aS ? -1 : 1;
-        return a.localeCompare(b, 'de');
-      }),
-    formatLabel: name => name,
-    onSelect:    (name, input) => { input.value = name; },
+        return a.label.localeCompare(b.label, 'de');
+      });
+    },
+    formatLabel: item => item.label,
+    onSelect: (item, input) => {
+      const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+      if (item.placeId && reg) {
+        const year = typeof getDateYear === 'function' ? getDateYear() : null;
+        const resolved = reg.resolveAsOf(item.placeId, year) || '';
+        // Nur Atom-Namen übernehmen — Hierarchie-Strings (mit Komma) niemals als ev.place
+        // schreiben, da sie beim nächsten Roundtrip als neue pnames auftauchen
+        input.value = (resolved && !resolved.includes(',')) ? resolved : item.label;
+      } else {
+        input.value = item.label;
+      }
+      // placeId ins Hidden-Feld schreiben
+      const pidEl = placeIdFieldId && document.getElementById(placeIdFieldId);
+      if (pidEl) pidEl.value = item.placeId || '';
+    },
   });
 }
 
 // Autocomplete für alle Ortsfelder einmalig initialisieren
-initPlaceAutocomplete('ef-place',        'ef-place-dd');
-initPlaceAutocomplete('ff-mplace',       'ff-mplace-dd');
-initPlaceAutocomplete('fev-place',       'fev-place-dd');
-initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd');
-initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd');
-initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
-initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
-initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
-initPlaceAutocomplete('np-name',   'np-name-dd');
+// Ortsfeld-Autocomplete: ui-forms-event.js registriert ef-place + fev-place mit getDateYear
+// Hier: alle übrigen Ortsfelder (Personen-/Familien-Formular)
+initPlaceAutocomplete('ff-mplace',        'ff-mplace-dd',        'ff-mplace-id',
+  () => _yearFromDateField('ff-mdate-y'));
+initPlaceAutocomplete('pf-birth-place',   'pf-birth-place-dd',   null,
+  () => _yearFromDateField('pf-birth-date'));
+initPlaceAutocomplete('pf-death-place',   'pf-death-place-dd',   null,
+  () => _yearFromDateField('pf-death-date'));
+initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd',     null,
+  () => _yearFromDateField('pf-chr-date'));
+initPlaceAutocomplete('pf-buri-place',    'pf-buri-place-dd',    null,
+  () => _yearFromDateField('pf-buri-date'));
+initPlaceAutocomplete('pf-wohnort-place', 'pf-wohnort-place-dd', null,
+  () => _yearFromDateField('pf-wohnort-date'));
+initPlaceAutocomplete('np-name',          'np-name-dd');
+initAutocomplete('qa-place', 'qa-place-dd', {
+  showAllOnFocus: true,
+  useFixed: true,
+  getItems: q => {
+    const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+    const seen = new Set();
+    const items = [];
+    for (const pl of collectPlaces().values()) {
+      if (pl.placeId && reg) {
+        if (seen.has(pl.placeId)) continue;
+        seen.add(pl.placeId);
+        const title = reg.byId[pl.placeId]?.title || pl.name;
+        if (q && !title.toLowerCase().includes(q)) continue;
+        items.push({ label: title, placeId: pl.placeId });
+      } else {
+        if (q && !pl.name.toLowerCase().includes(q)) continue;
+        items.push({ label: pl.name, placeId: null });
+      }
+    }
+    return items.sort((a, b) => {
+      if (q) {
+        const aS = a.label.toLowerCase().startsWith(q), bS = b.label.toLowerCase().startsWith(q);
+        if (aS !== bS) return aS ? -1 : 1;
+      }
+      return a.label.localeCompare(b.label, 'de');
+    });
+  },
+  formatLabel: item => item.label,
+  onSelect: (item, input) => { input.value = item.label; },
+});
+
+initAutocomplete('qa-src-input', 'qa-src-dd', {
+  showAllOnFocus: true,
+  useFixed: true,
+  limit: 50,
+  getItems: q => Object.values(AppState.db.sources || {})
+    .filter(s => !q || (s.abbr || s.title || s.id || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de')),
+  formatLabel: s => s.abbr ? `${s.abbr} — ${s.title || ''}`.trim() : (s.title || s.id),
+  onSelect: (s, input) => {
+    input.value = s.abbr || s.title || s.id;
+    _qaSrcId = s.id;
+    if (typeof _qaUpdateClipBtns === 'function') _qaUpdateClipBtns();
+  },
+});
+
+// ─── CAM-LINK: Foto direkt zur Zitation (cit.media[]) ──────────────────────
+let _citCamPrefix = null, _citCamIdx = -1;
+
+function citCamCapture(prefix, citIdx) {
+  _citCamPrefix = prefix;
+  _citCamIdx    = citIdx;
+  document.getElementById('cit-cam-input').click();
+}
+
+function citCamChange(file) {
+  const prefix = _citCamPrefix;
+  const idx    = _citCamIdx;
+  _citCamPrefix = null; _citCamIdx = -1;
+  if (!file || !prefix || idx < 0) return;
+  if (!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)) {
+    showToast('Nur Bilder erlaubt (JPG, PNG, WEBP, GIF)', 'error');
+    return;
+  }
+  resizeImageToBase64(file).then(b64 => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fileName = `foto_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_`
+                   + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`;
+    idbPut('img:' + fileName, b64).then(() => {
+      const cit = srcWidgetState[prefix]?.citations[idx];
+      if (!cit) return;
+      if (!Array.isArray(cit.media)) cit.media = [];
+      cit.media.push({ file: fileName, title: '', form: 'jpeg', _extra: [] });
+      renderSrcTags(prefix);
+      showToast('Foto zur Quelle gespeichert', 'success');
+    });
+  }).catch(() => showToast('Bild konnte nicht geladen werden', 'error'));
+}
 
 
 

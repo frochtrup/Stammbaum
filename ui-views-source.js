@@ -3,17 +3,15 @@
 // ─────────────────────────────────────
 function showSourceDetail(id, pushHistory = true) {
   const s = getSource(id);
-  if (!s) return;
+  if (!s) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentSourceId  = id;
-  AppState.currentPersonId  = null;
-  AppState.currentFamilyId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = null;
-
-  document.getElementById('detailTopTitle').textContent = 'Quelle';
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = true;
+  ViewState.setCurrent('sources', id);
+  // P6-B6: Listen-Sync analog showDetail/showFamilyDetail
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'sources') _updateSourceListCurrent(id); else _updateSourceListCurrent(null);
+  }
+  // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
+  _configureDetailToolbar('sources', id);
 
   // Collect all persons and families referencing this source
   const refPersons = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
@@ -28,6 +26,9 @@ function showSourceDetail(id, pushHistory = true) {
     </div>
   </div>`;
 
+  // Quick-Template-Shortcut: Template direkt aus dieser Quelle anlegen (Phase D)
+  html += `<div class="src-qt-action"><button type="button" class="btn-link" data-action="qtNewTemplateFromSource" data-sid="${esc(id)}">⚡ Quick-Template erstellen</button></div>`;
+
   // Source details
   html += `<div class="section fade-up"><div class="section-title">Details</div>`;
   if (s.abbr)                          html += factRow('Kurzname', s.abbr);
@@ -38,11 +39,27 @@ function showSourceDetail(id, pushHistory = true) {
   if (s.repo) {
     if (s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo]) {
       const r = AppState.db.repositories[s.repo];
-      const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}` : '';
+      const _rc0 = s.repoCalns?.[0] || (s.repoCallNum ? {num:s.repoCallNum, medi:s.repoCallMedi||''} : null);
+      const callNum = _rc0?.num ? ` · Signatur: ${esc(_rc0.num)}${_rc0.medi ? ' (' + esc(_rc0.medi) + ')' : ''}` : '';
       html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
         <span class="fact-val"><span class="btn-link" data-action="showRepoDetail" data-id="${s.repo}">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
     } else {
       html += factRow('Aufbewahrung', s.repo);
+    }
+  }
+  if (s.refns && s.refns.length) {
+    for (const r of s.refns) {
+      const label = r.type ? `Referenz (${esc(r.type)})` : 'Referenz';
+      html += factRow(label, r.val);
+    }
+  }
+  if (s.agnc) html += factRow('Behörde', s.agnc);
+  if (s.dataEvens && s.dataEvens.length) {
+    for (const de of s.dataEvens) {
+      let cov = de.evens || '(alle Ereignisse)';
+      if (de.date) cov += ` · ${esc(de.date)}`;
+      if (de.plac) cov += ` · ${esc(de.plac)}`;
+      html += factRow('Deckungsbereich', cov);
     }
   }
   html += `</div>`;
@@ -58,7 +75,55 @@ function showSourceDetail(id, pushHistory = true) {
         ? `<div class="note-text">${linkifyUrls(s.text)}</div>`
         : `<div class="note-hint">Notiz hinzufügen…</div>`}
     </div>
+    ${s.noteText ? `<div class="note-text note-ref-text">${linkifyUrls(s.noteText)}</div>` : ''}
   </div>`;
+
+  // Media section: inline entries from media[] + reference entries from passthrough
+  const srcMedia = s.media || [];
+  const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  {
+    const _objeMap = _buildObjeRefMap();
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Medien</div>
+        <button class="section-add" data-action="openAddMediaDialog" data-ctx="source" data-id="${id}">+ Hinzufügen</button>
+      </div>`;
+    for (let i = 0; i < srcMedia.length; i++) {
+      const m = srcMedia[i];
+      if (!m.file && !m.title) continue;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div class="media-row"
+        data-action="openSourceMediaView" data-sid="${id}" data-idx="${i}">
+        <div id="src-media-thumb-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(m.title || m.file)}</div>
+          ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
+          ${m.form ? `<div class="media-ref-label">${esc(m.form)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="source" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
+      </div>`;
+    }
+    for (const l of srcPtObje) {
+      const ref = l.replace(/^1 OBJE\s+/, '').trim();
+      const obj = _objeMap[ref];
+      const label = obj ? (obj.title || obj.file || ref) : ref;
+      const sub   = obj && obj.title && obj.file ? obj.file : '';
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div class="media-row--ref">
+        <div class="media-thumb">${_icon2}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(label)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
+          <div class="media-ref-label">Verweis</div>
+        </div>
+      </div>`;
+    }
+    if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
+    html += `</div>`;
+  }
 
   // Referencing persons
   if (refPersons.length) {
@@ -110,54 +175,8 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up"><div class="empty no-ref-pad">Keine Referenzen gefunden</div></div>`;
   }
 
-  // Media section: inline entries from media[] + reference entries from passthrough
-  const srcMedia = s.media || [];
-  const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
-  {
-    const _objeMap = _buildObjeRefMap();
-    html += `<div class="section fade-up">
-      <div class="section-head">
-        <div class="section-title">Medien</div>
-        <button class="section-add" data-action="openAddMediaDialog" data-ctx="source" data-id="${id}">+ Hinzufügen</button>
-      </div>`;
-    for (let i = 0; i < srcMedia.length; i++) {
-      const m = srcMedia[i];
-      if (!m.file && !m.title) continue;
-      const _ext = (m.file || '').split('.').pop().toLowerCase();
-      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
-      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div class="media-row"
-        data-action="openSourceMediaView" data-sid="${id}" data-idx="${i}">
-        <div id="src-media-thumb-${i}" class="media-thumb">${_icon}</div>
-        <div class="media-info">
-          <div class="media-title">${esc(m.title || m.file)}</div>
-          ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
-          ${m.form ? `<div class="media-ref-label">${esc(m.form)}</div>` : ''}
-        </div>
-        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="source" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
-      </div>`;
-    }
-    for (const l of srcPtObje) {
-      const ref = l.replace(/^1 OBJE\s+/, '').trim();
-      const obj = _objeMap[ref];
-      const label = obj ? (obj.title || obj.file || ref) : ref;
-      const sub   = obj && obj.title && obj.file ? obj.file : '';
-      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
-      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
-      html += `<div class="media-row--ref">
-        <div class="media-thumb">${_icon2}</div>
-        <div class="media-info">
-          <div class="media-title">${esc(label)}</div>
-          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
-          <div class="media-ref-label">Verweis</div>
-        </div>
-      </div>`;
-    }
-    if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
-    html += `</div>`;
-  }
-
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailSource').innerHTML = html;
+  _activateDetailContainer('detailSource', id);
   showView('v-detail');
 
   // Quellenmedien async laden — IDB zuerst (Kamera-Aufnahmen), dann OneDrive
@@ -276,13 +295,9 @@ function filterSources(q) {
 }
 
 function renderRepoList() {
-  const section = document.getElementById('repoSection');
-  const el      = document.getElementById('repoList');
-  const repos   = Object.values(AppState.db.repositories || {});
-  const jumpBtn = document.getElementById('repoJumpBtn');
-  if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.hidden = true; return; }
-  section.style.display = '';
-  if (jumpBtn) jumpBtn.hidden = false;
+  const el    = document.getElementById('repoList');
+  const repos = Object.values(AppState.db.repositories || {});
+  if (!repos.length) { el.innerHTML = '<div class="empty">Keine Archive vorhanden</div>'; return; }
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
     const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;
@@ -291,4 +306,19 @@ function renderRepoList() {
       <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
     </div>`;
   }).join('');
+}
+
+function switchSourcesSubTab(sub) {
+  document.getElementById('toggle-sources')?.classList.toggle('active', sub === 'sources');
+  document.getElementById('toggle-repos')?.classList.toggle('active', sub === 'repos');
+  document.getElementById('toggle-media')?.classList.toggle('active', sub === 'media');
+  const isSources = sub === 'sources';
+  const isMedia   = sub === 'media';
+  document.getElementById('sourceList').hidden              = !isSources;
+  document.getElementById('source-search-wrap').hidden      = !isSources;
+  document.getElementById('media-filter-bar-wrap').hidden   = !isMedia;
+  document.getElementById('repoSection').hidden             = isSources || isMedia;
+  document.getElementById('mediaSection').hidden            = !isMedia;
+  if (sub === 'repos') renderRepoList();
+  if (isMedia) showMediaSection();
 }
