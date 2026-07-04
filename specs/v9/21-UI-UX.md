@@ -99,6 +99,8 @@ Radius:       14px (Karten/Modals) · 9px (Buttons/Inputs)
 Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 ```
 
+**INV-UI-4 (wiederkehrende visuelle Muster haben genau eine Quelle):** Ein UI-Muster, das an mehreren Stellen dieselbe Rolle spielt (Segment-Control/Tab-Reihe, View-Kopfzeile, Listenzeile, Badge, …), wird **einmal** als gemeinsame CSS-Klasse(n) in `design-system.css` (oder eine gemeinsame Shell-Komponente) definiert und von allen Konsumenten referenziert — nicht pro View neu geschrieben. **Lehre (2026-07-05, ADR-v9-26):** `EntityTab`s Entitäten-Segmente und der spätere `LensSwitcher` implementierten unabhängig voneinander zwei sichtbar unterschiedliche Segment-Control-Stile (individuell umrandete Pillen vs. gemeinsamer Track mit transparenten Items), bevor auf `.stb-segment-row`/`.stb-segment-btn` konsolidiert wurde; ebenso hatten `TreeView`/`MapLensView` je eine eigene, unterschiedlich hohe Kopfzeile mit redundantem Titel-Text neben dem bereits aktive-markierenden Lens-Umschalter, bevor auf `LensViewHeader` konsolidiert wurde. **Vor dem Bau eines neuen „sieht aus wie X"-Elements:** `design-system.css` und bestehende `ui/views`/`ui/shell`-Dateien nach einem vergleichbaren Muster durchsuchen (grep nach ähnlichen Klassennamen/Rollen) — existiert eines, wiederverwenden statt neu erfinden.
+
 ---
 
 ## 7. Symbol-Konventionen (verschlankt)
