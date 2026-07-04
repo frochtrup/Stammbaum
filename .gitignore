@@ -10,9 +10,10 @@ MeineDaten_ancestris.ged
 !GEDCOM551.pdf
 Decker_story.html
 
-# Lokale Entwicklungsumgebung (nur Projekt-Skills versioniert)
+# Lokale Entwicklungsumgebung (nur Projekt-Skills + Bau-Agenten versioniert)
 .claude/*
 !.claude/skills/
+!.claude/agents/
 
 # Archiv / Planung
 GEDCOM_V2_PLAN.md
