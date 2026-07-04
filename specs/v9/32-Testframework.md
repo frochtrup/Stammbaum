@@ -25,7 +25,7 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 | **Property/Invariante** | Eigenschaften statt Einzelfälle: Auflösung deterministisch, Roundtrip idempotent, Passthrough verlustfrei | gezielt | Vitest + fast-check (property-based) |
 | **Snapshot/Goldfile** | stabile Render-Ausgaben, **aus dem Modell gerechnet** (Reports, Orts-Steckbrief) — nicht DOM-abhängig | pro Report | Vitest snapshot |
 | **Architektur-Gates** | Import-Grenze (INV-ARCH-1), CSP (LP-8), Funktionsgröße | CI-Gate | dependency-cruiser / ESLint / CSP-Scanner |
-| **Komponenten** | reaktive UI-Schale: Formulare, Listen, View-State-Kontrakt | wenige | Testing-Library des Frameworks + happy-dom |
+| **Komponenten** | reaktive UI-Schale: Formulare, Listen, View-State-Kontrakt | wenige | @testing-library/svelte + happy-dom |
 | **E2E** | 2–3 kritische Flows real: Datei öffnen → editieren → exportieren → re-parsen; Offline-Boot | minimal | Playwright (optional) |
 
 **Imperative Inseln** (Baum/Karte/Zeitleiste, [02 §5](02-Zielarchitektur-v9.md)) werden über ihre **Layout-Berechnung** unit-getestet (reine Funktion Modell→Positionen), nicht über gerenderte Pixel.
@@ -36,7 +36,7 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 
 - **Vitest** — Kern-Unit + Roundtrip + Property + Snapshot. Nutzt Vite-Transform (TypeScript direkt), läuft in Node → headless, build-frei ([31 §3](31-Dev-Umgebung.md)).
 - **fast-check** — property-based Tests für Invarianten (Determinismus, Idempotenz).
-- **Testing-Library** des gewählten Frameworks (Svelte/Solid, [02 §6](02-Zielarchitektur-v9.md)) + **happy-dom** — Komponenten-Tests der Schale.
+- **@testing-library/svelte** + **happy-dom** — Komponenten-Tests der Schale (Svelte 5, [02 §6](02-Zielarchitektur-v9.md)).
 - **Playwright** *(optional, minimal)* — 2–3 E2E-Flows in echtem Browser inkl. Offline/PWA-Boot.
 - **dependency-cruiser** oder **eslint-plugin-boundaries** — Import-Grenzen-Gate (INV-ARCH-1: Kern importiert nichts von oben).
 - **CSP-Scanner** — Portierung von v8 `test-csp.js`: findet inline-Styles/-Handler (LP-8).

@@ -35,9 +35,9 @@ Das v9-System ist vollständig in `specs/v9/` spezifiziert. **Einstieg: `specs/v
 Kern-Tests headless & build-frei (Vitest, [32](specs/v9/32-Testframework.md)). **Jede `INV-…`/`LP-…` hat einen Test (TST-2).** Pre-Commit = schneller Kern-Subset; CI = alle Ebenen, Deploy nur bei grün.
 *(Hinweis: der aktuelle Git-Pre-Commit-Hook läuft noch die v8-Tests — für v9-Doku-Commits unschädlich; wird beim Repo-Umzug durch das Vitest-/CI-Gate ersetzt.)*
 
-## Offene Vorbedingung
+## Stack (entschieden)
 
-**Framework-Wahl** ([02 §6](specs/v9/02-Zielarchitektur-v9.md), Svelte/Solid favorisiert) — vor Baubeginn festlegen und im Entscheidungslog dokumentieren.
+UI-Schale: **Svelte 5 + Vite** (kein SvelteKit); Domänenkern framework-frei ([02](specs/v9/02-Zielarchitektur-v9.md)). Tests: Vitest + `@testing-library/svelte` ([32](specs/v9/32-Testframework.md)). Einmalige Voraussetzung: Node.js. **Baubeginn kann starten.**
 
 ## Projektpfad (aktuell, transitorisch)
 

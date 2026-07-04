@@ -60,7 +60,9 @@ Chronologisches Log der tragenden Architektur- und Produktentscheidungen des v9-
 - **Entscheidung:** **INV-DEV-1** — v9-Repo lokal (`~/dev/stammbaum-v9`), nur GitHub als „Wolke".
 - **Refs:** [31 §1](31-Dev-Umgebung.md).
 
-## ADR-v9-09 — UI-Framework-Wahl 🟡 offen
+## ADR-v9-09 — UI-Framework: Svelte 5 + Vite ✅ · 2026-07-04
 - **Kontext:** Ansatz C braucht ein reaktives Schale-Framework mit leichter Escape-Hatch ins Imperative.
-- **Stand:** **offen.** Favorisiert Svelte oder Solid (compile-away, kleines Runtime, sauberer Ref-Ausstieg). Vor Baubeginn festlegen; legt zugleich das UI-Test-Tooling ([32 §3](32-Testframework.md)) fest.
+- **Entscheidung:** **Svelte 5 + Vite** (Komponenten-Bibliothek, **kein** SvelteKit — statischer Build, kein Server). Runes (`$state`/`$derived`) für die Schale; `bind:this`/`$effect` als Ausstieg in die imperativen SVG-Inseln.
+- **Konsequenz:** UI-Test-Tooling = `@testing-library/svelte` + happy-dom ([32 §3](32-Testframework.md)); Vite-Build → dist/ nach GitHub Pages ([31](31-Dev-Umgebung.md)). Node.js als einmalige Voraussetzung.
+- **Verworfen:** Solid (kleineres Ökosystem, JSX dichter für Review), Lit (gröbere Reaktivität → näher am manuellen v8-Schmerz), React (schwerer + Reconciler-Reibung mit imperativem SVG). Setup/Kosten waren kein Unterscheidungsmerkmal (alle gratis, alle nur Node).
 - **Refs:** [02 §6](02-Zielarchitektur-v9.md).

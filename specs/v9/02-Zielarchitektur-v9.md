@@ -114,7 +114,7 @@ SVG-lastige Ansichten (Sanduhr, Fan-Chart, Nachkommen, Karte, Zeitleiste) sind *
 
 ---
 
-## 6. Framework-Wahl (Leitplanken, nicht final)
+## 6. Framework-Wahl — Svelte 5 + Vite ✅
 
 Für die reaktive Schale eignen sich **compile-away-Frameworks mit leichter Escape-Hatch ins Imperative**:
 
@@ -124,7 +124,7 @@ Für die reaktive Schale eignen sich **compile-away-Frameworks mit leichter Esca
 | **Lit / Web Components** | ⚠️ Kompromiss | fast build-frei, aber gröbere Reaktivität — näher an Ansatz A |
 | **React** | ⚠️ eher nicht | schwerer, Reconciler reibt stärker an imperativem SVG/Refs |
 
-Kriterien für die endgültige Wahl: (1) kleines Runtime (Offline-Bundle), (2) sauberer Ausstieg ins imperative DOM für die Inseln, (3) einfacher, schneller Dev-Loop, (4) statisches Build-Ergebnis für GitHub-Pages-Deploy. **Entscheidung offen — 🟡 vor Baubeginn festlegen.**
+Kriterien für die endgültige Wahl: (1) kleines Runtime (Offline-Bundle), (2) sauberer Ausstieg ins imperative DOM für die Inseln, (3) einfacher, schneller Dev-Loop, (4) statisches Build-Ergebnis für GitHub-Pages-Deploy. **Entscheidung (2026-07-04): Svelte 5 + Vite** — Komponenten-Bibliothek, **kein** SvelteKit (statischer Build, kein Server). Svelte gewann auf Lesbarkeit (Review-Rolle) + Ökosystem bei gleichwertigem SVG-Insel-Ausstieg; Setup/Kosten waren kein Kriterium (alle gratis, nur Node.js). Details: [04 ADR-v9-09](04-Entscheidungslog.md).
 
 ---
 
