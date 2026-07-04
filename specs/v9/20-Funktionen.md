@@ -43,8 +43,10 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[S]** Fotos (Upload, Lightbox, Hauptfoto), Medien-Verwaltung, Kamera-Schnellzugriff.
 
 ### 1.5 Familien-Tab
-- **[K]** Liste (Elternpaar, Heiratsdatum, Kinderzahl), Suche, Detail mit anklickbaren Mitgliedern, Baum-Sprung.
-- **[S]** CSV-Export, Medien-Verwaltung.
+- **[K]** Liste (Elternpaar, Heiratsdatum, Kinderzahl), Detail mit anklickbaren Mitgliedern, Baum-Sprung.
+- **[K]** Sortier-Umschalter mit drei Zuständen: Nachname Ehemann · Nachname Ehefrau · Heiratsdatum (fehlender Wert je Modus sortiert ans Ende). **Neuaufsatz-Hinweis:** v8 hatte hierfür nur feste Listenreihenfolge + Textsuche ohne Sortier-Umschalter — diese Zeile ist eine bewusste v9-Erweiterung über den erreichten v8-Umfang hinaus, analog zum Personen-Sortier-Umschalter ([§1.4](#14-personen-tab)) gebaut, kein Orakel-Befund.
+- **[K]** Suche über Ehepartnernamen/Kindernamen/Ereignisse/Notizen; erweiterte Filter analog Personen-Tab: Heiratsjahr-Bereich, Heiratsort (Textmatch), fehlende Felder (kein Heiratsdatum · keine Quellen · keine Kinder).
+- **[S]** CSV-Export der gefilterten Liste, Medien-Verwaltung.
 
 ### 1.6 Quellen-Tab & Archive
 - **[K]** Liste (Kurzname, Autor, Datum, Referenzzähler), Suche, Detail mit allen referenzierenden Personen/Familien inkl. PAGE/QUAY.
