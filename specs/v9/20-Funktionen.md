@@ -29,6 +29,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 
 ### 1.3 Baum-Visualisierungen *(imperative Inseln — [02 §5](02-Zielarchitektur-v9.md))*
 - **[K]** Sanduhr-Baum: bis 4 Vorfahren-Ebenen (Desktop) / 2 (Portrait) + Proband + Ehepartner + Kinder. Kekule-Nummern. Mehrfach-Ehen (`⚭N`), Halbgeschwister (`½`).
+- **[K]** Geschwisterzeile des Probanden (Voll- und Halbgeschwister, aus den Kindern der Eltern-Familie(n) außer dem Proband selbst) — eigene Zeile neben/um den Proband, nicht nur die `½`-Markierung auf fremden Kindern. **Nachtrag 2026-07-04:** in der ersten Sanduhr-Bauabschnitt (ADR-v9-23) versehentlich als nicht explizit gelistet ausgelassen, obwohl v8 dies als Teil der Sanduhr hatte — hiermit nachträglich als [K] präzisiert.
 - **[K]** Interaktion: Klick-Rezentrierung, Pinch-Zoom (0.3×–3×), Drag-Pan, Vollbild, Tastaturnavigation, Desktop Auto-Fit.
 - **[S]** Nachkommen-Baum (top-down, Gen 2–7, Ehepartner/Geschwister, T-Linien).
 - **[S]** Fan-Chart (konzentrische Halbkreis-Segmente, 3–6 Generationen).
