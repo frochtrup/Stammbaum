@@ -2,7 +2,7 @@
 
 > Schicht: Meta · Pflege via Skill `decision-log`
 
-Chronologisches Log der tragenden Architektur- und Produktentscheidungen des v9-Neuaufsatzes. **Unabhängig** von den v8-ADRs (die in `ARCHITECTURE.md` stehen). Ein Eintrag wird angelegt, sobald eine Entscheidung fällt, die den Bau bindet oder eine Alternative bewusst verwirft.
+Chronologisches Log der tragenden Architektur- und Produktentscheidungen des v9-Neuaufsatzes. **Unabhängig** von den v8-ADRs (die in `legacy-v8/ARCHITECTURE.md` stehen). Ein Eintrag wird angelegt, sobald eine Entscheidung fällt, die den Bau bindet oder eine Alternative bewusst verwirft.
 
 **Status-Legende:** ✅ akzeptiert · 🟡 offen/vorläufig · ⛔ verworfen · ♻️ ersetzt durch spätere Entscheidung.
 

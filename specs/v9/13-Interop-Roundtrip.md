@@ -2,7 +2,7 @@
 
 > Schicht: Kern · Abhängig von: [10 Domänenmodell](10-Domaenenmodell.md), [11 Orte/Höfe](11-Orte-Hoefe-Identitaet.md), [12 Forschung](12-Forschungsdaten.md)
 
-Vier Ausgabemodi über **ein** gemeinsames internes Modell. Referenz-Detailtiefe (vollständige Tag-Tabellen INDI/FAM/SOUR/REPO, Parser/Writer-Ausgabestruktur, `_`-Tag-Analyse) bleibt in `GEDCOM.md`.
+Vier Ausgabemodi über **ein** gemeinsames internes Modell. Tag-Semantik + Wire-Format (INDI/FAM/SOUR/REPO, Ausgabestruktur, GED7-Deltas) stehen in der zeitlosen Wire-Referenz [`GEDCOM.md`](../../GEDCOM.md).
 
 ---
 

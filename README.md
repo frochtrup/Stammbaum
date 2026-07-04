@@ -13,8 +13,7 @@ CLAUDE.md          ← Arbeitsanweisungen (wird von der Claude-App automatisch g
 .claude/skills/    ← Projekt-Skills (altlast-audit, spec-new, spec-lint, roundtrip-verify, decision-log)
 legacy-v8/         ← eingefrorene v8-Codebasis: Referenz + Roundtrip-Orakel (nicht weiterentwickelt)
 
-GEDCOM.md · ARCHITECTURE.md · DATAMODEL.md · UI-DESIGN.md · CHANGELOG.md · ROADMAP.md
-                   ← v8-Detail-Referenz, auf die die Specs verweisen
+GEDCOM.md          ← zeitlose GEDCOM/GRAMPS-Wire-Referenz (Tag-Semantik + Format)
 ```
 
 ## Einstieg

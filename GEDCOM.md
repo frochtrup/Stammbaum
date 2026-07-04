@@ -1,412 +1,161 @@
-# GEDCOM Referenz
+# GEDCOM / GRAMPS — Wire-Referenz
 
-## Unterstützte Tags
+> Zeitlose Referenz für Tag-Semantik, Datei-Format und Roundtrip-Details des GEDCOM-Standards (5.5.1 / 7.0). Enthält **externes Standardwissen**, das die Specs bewusst nicht duplizieren.
+>
+> Das **v9-Datenmodell** steht in [`specs/v9/10-Domaenenmodell.md`](specs/v9/10-Domaenenmodell.md); die **Roundtrip- und Passthrough-Anforderung** in [`specs/v9/13-Interop-Roundtrip.md`](specs/v9/13-Interop-Roundtrip.md). Die konkrete v8-Implementierung (Parser-Interna, `_`-Tag-Häufigkeiten in Bestandsdateien) liegt in [`legacy-v8/`](legacy-v8/) — hier absichtlich nicht.
+
+---
+
+## 1. Unterstützte Tags
+
+Spalten: **Tag** · **Level** · **Bedeutung**. Die Zuordnung auf das v9-Modell (Sonder-Ereignisse, `Citation[]`, `PlaceObject`/`HofObject` …) regelt [10](specs/v9/10-Domaenenmodell.md).
 
 ### INDI (Person)
 
-| Tag | Level | Feld in `db.individuals` | Notizen |
-|---|---|---|---|
-| `NAME` | 1 | `name`, `given`, `surname` | `/Nachname/` Format geparst |
-| `GIVN` | 2 | `given` | Überschreibt NAME-Parsing |
-| `SURN` | 2 | `surname` | Überschreibt NAME-Parsing |
-| `NPFX` | 2 | `prefix` | z.B. „Dr.-Ing." |
-| `NSFX` | 2 | `suffix` | z.B. „Jr." |
-| `SOUR` | 2 | `nameSources[]` | SOUR direkt unter NAME |
-| `SEX` | 1 | `sex` | M / F → sonst 'U' |
-| `TITL` | 1 | `titl` | Adelstitel etc. |
-| `RELI` | 1 | `reli` | Religion (String) |
-| `_UID` | 1 | `uid` | Ancestris/Legacy UUID |
-| `BIRT` | 1 | `birth.{date,place,lati,long,sources}` | Sonder-Objekt |
-| `CHR` | 1 | `chr.{date,place,lati,long,sources}` | Taufe, Sonder-Objekt |
-| `DEAT` | 1 | `death.{date,place,lati,long,sources,cause}` | Sonder-Objekt |
-| `BURI` | 1 | `buri.{date,place,lati,long,sources}` | Beerdigung, Sonder-Objekt |
-| `CAUS` | 2 | `death.cause` | Sterbeursache (unter DEAT) |
-| `OCCU` | 1 | `events[]` type='OCCU' | Beruf |
-| `RESI` | 1 | `events[]` type='RESI' | Wohnort |
-| `EDUC` | 1 | `events[]` type='EDUC' | Bildung |
-| `EMIG` | 1 | `events[]` type='EMIG' | Auswanderung |
-| `IMMI` | 1 | `events[]` type='IMMI' | Einwanderung |
-| `NATU` | 1 | `events[]` type='NATU' | Einbürgerung |
-| `EVEN` | 1 | `events[]` type='EVEN' | Allgemeines Ereignis |
-| `GRAD` | 1 | `events[]` type='GRAD' | Abschluss |
-| `ADOP` | 1 | `events[]` type='ADOP' | Adoption |
-| `MILI` | 1 | `events[]` type='MILI' | Militärdienst |
-| `FACT` | 1 | `events[]` type='FACT' | Fakt/Merkmal mit TYPE-Klassifikation |
-| `TYPE` | 2 | `events[].eventType` | Unter EVEN/FACT: Klassifikationstext |
-| `DATE` | 2 | `events[].date` | Freitext, Legacy-Format |
-| `PLAC` | 2 | `events[].place` | Ortsname |
-| `MAP` | 3 | *(Kontext)* | Legacy: Level 3 (Standard: Level 2) |
-| `LATI` | 4 | `events[].lati` | N52.15 → 52.15, S → negativ |
-| `LONG` | 4 | `events[].long` | E7.33 → 7.33, W → negativ |
-| `NOTE` | 2 | `events[].note` | Mehrere NOTEs akkumuliert mit `\n` |
-| `ADDR` | 2 | `events[].addr` + `events[].addrExtra[]` | Adresse; Sub-Tags (CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG) via `addrExtra[]` + `_ptDepth=2` |
-| `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt; `3 PAGE` darunter → `sourcePages[sid]` |
-| `PAGE` | 3 | `events[].sourcePages[sid]` / `birth.sourcePages[sid]` etc. | Seitenangabe unter SOUR, editierbar im Ereignis-Formular |
-| `QUAY` | 3 | `events[].sourceQUAY[sid]` / `birth.sourceQUAY[sid]` etc. | Quellenqualität 0–3 unter SOUR, editierbar im Quellen-Widget |
-| `SOUR` | 1 | `topSources[]` + `topSourcePages{}` + `topSourceQUAY{}` | SOUR direkt unter INDI (Level 1) |
-| `PAGE` | 2 | `topSourcePages[sid]` | Seitenangabe unter INDI-Level SOUR |
-| `QUAY` | 2 | `topSourceQUAY[sid]` | Quellenqualität unter INDI-Level SOUR |
-| `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
-| `CONC`/`CONT` | 2 | `noteText` (angehängt) | Mehrzeilige Notizen |
-| `RESN` | 1 | `resn` | Beschränkung (confidential / locked / privacy) |
-| `EMAIL` | 1 | `email` | E-Mail-Adresse der Person |
-| `WWW` | 1 | `www` | Website-URL der Person |
-| `OBJE` | 1 | `media[].{file,title}` | Foto-Referenz |
-| `FILE` | 2 | `media[].file` | Pfad (oft Windows-Pfad aus Legacy) |
-| `TITL` | 3 | `media[].title` | Unter OBJE/FILE |
-| `FAMC` | 1 | `famc[].{famId,frel,mrel,frelSeen,mrelSeen,frelSour,frelPage,frelQUAY,frelSourExtra[],mrelSour,mrelPage,mrelQUAY,mrelSourExtra[],sourIds[],sourPages{},sourQUAY{},sourExtra{}}` | Kind-in-Familie |
-| `PEDI` | 2 | `famc[].pedi` | Eltern-Kind-Verhältnis (GEDCOM 5.5.1-Standard, ADR-014): birth\|adopted\|foster\|sealing |
-| `SOUR` | 2 | `famc[].sourIds[]` + `famc[].sourPages{}` + `famc[].sourQUAY{}` + `famc[].sourExtra{}` | SOUR direkt unter FAMC |
-| `_FREL` | 2 | `famc[].frel` + `famc[].frelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
-| `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
-| `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
-| `ALIA` | 1 | `aliases[]` / `aliaNames[]` | @xref@-Zeiger → `aliases[]`; Name-String (GED7) → `aliaNames[]` |
-| `ASSO` | 1 | `associations[].{xref,_grampsHlink,role,note,sources[],sourcePages{},sourceQUAY{}}` | Assoziationsbeziehung (Pate, Zeuge …); read+write; editierbar seit ASSO-EDIT v734 |
-| `RELA` | 2 | `associations[].role` | GED5-Beziehungsrolle (Freitext, z. B. „Godparent") |
-| `ROLE` | 2 | `associations[].role` | GED7-Beziehungsrolle (Enum: GODP, WITN …); Parser liest beide → `.role` |
-| `NO` | 1 | `noEvents: Set<string>` | GED7: bestätigtes Fehlen eines Ereignisses (z. B. `NO BIRT`) |
-| `EXID` | 1 | `exids[].{value, type}` | GED7: externe ID (FamilySearch ARK, WikiTree …); TYPE als Unterfeld |
-| `CREA` | 1 | `createdDate` | GED7: Erstellungsdatum des Records |
-| `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `NAME` | 1 | Name; `Vorname /Nachname/`-Format |
+| `GIVN` / `SURN` | 2 | Vor-/Nachname (überschreiben NAME-Parsing) |
+| `NPFX` / `NSFX` | 2 | Namenspräfix / -suffix |
+| `NICK` | 2 | Rufname |
+| `SOUR` | 2 | Zitat unter NAME |
+| `SEX` | 1 | `M` / `F` → sonst `U` |
+| `TITL` | 1 | Titel |
+| `RELI` | 1 | Religion |
+| `RESN` | 1 | Beschränkung (confidential / locked / privacy) |
+| `EMAIL` / `WWW` | 1 | Kontaktangaben |
+| `BIRT` / `CHR` / `DEAT` / `BURI` | 1 | Haupt-Ereignisse (Sonderstatus im Modell) |
+| `CAUS` | 2 | Todesursache (unter DEAT) |
+| `OCCU` `RESI` `EDUC` `EMIG` `IMMI` `NATU` `EVEN` `GRAD` `ADOP` `MILI` `FACT` `CENS` `PROP` | 1 | weitere Ereignisse |
+| `TYPE` | 2 | Klassifikationstext unter EVEN/FACT |
+| `DATE` | 2 | Ereignis-Datum (Raw-String, § 5) |
+| `PLAC` | 2 | Ortsname (Projektions-Cache, siehe [11](specs/v9/11-Orte-Hoefe-Identitaet.md)) |
+| `MAP` / `LATI` / `LONG` | 3/4 | Geo-Koordinaten (MAP auf Lv 2 **oder** 3 tolerieren; § 3) |
+| `NOTE` | 1/2 | Inline-Text (mehrere akkumuliert) oder `@Ref@` |
+| `ADDR` | 2 | Adresse + Sub-Tags (CITY, POST, CONT, …) |
+| `SOUR` / `PAGE` / `QUAY` | 1–4 | Zitat auf jeder Ebene; PAGE = Seite, QUAY = Zuverlässigkeit 0–3 |
+| `OBJE` / `FILE` / `TITL` | 1/2/3 | Medien-Referenz (FILE = relativer Pfad) |
+| `FAMC` | 1 | Mitgliedschaft als Kind |
+| `PEDI` | 2 | Eltern-Kind-Verhältnis: `birth` \| `adopted` \| `foster` \| `sealing` |
+| `FAMS` | 1 | Mitgliedschaft als Elternteil |
+| `ALIA` | 1 | `@xref@`-Zeiger (GED5) **oder** Name-String (GED7) |
+| `ASSO` / `RELA` / `ROLE` | 1/2 | Assoziation (Pate, Zeuge …); Rolle aus `RELA` (GED5, Freitext) **oder** `ROLE` (GED7, Enum) |
+| `NO` / `EXID` / `CREA` | 1 | GED7: bestätigtes Fehlen / externe ID / Erstellungsdatum |
+| `CHAN` | 1 | letztes Änderungsdatum (via `2 DATE`) |
 
 ### FAM (Familie)
 
-| Tag | Level | Feld | Notizen |
-|---|---|---|---|
-| `HUSB` | 1 | `husb` | ID der Person |
-| `WIFE` | 1 | `wife` | ID der Person |
-| `CHIL` | 1 | `children[]` | IDs der Kinder |
-| `MARR` | 1 | `marr.{date,place,lati,long,sources}` | Heirat |
-| `ENGA` | 1 | `engag.{date,place}` | Verlobung (geparst + geschrieben + editierbar im Familien-Formular) |
-| `NOTE` | 1 | `noteText` | Inline-Text mit CONT-Unterstützung |
-| `SOUR` | 1–3 | `sourceRefs` (Set) + `marr.sources[]` | |
-| `PAGE` | 3 | `marr.sourcePages[sid]` | Seitenangabe unter MARR SOUR |
-| `QUAY` | 3 | `marr.sourceQUAY[sid]` | Quellenqualität unter MARR SOUR |
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `HUSB` / `WIFE` | 1 | Ehemann / Ehefrau (Personen-ID) |
+| `CHIL` | 1 | Kind (Personen-ID) |
+| `MARR` / `ENGA` | 1 | Heirat / Verlobung (Sonder-Ereignisse) |
+| `NOTE` | 1 | Notiz (CONT-fähig) |
+| `SOUR` / `PAGE` / `QUAY` | 1–3 | Zitate (auch unter MARR) |
 
 ### SOUR (Quelle)
 
-| Tag | Level | Feld | |
-|---|---|---|---|
-| `ABBR` | 1 | `abbr` | Kurzname (für Listen verwendet) |
-| `TITL` | 1 | `title` | Vollständiger Titel |
-| `AUTH` | 1 | `author` | |
-| `DATE` | 1 | `date` | |
-| `PUBL` | 1 | `publ` | Verlag |
-| `REPO` | 1 | `repo` | `@Rxx@`-Referenz auf REPO-Record **oder** Legacy-Freitext |
-| `CALN` | 2 | `repoCallNum` | Signatur / Bestellnummer (unter `1 REPO`) |
-| `TEXT` | 1 | `text` | Notiz / Beschreibung |
-| `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum; wird beim Speichern auto-gesetzt |
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `ABBR` / `TITL` / `AUTH` / `DATE` / `PUBL` / `TEXT` | 1 | Kurzname / Titel / Autor / Datum / Verlag / Beschreibung |
+| `REPO` | 1 | `@Rxx@`-Referenz **oder** Legacy-Freitext |
+| `CALN` / `MEDI` | 2/3 | Signatur / Medium (unter REPO) |
+| `DATA` → `EVEN` / `DATE` / `PLAC` | 1–3 | Ereignis-Abdeckung der Quelle |
+| `REFN` (+`TYPE`) | 1/2 | externe Referenznummer |
+| `CHAN` | 1 | Änderungsdatum |
 
-### REPO (Archiv / Bibliothek)
+### REPO (Archiv)
 
-| Tag | Level | Feld in `db.repositories` | |
-|---|---|---|---|
-| `NAME` | 1 | `name` | Vollständiger Name des Archivs |
-| `ADDR` | 1 | `addr` + `addrExtra[]` | Adresse (Hauptzeile); Sub-Tags (CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG) via `addrExtra[]` + `_ptDepth=1` |
-| `CONT` | 2 | `addr` (angehängt) | Folgezeilen der Adresse (direkte CONT, nicht via addrExtra) |
-| `PHON` | 1 | `phon` | Telefonnummer |
-| `WWW` | 1 | `www` | Website-URL |
-| `EMAIL` | 1 | `email` | E-Mail-Adresse |
-| `CHAN` | 1 | `lastChanged` | via `2 DATE` |
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `NAME` | 1 | Name des Archivs |
+| `ADDR` (+ `CONT`, Sub-Tags) | 1/2 | Adresse |
+| `PHON` / `WWW` / `EMAIL` | 1 | Kontakt |
+| `CHAN` | 1 | Änderungsdatum |
 
-### NOTE / SNOTE (Notiz-Record)
-Werden beim Parsen in `notes`-Map gespeichert (`n.type: 'NOTE'|'SNOTE'`) und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren). Writer gibt `0 NOTE` oder `0 SNOTE` je nach `n.type` aus.
+### NOTE / SNOTE (Record)
+
+`0 NOTE`/`0 SNOTE`-Records werden in einer Notiz-Map gehalten (Typ `NOTE`|`SNOTE`) und über Referenzen aufgelöst. Writer gibt `0 NOTE` bzw. `0 SNOTE` je nach Typ aus.
+
+### Proprietäre `_`-Tags
+
+Alle `_`-Tags werden im Roundtrip **verlustfrei erhalten** (Passthrough-Prinzip, [13 § 2](specs/v9/13-Interop-Roundtrip.md)). Modellierte `_`-Tags (editierbar gemacht) müssen vom Parser aus dem Passthrough **herausgelöst** werden, sonst Doppelschreibung. Beispiele modellierter Extensions: `_UID`, `_FREL`/`_MREL` (→ PEDI), `_EVAL` (Evidenz, [12](specs/v9/12-Forschungsdaten.md)), `_HYPO` (Hypothese), `_RTYPE`/`_FAURL` (Repository), `_TASK`/`_RLOG` (Forschung). Der Strict-Export lässt alle `_`-Tags weg ([13 § 5](specs/v9/13-Interop-Roundtrip.md)).
 
 ---
 
-## GEDCOM 7.0 — Unterstützung
+## 2. GEDCOM 7.0 — Deltas
 
-Stammbaum PWA kann GEDCOM 7.0-Dateien lesen und (opt-in) als GEDCOM 7.0 exportieren (`db.gedVersion === '7.0'`). Standardformat für neue Dateien bleibt GEDCOM 5.5.1.
-
-### Neue/geänderte Tags in GED7
-
-| Tag | Kontext | Feld | Verhalten |
-|---|---|---|---|
-| `NO` | INDI lv=1 | `p.noEvents: Set<string>` | Explizites Fehlen eines Ereignisses; GED5-Downgrade: `1 NOTE Kein bekanntes Ereignis: TAG` |
-| `EXID` | INDI lv=1 | `p.exids[].{value, type}` | Externe IDs; GED5-Downgrade: `1 REFN` + `2 TYPE` |
-| `CREA` | INDI lv=1 | `p.createdDate` | Erstellungsdatum; nur im GED7-Writer ausgegeben |
-| `SNOTE` | lv=0 Record | `db.notes[id]` mit `type:'SNOTE'` | Geteilte Notizen; Writer gibt `0 SNOTE` statt `0 NOTE` aus |
-| `PHRASE` | unter `DATE` | `ev.datePhrase` | Freitext-Datumsangabe; dargestellt als kursiver Block neben dem Strukturdatum |
-| `ROLE` | unter `ASSO` | `associations[].role` | GED7-Enum; Parser liest `RELA` (GED5) und `ROLE` (GED7) → beide in `.role` |
-| `TRAN` | unter `NAME` | `p.nameTrans[]` | Namensübersetzung; GED5-Writer gibt `2 _TRAN` aus |
-| `TRAN` / `_TRAN` | unter `PLAC` | `extraPlaces[name].trans[]` | Ortsübersetzung; zentraler Registry-Eintrag (nicht auf Event-Ebene) |
-| `ALIA` (String) | INDI lv=1 | `p.aliaNames[]` | GED7 Name-String (kein @xref@); GED5 ALIA waren ausschließlich @xref@-Zeiger |
-
-### Writer: GED5 vs. GED7 Unterschiede
+Der Parser liest 5.5.1 **und** 7.0; der Writer gibt 7.0 nur bei `gedVersion === '7.0'` aus. Standard bleibt 5.5.1.
 
 | Feature | GED5 (Standard) | GED7 (opt-in) |
 |---|---|---|
-| Ortsübersetzungen | `3 _TRAN value` / `4 LANG lang` | `3 TRAN value` / `4 LANG lang` |
-| Namensübersetzungen | `2 _TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` | `2 TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` |
-| Externe IDs | `1 REFN value` + `2 TYPE type` | `1 EXID value` + `2 TYPE type` |
 | Fehlendes Ereignis | `1 NOTE Kein bekanntes Ereignis: BIRT` | `1 NO BIRT` |
+| Externe IDs | `1 REFN` + `2 TYPE` | `1 EXID` + `2 TYPE` |
 | Geteilte Notizen | `0 NOTE @xref@` | `0 SNOTE @xref@` |
-| CONC | erlaubt bei langen Zeilen | nicht erlaubt (nur CONT) |
-| CHAR UTF-8 | `1 CHAR UTF-8` im HEAD | nicht mehr vorhanden |
-| GEDC/VERS | `2 VERS 5.5.1` | `2 VERS 7.0` |
-| SCHMA | nicht vorhanden | `1 SCHMA` mit `2 TAG _xyz https://...` für alle `_`-Tags |
-
-### GED7-Export aktivieren
-
-In **Einstellungen** (☰ → Einstellungen): Toggle „GEDCOM-Version: 7.0" aktivieren. Der Export-Button im Menü wechselt auf „Als GEDCOM 7.0 exportieren". Wenn eine GED7-Datei geladen ist, erscheint zusätzlich der Button „Als GRAMPS exportieren".
-
----
-
-## Parser-Implementierung
-
-### Kontext-Tracking
-Der Parser verwendet **flaches Kontext-Tracking** (kein Stack):
-
-```javascript
-let lv1tag = '';      // aktueller Level-1-Tag (BIRT, DEAT, EVEN, ...)
-let lv2tag = '';      // aktueller Level-2-Tag
-let lv3tag = '';      // aktueller Level-3-Tag
-let evIdx  = -1;      // Index in cur.events (-1 wenn kein Event aktiv)
-let inMap  = false;   // sind wir in einem MAP-Block?
-let mapParent = '';   // welcher lv1tag gehört zur aktuellen MAP?
-let lastSourVal = ''; // letzte SOUR @id@ — wird bei lv2 UND lv3 SOUR gesetzt
-                      // → ermöglicht PAGE/QUAY auf lv3 (Events) und lv4 (_FREL/_MREL)
-```
-
-Bei jeder Zeile:
-- `lv===0`: neues Haupt-Record (INDI / FAM / SOUR / NOTE / TRLR)
-- `lv===1`: alle Kontext-Vars zurücksetzen, neuen lv1tag setzen, `lastSourVal=''`
-- `lv===2`: lv2tag setzen, inMap=false (außer tag==='MAP'); bei tag==='SOUR': `lastSourVal=val`
-- `lv===3`: wenn tag==='MAP' → inMap=true, mapParent=lv1tag; bei lv2tag==='SOUR' && tag==='PAGE' → `sourcePages[lastSourVal]=val`
-
-### Geo-Koordinaten Parsing
-```javascript
-// N52.216667 → 52.216667
-// S10.5      → -10.5
-// W7.183333  → -7.183333
-function parseGeoCoord(val) {
-  const sign = (val[0] === 'S' || val[0] === 'W') ? -1 : 1;
-  return sign * parseFloat(val.slice(1));
-}
-```
-
-### Quellen-Sammlung (multi-level)
-Quellen werden auf **allen Ebenen** gesammelt, sowohl pro Ereignis als auch in der Gesamt-Referenz der Person:
-
-```javascript
-// Level 2 unter BIRT:
-if (lv1tag === 'BIRT' && tag==='SOUR') {
-  cur.birth.sources.push(val);   // für dieses Ereignis
-  cur.sourceRefs.add(val);       // für die Gesamtperson
-}
-// Level 3+ (unter DATE/PLAC):
-if (tag === 'SOUR') cur.sourceRefs.add(val);
-// Level 1 direkt unter INDI:
-if (lv===1 && tag==='SOUR') cur.topSources.push(val);
-```
+| Orts-/Namensübersetzung | `_TRAN` (+ `LANG`) | `TRAN` (+ `LANG`) |
+| Datum-Freitext | — | `PHRASE` unter `DATE` |
+| ASSO-Rolle | `RELA` (Freitext) | `ROLE` (Enum: GODP, WITN …) |
+| ALIA | nur `@xref@` | auch Name-String |
+| CONC | erlaubt | nicht erlaubt (nur CONT) |
+| `CHAR UTF-8` im HEAD | vorhanden | entfällt |
+| `GEDC`/`VERS` | `5.5.1` | `7.0` |
+| `SCHMA` | — | deklariert alle `_`-Tags (`2 TAG _xyz https://…`) |
 
 ---
 
-## Writer-Implementierung
+## 3. Wire-Format
 
-### Ausgabe-Format
-- Zeilenende: `\r\n` (GEDCOM-Standard)
-- Kodierung: UTF-8
-- Header mit aktuellem Datum
+**Ausgabe:** `\r\n`-Zeilenenden, UTF-8. Der HEAD wird von der App neu geschrieben (`1 SOUR Stammbaum-App`); der Rest der Datei bleibt verbatim (Roundtrip, [13](specs/v9/13-Interop-Roundtrip.md)).
 
-### Vollständige Ausgabe-Struktur
+**Grundstruktur:**
 ```
 0 HEAD
-1 SOUR Stammbaum-App / 2 VERS 1.0
-1 GEDC / 2 VERS 5.5.1
-1 CHAR UTF-8
-1 DATE [aktuelles Datum]
-
-0 @Ixx@ INDI
-1 NAME Vorname /Nachname/
-  2 GIVN / SURN / NPFX / NSFX
-  2 SOUR @Sxx@                   ← nameSources[]
-1 SEX M/F
-1 TITL / 1 RELI
-1 _UID [uid]
-1 BIRT / 1 CHR / 1 DEAT / 1 BURI
-  2 DATE / 2 PLAC
-  3 MAP / 4 LATI / 4 LONG         ← wenn Koordinaten vorhanden
-  2 CAUS [cause]                  ← nur bei DEAT
-  2 SOUR @Sxx@                    ← birth.sources[]
-  3 PAGE [Seite]                  ← wenn birth.sourcePages[@Sxx@] gesetzt
-1 [OCCU|RESI|EDUC|EMIG|IMMI|NATU|EVEN|GRAD|ADOP|MILI] [value]
-  2 TYPE / 2 DATE / 2 PLAC
-  3 MAP / 4 LATI / 4 LONG
-  2 NOTE [text] / 3 CONT [...]
-  2 ADDR [text] / 3 CONT [...]    ← nur wenn ev.addr gesetzt
-  2 SOUR @Sxx@                    ← ev.sources[]
-  3 PAGE [Seite]                  ← wenn ev.sourcePages[@Sxx@] gesetzt
-1 NOTE [noteText] / 2 CONT [...]
-1 SOUR @Sxx@                      ← topSources[]
-  2 PAGE [Seite]                  ← topSourcePages[sid]
-  2 QUAY [0-3]                    ← topSourceQUAY[sid]
-1 FAMC @Fxx@
-  2 PEDI birth                   ← Standard-Enum: birth|adopted|foster|sealing (ADR-014)
-  2 SOUR @Sxx@                   ← sourIds[] direkt unter FAMC (GEDCOM 5.5.1-konform)
-    3 PAGE [Seite]               ← sourPages[sid]
-    3 QUAY [0-3]                 ← sourQUAY[sid]
-  (Ausnahme: frel≠mrel → _FREL/_MREL statt PEDI, kein Datenverlust)
-1 FAMS @Fxx@
-1 OBJE / 2 FILE [path] / 3 TITL [title]
-1 CHAN / 2 DATE [lastChanged]
-
-0 @Fxx@ FAM
-1 HUSB @Ixx@ / 1 WIFE @Ixx@ / 1 CHIL @Ixx@
-1 MARR / 2 DATE / 2 PLAC / 3 MAP
-  2 SOUR @Sxx@                    ← marr.sources[]
-    3 PAGE [Seite]                ← marr.sourcePages[sid]
-    3 QUAY [0-3]                  ← marr.sourceQUAY[sid]
-1 ENGA / 2 DATE / 2 PLAC
-1 NOTE [noteText] / 2 CONT [...]
-1 SOUR @Sxx@                      ← sourceRefs (ohne marr-Quellen)
-
-0 @Sxx@ SOUR
-1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL
-1 REPO @Rxx@                      ← wenn @Rxx@-Referenz
-  2 CALN [Signatur]               ← wenn repoCallNum gesetzt
-1 REPO [Freitext]                 ← wenn Legacy-Freitext (kein CALN)
-1 TEXT
-1 CHAN / 2 DATE [lastChanged]
-
-0 @Rxx@ REPO                      ← v1.2: vor TRLR
-1 NAME [name]
-1 ADDR [erste Zeile]
-  2 CONT [Folgezeile]
-1 PHON / 1 WWW / 1 EMAIL
-1 CHAN / 2 DATE [lastChanged]
-
+  1 SOUR <app> / 2 VERS <v>
+  1 GEDC / 2 VERS 5.5.1        (bzw. 7.0)
+  1 CHAR UTF-8                 (nur GED5)
+  1 DATE <Datum>
+0 @Ixx@ INDI   …              (Personen)
+0 @Fxx@ FAM    …              (Familien)
+0 @Sxx@ SOUR   …              (Quellen)
+0 @Rxx@ REPO   …              (Archive)
+0 @Nxx@ NOTE|SNOTE …          (Notizen)
 0 TRLR
 ```
+Feste Ausgabe-Reihenfolge je Record (Sonder-Ereignisse an fester Position); Detail der Feld-Serialisierung → [10](specs/v9/10-Domaenenmodell.md)/[13](specs/v9/13-Interop-Roundtrip.md).
 
-### Kontext-Tracking (Parser)
-| Level | Variable | Bedeutung |
-|---|---|---|
-| lv1 | `lv1tag` | Aktueller Level-1-Tag, `lastSourVal=''` zurücksetzen |
-| lv2 | `lv2tag` | Aktueller Level-2-Tag; bei `SOUR`: `lastSourVal=val` |
-| lv3 | `lv3tag` | Aktueller Level-3-Tag; bei `SOUR`: `lastSourVal=val` (für lv4 PAGE/QUAY) |
-| lv4 | *(kein eigenes Tag)* | Liest `lv1tag`/`lv2tag`/`lv3tag` zur Kontextbestimmung |
-
-### Was NICHT geschrieben wird (bekannte Verluste / Passthrough-Lücken)
-
-**Akzeptierte Verluste (HEAD-Rewrite — by design):**
-| Was | Grund |
-|---|---|
-| `1 SOUR ANCESTRIS` + Sub-Tags | HEAD wird von App neu geschrieben (`1 SOUR Stammbaum-App`) |
-| `1 SUBM @S0@`, `1 FILE`, HEAD `1 NOTE` | HEAD-Rewrite |
-
-**Via Passthrough erhalten (kein Datenverlust, aber nicht editierbar im UI):**
-| Tag-Kontext | Passthrough-Feld | Optimierungspotenzial |
-|---|---|---|
-| `2 NICK` und andere NAME-Sub-Tags außer GIVN/SURN/NPFX/NSFX | `_passthrough[]` (via `_ptNameEnd` korrekt nach NAME-Block) | — |
-| `1 DATA` in SOUR-Records (GEDCOM 5.5 `2 AGNC`, `2 EVEN`) | SOUR `_passthrough[]` | Selten |
-| Mehrere `1 NAME`-Blöcke (Geburtsname, Alias) | INDI `_passthrough[]` | 2. Name editierbar machen |
+**Geo-Koordinaten:** Himmelsrichtungs-Präfix, Süd/West negativ.
+```
+N52.216667 → 52.216667      S10.5 → -10.5      W7.183333 → -7.183333
+```
+`MAP` auf Level 2 **und** 3 tolerieren (Legacy-Exportprogramme).
 
 ---
 
-## Proprietäre `_`-Tags — Analyse und Strict-Export-Planung
+## 4. HEAD-Rewrite (akzeptierte, dokumentierte Abweichung)
 
-Alle `_`-Tags werden im Roundtrip vollständig erhalten. Für einen künftigen **Strict GEDCOM 5.5.1 Export** (ohne proprietäre Tags) ist folgendes zu beachten:
-
-### Vollständig abgebildet (Parser + Writer)
-
-| Tag | Level | Kontext | Mapping | Häufigkeit (`Unsere Familie.ged`) |
-|---|---|---|---|---|
-| `_UID` | 1 | INDI | `p.uid` | 2769× |
-| `_PRIM Y` | 2+4 | OBJE | `m.prim` | 166× |
-| `_SCBK Y` | 2+4 | OBJE | `m.scbk` | 208× |
-| `_DATE` | 2–4 | OBJE | `m.date` | 18× |
-| `_DATE` | 1 | SOUR | `s._date` | 11× |
-| `_STAT` | 1 | INDI/FAM | `p._stat` / `f._stat` | 46× |
-| `_TASK/_CAT/_DONE/_ID` | 1–2 | INDI | eigene Impl. | <10× |
-
-### Nicht abgebildet — ignoriert (passthrough)
-
-| Tag | Level | Kontext | Bewertung |
-|---|---|---|---|
-| `_STYLE 1` | 2 | REPO→ADDR | Ancestris-intern, keine semantische Bedeutung |
-| `_NAME` | 2 | REPO→ADDR | Dupliziert `1 NAME` im selben REPO-Record |
-| `_VALID Y` | 1 | CHAN | Ancestris Nicht-Duplikat-Markierung, App-irrelevant |
-
-### Strict-Export-Mapping (geplant)
-
-| Tag | Häufigkeit | Standard-Äquivalent | Verlust-Risiko |
-|---|---|---|---|
-| `_UID` | 2769× | `1 REFN` + `2 TYPE UID` | Keiner — kann sauber gemappt werden; `REFN` ist GEDCOM 5.5.1-konform |
-| `_PRIM Y` | 166× | Reihenfolge (erstes OBJE = primär) | Gering — Reihenfolge wird beim Schreiben bereits nach `m.prim` sortiert |
-| `_SCBK Y` | 208× | Kein Äquivalent | Datenverlust — Flag hat außerhalb Ancestris/FTM keine Bedeutung; akzeptiert |
-| `_DATE` auf OBJE | 18× | Kein Standard-DATE unter OBJE | Datenverlust — Fotodatum kann in `2 NOTE` umgeschrieben werden (`Aufnahmedatum: 1929`) |
-| `_DATE` auf SOUR | 11× | `1 DATE` (standard) | Keiner — direkt als `1 DATE` schreiben, der ohnehin schon in GEDCOM.md aufgeführt ist |
-| `_STAT Never Married` | 44× | `1 FACT Never Married` + `2 TYPE Relationship Status` | Gering — Semantik bleibt erhalten; keine GEDCOM-Standardkategorie für Personenstatus |
-| `_STAT Geschieden` | 2× | wie oben | Gering |
-| `_TASK/_CAT/_DONE/_ID` | <10× | `1 NOTE` (Freitext-Fallback) oder weglassen | Verlust der Struktur; bei Strict-Export weglassen oder als NOTE serialisieren |
-
-### UI-Lücken (geparst + geschrieben, aber nicht angezeigt)
-
-| Tag | Info | Handlungsbedarf |
-|---|---|---|
-| `_DATE` auf OBJE | Aufnahmedatum des Fotos | Anzeige + Editierfeld im Medienbrowser / Medienformular |
-| `_STAT` | Beziehungsstatus der Person | Anzeige in Personen-Detail + Familien-Detail |
-| `_SCBK` | Scrapbook-Visibility-Flag | Kein Handlungsbedarf (Ancestris-intern) |
+Beim Neuschreiben des HEAD gehen bewusst verloren: `1 SOUR ANCESTRIS` + Sub-Tags, `1 SUBM`, HEAD-`1 FILE`, HEAD-`1 NOTE`. Das ist die einzige by-design-Abweichung im ansonsten byte-treuen Roundtrip (`net_delta=0` misst gegen die Ur-Quelle bei idempotenten Speichervorgängen).
 
 ---
 
-**Bekannte Einzelverluste (Edge Cases in MeineDaten_ancestris.ged):**
-| Was | Anzahl | Ursache |
-|---|---|---|
-| Doppeltes `3 MAP` unter einer `2 PLAC` | 1 | Erstes MAP-Block verloren — zweiter überschreibt |
-| Bare `1 CHAN` ohne `2 DATE` | 1 | Writer schreibt CHAN nur mit DATE |
-| `1 REFN`, `1 _VALID` | je 1 | Unbekannte lv=1-Tags die _ptDepth nicht korrekt auslösen |
+## 5. Datums-Format
 
-**Mehrfache inline INDI-Notes:**
-Mehrere `1 NOTE`-Zeilen ohne @ref@ auf einer Person werden beim Parsen konkateniert (`noteTextInline += val`) und als ein `1 NOTE`-Block ausgegeben → Count -1 pro zusätzliche inline Note. Kein Datenverlust, aber Struktur verändert.
+Datumsangaben werden intern als **Raw-String** geführt und unverändert exportiert (nach Groß-/Kleinschreibungs-Normierung).
 
----
-
-## Datums-Format
-GEDCOM-Datumsangaben werden intern als **Raw-String** gespeichert und beim Export unverändert ausgegeben (nach Groß/Klein-Normierung).
-
-**Unterstützte GEDCOM-Qualifier:**
 | Qualifier | Bedeutung | Beispiel |
 |---|---|---|
-| *(keiner)* | Exaktes Datum | `12 MAR 1890` |
-| `ABT` | ungefähr (About) | `ABT 1875` |
-| `CAL` | errechnet (Calculated) | `CAL 1875` |
-| `EST` | geschätzt (Estimated) | `EST 1875` |
-| `BEF` | vor (Before) | `BEF 1900` |
-| `AFT` | nach (After) | `AFT 1850` |
-| `BET … AND …` | zwischen (Between) | `BET 1880 AND 1890` |
+| *(keiner)* | exakt | `12 MAR 1890` |
+| `ABT` | ungefähr | `ABT 1875` |
+| `CAL` | errechnet | `CAL 1875` |
+| `EST` | geschätzt | `EST 1875` |
+| `BEF` / `AFT` | vor / nach | `BEF 1900` / `AFT 1850` |
+| `BET … AND …` | zwischen | `BET 1880 AND 1890` |
+| `FROM … TO …` | Zeitraum | `FROM 1985 TO 1990` |
 
-**Eingabe in `index.html`:** Strukturierte 3-Felder-Eingabe (Tag / Monat / Jahr) mit Qualifier-Dropdown. Der Monats-Eingabe akzeptiert Zahlen (1–12) sowie deutsch und englisch geschriebene Monatsnamen und normiert diese zu GEDCOM-Abkürzungen (JAN–DEC). `normMonth()` übernimmt diese Konvertierung.
-
-Für die Volltextsuche funktioniert Raw-Format gut (Jahreszahlen sind enthalten). Chronologische Sortierung innerhalb Ereignis-Gruppen in der Detailansicht: `gedDateSortKey()` (undatierte Einträge ans Ende).
+Monate als GEDCOM-Abkürzung `JAN`–`DEC`. Eingabe akzeptiert Zahl (1–12) sowie deutsche/englische Namen und normiert. Anzeige lokalisiert (§ 5.2 in [10](specs/v9/10-Domaenenmodell.md)).
 
 ---
 
-## ID-Vergabe
-```javascript
-function nextId(prefix) {
-  // prefix: 'I' für Personen, 'F' für Familien, 'S' für Quellen, 'R' für Repos
-  const existing = Object.keys(
-    prefix === 'I' ? db.individuals :
-    prefix === 'F' ? db.families :
-    prefix === 'R' ? db.repositories : db.sources
-  );
-  const nums = existing.map(id => parseInt(id.replace(/\D/g,''))||0);
-  const next = (Math.max(0, ...nums) + 1);
-  return `@${prefix}${next}@`;
-}
-```
+## 6. Identität & Startpunkt
 
-## Startperson nach Datei-Load
-```javascript
-function smallestPersonId() {
-  return Object.keys(db.individuals)
-    .sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, '')) || 0;
-      const nb = parseInt(b.replace(/\D/g, '')) || 0;
-      return na - nb;
-    })[0] || null;
-}
-```
-Nach dem Laden wird `showTree(smallestPersonId())` aufgerufen — die Person mit der niedrigsten numerischen ID wird als Startpunkt der Sanduhr-Ansicht gesetzt.
+- **ID-Vergabe:** höchste vorhandene numerische ID je Typ + 1, im Format `@<Präfix><n>@` (`I` Personen · `F` Familien · `S` Quellen · `R` Archive · `N` Notizen).
+- **Startperson nach Load:** Person mit der kleinsten numerischen ID → Einstieg der Baumansicht.

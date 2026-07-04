@@ -2,7 +2,7 @@
 
 > Schicht: App · Abhängig von: [10](10-Domaenenmodell.md), [11](11-Orte-Hoefe-Identitaet.md), [12](12-Forschungsdaten.md), [13](13-Interop-Roundtrip.md) · Darstellung: [21 UI/UX](21-UI-UX.md)
 
-Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[S]**tandard (soll), **[E]**rweitert (kann). Feature-Detail-Historie: `ROADMAP.md`/`CHANGELOG.md`.
+Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[S]**tandard (soll), **[E]**rweitert (kann). Feature-Detail-Historie: `legacy-v8/ROADMAP.md` / `legacy-v8/CHANGELOG.md`.
 
 ---
 

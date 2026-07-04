@@ -73,4 +73,4 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 - **INV-…** = harte Invariante (Akzeptanzkriterium, nicht optional).
 - **LP-…** = Leitprinzip (siehe 01), gilt dokumentübergreifend.
 - **„Neuaufsatz-Hinweis"** = Abgrenzung zur v8-Implementierung (was anders/besser wird).
-- Referenz-Detailtiefe (Tag-Tabellen, ADR-Begründungen, Sprint-Historie) bleibt in den v8-Dokumenten: `GEDCOM.md`, `ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `CHANGELOG.md`.
+- Zeitlose Wire-Referenz (GEDCOM/GRAMPS Tag-Semantik + Datei-Format): `GEDCOM.md` (am Root). Die historische v8-Detailtiefe (ADR-Begründungen, altes Datenmodell, Layout-/Symboltabellen, Sprint-Historie) liegt eingefroren in `legacy-v8/` (`ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `CHANGELOG.md`, `ROADMAP.md`) — Referenz/Orakel, **kein v9-Design**.
