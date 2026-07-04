@@ -36,7 +36,8 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 
 ### 1.4 Personen-Tab
 - **[K]** Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr + Ort.
-- **[K]** Suche über Name/Titel/Ereignisse/Notizen/Religion; erweiterte Filter (fehlende Felder, Geburtsjahr-Bereich).
+- **[K]** Sortier-Umschalter Name ⇄ Geburtsdatum (ein Toggle, ersetzt die Buchstaben-Trenner-Gruppierung im Datum-Modus durch schlichte chronologische Reihenfolge).
+- **[K]** Suche über Name/Titel/Ereignisse/Notizen/Religion (inkl. Namensvarianten, Soundex-Modus optional); erweiterte Filter: Geschlecht, Geburtsjahr-Bereich, Geburtsort (Textmatch auf Geburts-/Taufort), fehlende Felder (kein Sterbedatum · keine Quellen · keine Eltern).
 - **[S]** CSV-Export der gefilterten Liste.
 - **[K]** Detail: alle Ereignisse, Quellen-Badges `§N` (QUAY-Farbindikator), Geo-Links, Familien-Navigationszeilen.
 - **[S]** Fotos (Upload, Lightbox, Hauptfoto), Medien-Verwaltung, Kamera-Schnellzugriff.
