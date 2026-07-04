@@ -20,6 +20,7 @@ Dann je nach Arbeitsschwerpunkt.
 | **01** | [Vision & Prinzipien](01-Vision-und-Prinzipien.md) | Meta | Produktvision, Zielgruppe, Leitprinzipien LP-1…9, Systemkontext, Nicht-Ziele, Glossar |
 | **02** | [Zielarchitektur v9](02-Zielarchitektur-v9.md) | Meta | Schichtenmodell (Ansatz C), Kern-↔-Schale-Grenze, imperative Diagramm-Inseln, Framework-Wahl, Verzeichnis-Layout |
 | **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
+| **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen (Pflege via Skill `decision-log`) |
 | **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
 | **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
@@ -36,6 +37,7 @@ Dann je nach Arbeitsschwerpunkt.
 ```
 01 Vision/Prinzipien ─────────────┐ (gilt für alle)
 02 Zielarchitektur ───────────────┤
+04 Entscheidungslog ──────────────┤ (protokolliert Entscheidungen zu 02/14/21/31/32 …)
                                   │
 Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
                           └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
@@ -54,7 +56,7 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 
 | Dokument | Reifegrad | Bemerkung |
 |---|---|---|
-| 00–03 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt |
+| 00–04 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt; 04 Entscheidungslog laufend gepflegt |
 | 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
 | 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
 | 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |

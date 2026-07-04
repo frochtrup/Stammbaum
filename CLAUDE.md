@@ -1,39 +1,44 @@
-# Stammbaum PWA — Claude-Anweisungen
+# Stammbaum — Claude-Anweisungen (v9)
 
-## Aktiver Entwicklungs-Branch
+Spezifikationsgetriebener Neuaufsatz. Der v8-Stand (Code in diesem Repo) ist **eingefrorene Referenz + Verhaltens-Orakel** — er wird nicht mehr weiterentwickelt. Der eigentliche v9-Bau zieht in ein eigenes lokales Repo um (siehe `specs/v9/31-Dev-Umgebung.md`), **nicht** in iCloud (INV-DEV-1).
 
-**Aktiver Branch: `v8-dev`**
+## Aktiver Branch
 
-Claude Code erstellt Worktrees automatisch vom `main`-Branch.
-**Am Anfang jeder Session im Worktree zuerst ausführen:**
+`v9-dev`. Auf `v9-dev` committen; nach `main` nur per PR mit grüner CI.
+*(v8-Branches `main`/`v8-dev` behalten ihre eigenen, v8-spezifischen Regeln — dieser Datei-Stand gilt nur auf `v9-dev`.)*
 
-```bash
-git fetch origin
-git reset --hard origin/v8-dev
-```
+## Spezifikation = Quelle der Wahrheit
 
-Danach sind alle Commits direkt auf dem Stand von `v8-dev`. Änderungen dann pushen mit:
+Das v9-System ist vollständig in `specs/v9/` spezifiziert. **Einstieg: `specs/v9/00-Index.md`.**
 
-```bash
-git push origin HEAD:v8-dev
-```
+- **Vor jeder Änderung** das betroffene Subsystem-Spec lesen, dann handeln.
+- Code widerspricht Spec → die **Spec gewinnt** (oder die Spec bewusst zuerst ändern).
+- Entscheidungen von Tragweite → im **Entscheidungslog `specs/v9/04-Entscheidungslog.md`** festhalten (Skill `decision-log`).
 
-Kein cherry-pick, keine Konflikte.
+## Skills (`.claude/skills/`, greifen automatisch)
 
-## Pflichtregeln bei Code-Änderungen
+- `altlast-audit` — v8-Bereich am echten Code prüfen → v9-Modell planen → Altlast §N
+- `spec-new` — neues Subsystem-Spec anlegen + vollständig ins Set verdrahten
+- `spec-lint` — Konsistenz des Spec-Sets prüfen
+- `roundtrip-verify` — GEDCOM/GRAMPS-Roundtrip (`net_delta=0`) headless
+- `decision-log` — Entscheidung als ADR-Eintrag festhalten
 
-- `sw.js`: `CACHE_NAME` bei jeder Änderung hochzählen (aktuell: `stammbaum-v1057`)
-- `ROADMAP.md`: sw-Version im Abschnitt "Aktueller Stand" synchron halten
-- `ROADMAP.md` Handbuch-Stand: bei Code-Änderungen ohne Handbuch-Update → `*(veraltet — vXXX–vYYY noch nicht dokumentiert)*` setzen
-- `HANDBUCH.html`: wenn aktualisiert, BEIDE Versionsfelder (`<p class="version">` + Footer) auf die **aktuelle** sw-Version setzen; gleichzeitig `ROADMAP.md` Handbuch-Stand auf `*(aktuell)*` korrigieren
-- **Pre-Commit-Gate:** `.git/hooks/pre-commit` führt `test-csp.js` + `test-unit.js` + `test-snapshot-place.js` aus; bricht den Commit ab, falls einer rot ist. Setup auf neuem Worktree/Gerät: `./setup-hooks.sh`. Notfall-Skip: `git commit --no-verify` (nur mit Begründung). Wenn UI-Änderung bewusst war: Goldfile aktualisieren mit `osascript -l JavaScript test-snapshot-place.js --update`.
+## Kern-Disziplin (nicht verhandelbar)
 
-## Projektpfad
+- **Am echten Code verifizieren, nicht aus Memory/Doku zitieren** — Docs driften (belegt).
+- **Roundtrip-Treue (LP-1):** nach jeder Parser-/Writer-/Serializer-Änderung `roundtrip-verify`; `net_delta≠0` **nie** per Goldfile-Update übertünchen.
+- **Vereinfachen vor Erfinden:** zuerst fragen, was den Zweck mit *weniger* Mechanismus löst.
+- **Schicht-Invarianten ([02](specs/v9/02-Zielarchitektur-v9.md)):** INV-ARCH-1 (Abhängigkeiten nur nach unten; Kern DOM-/Framework-frei), INV-ARCH-2 (Kern build-frei testbar).
+
+## Tests
+
+Kern-Tests headless & build-frei (Vitest, [32](specs/v9/32-Testframework.md)). **Jede `INV-…`/`LP-…` hat einen Test (TST-2).** Pre-Commit = schneller Kern-Subset; CI = alle Ebenen, Deploy nur bei grün.
+*(Hinweis: der aktuelle Git-Pre-Commit-Hook läuft noch die v8-Tests — für v9-Doku-Commits unschädlich; wird beim Repo-Umzug durch das Vitest-/CI-Gate ersetzt.)*
+
+## Offene Vorbedingung
+
+**Framework-Wahl** ([02 §6](specs/v9/02-Zielarchitektur-v9.md), Svelte/Solid favorisiert) — vor Baubeginn festlegen und im Entscheidungslog dokumentieren.
+
+## Projektpfad (aktuell, transitorisch)
 
 `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
-
-## Dev-Server
-
-```bash
-python3 -m http.server 8080
-```

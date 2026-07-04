@@ -13,6 +13,7 @@ Die ursprüngliche Gesamtspezifikation (alle 20 Abschnitte in einer Datei) ist i
 | 01 | [Vision & Prinzipien](v9/01-Vision-und-Prinzipien.md) | Meta |
 | 02 | [Zielarchitektur v9](v9/02-Zielarchitektur-v9.md) | Meta |
 | 03 | [Altlasten](v9/03-Altlasten.md) | Meta |
+| 04 | [Entscheidungslog](v9/04-Entscheidungslog.md) | Meta |
 | 10 | [Domänenmodell](v9/10-Domaenenmodell.md) | Kern |
 | 11 | [Orte, Höfe & Identitätsauflösung](v9/11-Orte-Hoefe-Identitaet.md) | Kern |
 | 12 | [Forschungsdaten](v9/12-Forschungsdaten.md) | Kern |
