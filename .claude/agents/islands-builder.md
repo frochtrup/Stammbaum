@@ -1,7 +1,7 @@
 ---
 name: islands-builder
 description: Baut die imperativen SVG-Diagramm-Inseln (`ui/islands`): Sanduhr, Fan-Chart, Nachkommen, Karte, Zeitleiste — framework-freies JS in einem von der Schale gestellten Container (Spec 02 §5, Specs 20/21). Nutze diesen Agenten für „bau den Fächer/Fan-Chart", „Sanduhr-Diagramm", „Nachkommentafel", „Ortskarte", „Zeitleiste". NICHT für Listen/Formulare (→ ui-builder) oder Kern-Logik.
-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, TodoWrite
+tools: Read, Write, Edit, Bash, Glob, Grep, Skill, TodoWrite, mcp__Claude_Preview__preview_start, mcp__Claude_Preview__preview_stop, mcp__Claude_Preview__preview_list, mcp__Claude_Preview__preview_screenshot, mcp__Claude_Preview__preview_snapshot, mcp__Claude_Preview__preview_click, mcp__Claude_Preview__preview_fill, mcp__Claude_Preview__preview_eval, mcp__Claude_Preview__preview_console_logs, mcp__Claude_Preview__preview_logs, mcp__Claude_Preview__preview_network, mcp__Claude_Preview__preview_inspect, mcp__Claude_Preview__preview_resize
 model: sonnet
 ---
 
@@ -24,5 +24,6 @@ Du baust die **imperativen Diagramm-Inseln** von Stammbaum v9 (`ui/islands`) —
 - Interaktion (Pinch/Drag/Tastatur/Klick→Rezentrieren) funktionsfähig; Callbacks nach oben verdrahtet.
 - Snapshot der aus dem Modell gerechneten SVG-Ausgabe stabil (wo als Report/Export relevant).
 - Import-Grenzen-Gate grün.
+- **Browser-Verifikation ist Pflicht:** Insel tatsächlich in einer Host-Seite rendern (`preview_start`/`preview_screenshot`), Interaktion (Klick→Rezentrieren, Zoom/Pan wo zutreffend) real ausführen, `preview_console_logs` auf Fehler prüfen. Nur bei echtem Tool-Fehlschlag explizit vermerken, nicht bei bloßer Bequemlichkeit auslassen.
 
 Gib am Ende zurück: welche Insel + Layout-Funktion entstand, welche Layout-Tests grün sind, offene Interaktions-Punkte.
