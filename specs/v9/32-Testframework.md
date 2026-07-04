@@ -13,6 +13,7 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 - **TST-3 — Determinismus by design.** Kein Zugriff auf Wall-Clock/Zufall/Plattform im Kern; alle Nichtdeterminismus-Quellen werden injiziert ([§5](#5-determinismus--seams)).
 - **TST-4 — Jeder Bug wird zum Test.** Ein reproduzierter Fehler bekommt zuerst einen roten Test, dann den Fix (Regressions-Verriegelung — die v8-Praxis).
 - **TST-5 — Testpyramide.** Viele schnelle Kern-Unit-Tests, wenige Komponenten-Tests, minimale E2E. Nicht umgekehrt.
+- **TST-6 — Das Orakel ist eng.** Die v8-Suite verbürgt **Datenerhalt** (Roundtrip, `net_delta=0`) — **nicht** v8-Verhalten, -Modell oder -UI. Bei Konflikt zwischen Orakel und Spec-Invariante **gewinnt die Spec**; jede bewusste Abweichung vom Orakel ist registriert ([§9](#9-orakel-disziplin--v8-abweichungs-register)).
 
 ---
 
@@ -59,6 +60,8 @@ Liegen in `/tests/fixtures` ([31 §2](31-Dev-Umgebung.md)):
 
 - **TST-FIX:** Fixtures sind eingecheckt und unveränderlich; ein bewusst geänderter Goldfile-Output wird explizit aktualisiert (Review-pflichtig), nie automatisch.
 
+Die v8-Fixtures sind ein **Datenerhalt-Orakel**, keine Verhaltens-Vorlage — der Umgang mit Abweichungen steht in [§9](#9-orakel-disziplin--v8-abweichungs-register).
+
 ---
 
 ## 5. Determinismus & Seams
@@ -102,7 +105,7 @@ Jede Zeile = Pflicht-Testabdeckung. Vollständigkeit ist Teil der Definition of 
 ## 8. Migration & Definition of Done
 
 1. **Zuerst der Kern, test-first:** `parse`/`serialize` + ein Minimal-Roundtrip auf einer Klein-Fixture grün, **bevor** UI gebaut wird ([31 §7](31-Dev-Umgebung.md)).
-2. **v8-Suite als Orakel:** die 884 v8-Tests + Roundtrip-Fixtures werden portiert bzw. als Verhaltensvergleich herangezogen — der neue Kern muss dieselben Ergebnisse liefern.
+2. **v8-Suite als Datenerhalt-Orakel:** die 884 v8-Tests + Roundtrip-Fixtures werden als **Paritäts-Vergleich** herangezogen — der neue Kern muss dieselben *Bytes* liefern **oder** die Abweichung ist bewusst und registriert ([§9](#9-orakel-disziplin--v8-abweichungs-register)). v8s *Struktur/Modell* wird ausdrücklich **nicht** nachgebaut ([03 Altlasten](03-Altlasten.md)).
 3. **Kuratierte Kanten-Fixtures** aus den v8-Testgruppen (Hof-Konventionen, `_EVAL`/`_HYPO`, PEDI-Delta …) übernehmen.
 
 **Definition of Done (pro Subsystem):**
@@ -110,3 +113,48 @@ Jede Zeile = Pflicht-Testabdeckung. Vollständigkeit ist Teil der Definition of 
 - Roundtrip-Fixtures grün (`out1===out2`, `net_delta=0`).
 - Architektur-Gate grün (keine Grenzverletzung).
 - Neue Bugs mit Regressions-Test verriegelt (TST-4).
+- Keine **undokumentierte** Abweichung vom v8-Orakel — jede beabsichtigte Abweichung steht im Register mit verriegelndem Test (TST-DEV, [§9](#9-orakel-disziplin--v8-abweichungs-register)).
+
+---
+
+## 9. Orakel-Disziplin & v8-Abweichungs-Register
+
+Verhindert, dass v8s Fehler, Inkonsistenzen und Schwächen über das Roundtrip-Orakel wieder in v9 einsickern.
+
+### Warum das Orakel v8s Schwächen nicht durchreicht
+
+Das Orakel vergleicht die **Wire-Ausgabe** (GEDCOM/GRAMPS-Bytes), nicht v8s Innenleben. v8s strukturelle Altlasten (drei Ortsspeicher, zerstreute Zitate, God-Module) sind **intern** — v9 erzeugt mit einem **sauberen** Modell dieselben Bytes. Über das Orakel können sie also gar nicht einwandern; und da v9 aus der **Spec** neu gebaut wird (kein Port), wandern auch v8s Code-Bugs nicht mit.
+
+### Zwei unabhängige Testquellen
+
+- **Invarianten-Tests** (aus der Spec, [§6](#6-test-kontrakte-je-subsystem)) — definieren *korrektes* Soll-Verhalten, top-down; **nicht** aus v8 abgeleitet.
+- **Orakel-/Roundtrip-Tests** (aus v8) — verbürgen *Datenerhalt*, bottom-up.
+
+Widersprechen sich beide, zeigt das genau die Stelle, an der v8 vom Soll abwich → **die Spec gewinnt** (TST-6).
+
+### Klassifikation bei Roundtrip-Abweichung (`net_delta ≠ 0`)
+
+Default-Annahme: **Regression, bis als Verbesserung bewiesen.**
+1. **v9 verliert, was v8 hielt** → Regression → fixen.
+2. **v9 behandelt korrekt, was v8 verstümmelte** (echter v8-Bug) → **beabsichtigte Abweichung**: Register-Eintrag + Test, der das neue korrekte Verhalten verriegelt.
+
+### Das Register — `tests/v8-abweichungen.md`
+
+Geführte Liste jeder Stelle, an der v9-Ausgabe **bewusst** vom v8-Orakel abweicht:
+
+| Feld | Inhalt |
+|---|---|
+| **ID** | `DEV-01`, `DEV-02`, … |
+| **Kontext** | Fixture / Tag / Konstrukt |
+| **v8-Verhalten** | was v8 ausgibt |
+| **v9-Verhalten** | was v9 ausgibt |
+| **Grund** | `bug-fix` (v8 war falsch) · `by-design` (Format-Grenze) |
+| **Test** | verriegelnder Test-Bezug |
+
+**Seed-Einträge** (schon in [13 §4/§8](13-Interop-Roundtrip.md) beschlossen): HEAD-Rewrite (`by-design`), Konvention-2→1-Übergang (`by-design`); dazu die dokumentierten v8-Einzelverluste (doppeltes `3 MAP`, nacktes `1 CHAN` ohne DATE) als `bug-fix`-Kandidaten, sobald v9 sie besser macht.
+
+### Regel
+
+- **TST-DEV:** Keine undokumentierte Abweichung vom Orakel. Jede beabsichtigte Abweichung hat **(a)** einen Register-Eintrag **und (b)** einen Test, der das neue Verhalten festhält. Ein **unerwarteter** Orakel-Diff ohne Register-Eintrag bricht die CI (wird wie eine Regression behandelt).
+
+Das Register ist die nachvollziehbare Grenze zwischen „Regression" (verboten) und „bewusste Verbesserung / Format-Grenze" (registriert). Es wird beim Kern-Baubeginn angelegt und wächst mit dem Bau.
