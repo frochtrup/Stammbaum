@@ -29,6 +29,7 @@ Dann je nach Arbeitsschwerpunkt.
 | **21** | [UI/UX](21-UI-UX.md) | App | View-Hierarchie, View-State-/Lifecycle-Kontrakt, Responsive, Design-System, Symbolkonventionen |
 | **30** | [NFR & Persistenz](30-NFR-und-Persistenz.md) | Betrieb | Performance/Skalierung, Offline/PWA, Sicherheit, Datenschutz, Barrierefreiheit, Speicher-/Sync-/Konfigurationsmodell |
 | **31** | [Dev-Umgebung & Auslieferung](31-Dev-Umgebung.md) | Betrieb | VS Code + Git/GitHub, Repo-Layout, `ci.yml`, Vite/Pages, Branch-Modell, Migration aus v8 |
+| **32** | [Testframework](32-Testframework.md) | Betrieb | Test-Ebenen (Pyramide), Werkzeuge (Vitest u. a.), Fixtures, Determinismus/Seams, Kontrakt-Matrix je Subsystem, Pre-Commit/CI |
 
 ## Abhängigkeitsgraph
 
@@ -44,6 +45,7 @@ App:   20 Funktionen ◄── 10,11,12,13,14       │
                                               │
 Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
          31 Dev-Umgebung   ◄── 02 (Schichten/Invarianten), 30 (PWA/Cache)
+         32 Testframework  ◄── prüft Invarianten ALLER Specs; 02/30/31
 ```
 
 **Regel:** App-Schicht (20/21) darf Kern-Schicht (10–13) referenzieren, nie umgekehrt. Der Kern kennt keine UI. Diese Richtung ist die zentrale Architektur-Invariante (siehe 02).
@@ -59,6 +61,7 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 | 21 | 🟢 Entwurf vollständig | Navigation neu (Rollenmodell); Mobile Bottom-Nav + Desktop Sidebar/Multi-Pane/⌘K; Konsistenz-Befunde B1–B7 |
 | 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
 | 31 | 🟢 Entwurf vollständig | VS Code + GitHub + Actions; Framework-Wahl in 02 noch 🟡 |
+| 32 | 🟢 Entwurf vollständig | Vitest-basiert, Kontrakt-Matrix je Subsystem; UI-Test-Tooling framework-abhängig (🟡) |
 
 **Legende Reifegrad:** 🟢 spezifiziert · 🟡 in Arbeit · 🔴 offen/TODO.
 

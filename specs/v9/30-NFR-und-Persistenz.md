@@ -32,9 +32,8 @@
 
 **NFR-6 Testbarkeit (kritisch — [02 INV-ARCH-2](02-Zielarchitektur-v9.md)):**
 - Alle Kern-Domänenlogik headless testbar (kein Browser, kein Nutzer, **kein Build**): Roundtrip-Tests (GEDCOM + GRAMPS), Unit-Tests der reinen Funktionen, Snapshot-Test kritischer Render-Ausgaben, CSP-Gate.
-- Test-Suite als Pre-Commit-Gate.
-- Deterministischer Synthetik-Generator für Skalierungstests.
-- Import-Graph-Check als Gate für [02 INV-ARCH-1](02-Zielarchitektur-v9.md) (Kern importiert nichts von oben).
+- Test-Suite als Pre-Commit-Gate; Import-Graph-Check als Gate für [02 INV-ARCH-1](02-Zielarchitektur-v9.md); deterministischer Synthetik-Generator für Skalierungstests.
+- **Vollständige Spezifikation: [32 Testframework](32-Testframework.md)** (Ebenen, Werkzeuge, Fixtures, Determinismus/Seams, Kontrakt-Matrix je Subsystem).
 
 ---
 

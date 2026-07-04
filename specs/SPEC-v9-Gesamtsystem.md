@@ -21,7 +21,9 @@ Die ursprüngliche Gesamtspezifikation (alle 20 Abschnitte in einer Datei) ist i
 | 20 | [Funktionen](v9/20-Funktionen.md) | App |
 | 21 | [UI/UX](v9/21-UI-UX.md) | App |
 | 30 | [NFR & Persistenz](v9/30-NFR-und-Persistenz.md) | Betrieb |
+| 31 | [Dev-Umgebung & Auslieferung](v9/31-Dev-Umgebung.md) | Betrieb |
+| 32 | [Testframework](v9/32-Testframework.md) | Betrieb |
 
-Neu gegenüber der Monolith-Fassung: **02 — Zielarchitektur v9** (Ansatz C: framework-freier Domänenkern + reaktive UI-Schale + imperative Diagramm-Inseln), **31 — Dev-Umgebung** (VS Code + GitHub + Actions) und **14 — Dateihandling** (radikal vereinfacht: Arbeitskopie + ein Export-Rohr + OS-Sync statt App-Cloud).
+Neu gegenüber der Monolith-Fassung: **02 — Zielarchitektur v9** (Ansatz C: framework-freier Domänenkern + reaktive UI-Schale + imperative Diagramm-Inseln), **31 — Dev-Umgebung** (VS Code + GitHub + Actions), **32 — Testframework** (Vitest, Kontrakt-Matrix je Subsystem) und **14 — Dateihandling** (radikal vereinfacht: Arbeitskopie + ein Export-Rohr + OS-Sync statt App-Cloud).
 
 Referenz-Detailtiefe (Tag-Tabellen, ADR-Begründungen, Sprint-Historie des erreichten v8-Stands) bleibt in `GEDCOM.md`, `ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `ROADMAP.md`, `CHANGELOG.md`.
