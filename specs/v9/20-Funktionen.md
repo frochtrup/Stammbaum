@@ -12,7 +12,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[K]** Rollenbasierte Navigation ([21 §1](21-UI-UX.md)): Entitäten · Ansichten (Lenses) · Arbeitsflächen. Mobile: Bottom-Nav **Baum · Personen · Suche · Aufgaben · Mehr** + Entitäts-Segment-Umschalter. Desktop: beschriftete Sidebar + Multi-Pane + Command-Palette (⌘K).
 - **[K]** Einheitlicher Lens-Umschalter (Baum/Karte/Zeitleiste/Statistik/Story) statt verstreuter Diagramm-Toggles ([21 §4](21-UI-UX.md)).
 - **[K]** History-Navigation (Zurück/Vorwärts, herkunftsbewusst), Swipe-Right auf Mobile.
-- **[K]** Globale Suche (erstklassiges Ziel) über Personen/Familien/Quellen/Orte, gruppierte Ergebnisse.
+- **[K]** Globale Suche (erstklassiges Ziel) über Personen/Familien/Quellen/Orte/Höfe, gruppierte Ergebnisse. **Nachtrag 2026-07-04 (ADR-v9-24):** Höfe waren in der ursprünglichen Aufzählung ausgelassen, obwohl Höfe im Orte-/Höfe-Tab ([§1.8](#18-höfe-tab)) ein gleichrangiges Entitäten-Segment sind — hiermit ergänzt.
 - **[S]** Proband (Startperson) konfigurierbar; „Zum Probanden"-Navigation.
 
 ### 1.2 Laden & Speichern
