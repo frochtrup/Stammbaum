@@ -29,9 +29,9 @@ Neue Nummer `ADR-v9-NN` fortlaufend vergeben. Status: ✅ akzeptiert · 🟡 off
 1. Nächste freie `ADR-v9-NN` ermitteln (`grep "## ADR-v9-" specs/v9/04-Entscheidungslog.md`).
 2. Eintrag **ans Ende** anhängen (chronologisch), Format oben, Datum = heute.
 3. Wenn die Entscheidung eine frühere ersetzt: alte auf `♻️ ersetzt durch ADR-v9-NN` setzen, neue verweist zurück.
-4. Betroffene Subsystem-Specs + `03-Altlasten.md` bei Bedarf angleichen (die Entscheidung ist die Kurzfassung, das Spec die Ausführung).
-5. `spec-lint` laufen lassen.
+4. **Ziel-Spec im selben Zug angleichen — Pflicht, nicht „bei Bedarf".** Für **jedes** Dokument in `Refs:` prüfen: Ändert der ADR, was dieser Abschnitt *vorschreibt*? Dann den Abschnitt **im selben Commit** korrigieren — der Text darf der Entscheidung nicht mehr widersprechen. Insbesondere: die unter **Verworfen** genannte Alternative darf **nicht** mehr als Vorgabe/Beispiel im Ziel-Abschnitt stehenbleiben (genau diese Sorte Drift verursachte die 31-Dev-Umgebung-Funde 2026-07-05: ADR-v9-07/-10 entschieden, aber §3/§4/§8 nannten noch die verworfene Variante). Gilt auch für `03-Altlasten.md`.
+5. `spec-lint` laufen lassen (fängt tote Links/Index-Drift; die semantische ADR↔Spec-Konsistenz aus Schritt 4 muss der Mensch/Agent selbst herstellen — spec-lint sieht sie nur teilweise).
 
 ## Grenze
 
-Das Log ist die **Kurz-Begründung**, nicht die Spezifikation. Die ausführliche Regel/Struktur lebt im jeweiligen Subsystem-Spec; der ADR-Eintrag verweist nur darauf.
+Das Log ist die **Kurz-Begründung**, nicht die Spezifikation. Die ausführliche Regel/Struktur lebt im jeweiligen Subsystem-Spec; der ADR-Eintrag verweist nur darauf. **Aber:** verweist ≠ widerspricht — der Ziel-Abschnitt muss die Entscheidung *tragen*, nicht ihr entgegenstehen (Schritt 4).
