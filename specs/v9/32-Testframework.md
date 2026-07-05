@@ -108,7 +108,7 @@ Jede Zeile = Pflicht-Testabdeckung. Vollständigkeit ist Teil der Definition of 
 
 ## 8. Migration & Definition of Done
 
-1. **Zuerst der Kern, test-first:** `parse`/`serialize` + ein Minimal-Roundtrip auf einer Klein-Fixture grün, **bevor** UI gebaut wird ([31 §7](31-Dev-Umgebung.md)).
+1. **Zuerst der Kern, test-first:** `parse`/`serialize` + ein Minimal-Roundtrip auf einer Klein-Fixture grün, **bevor** UI gebaut wird.
 2. **v8-Suite als Datenerhalt-Orakel:** die 884 v8-Tests + Roundtrip-Fixtures werden als **Paritäts-Vergleich** herangezogen — der neue Kern muss dieselben *Bytes* liefern **oder** die Abweichung ist bewusst und registriert ([§9](#9-orakel-disziplin--v8-abweichungs-register)). v8s *Struktur/Modell* wird ausdrücklich **nicht** nachgebaut ([03 Altlasten](03-Altlasten.md)).
 3. **Kuratierte Kanten-Fixtures** aus den v8-Testgruppen (Hof-Konventionen, `_EVAL`/`_HYPO`, PEDI-Delta …) übernehmen.
 

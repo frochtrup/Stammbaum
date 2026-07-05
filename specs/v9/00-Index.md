@@ -62,7 +62,7 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 | 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
 | 21 | 🟢 Entwurf vollständig | Navigation neu (Rollenmodell); Mobile Bottom-Nav + Desktop Sidebar/Multi-Pane/⌘K; Konsistenz-Befunde B1–B7 |
 | 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
-| 31 | 🟢 Entwurf vollständig | VS Code/Claude-App + GitHub + Actions; Framework (02): Svelte 5 ✅ |
+| 31 | 🟢 Entwurf vollständig | Claude-Desktop-App + GitHub + Actions (ADR-v9-07); Umgebung etabliert & in Betrieb |
 | 32 | 🟢 Entwurf vollständig | Vitest-basiert, Kontrakt-Matrix je Subsystem; UI-Test-Tooling: @testing-library/svelte ✅ |
 
 **Legende Reifegrad:** 🟢 spezifiziert · 🟡 in Arbeit · 🔴 offen/TODO.
