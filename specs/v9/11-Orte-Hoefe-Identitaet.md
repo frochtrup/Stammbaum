@@ -177,8 +177,12 @@ Vollständiges Format-Mapping: [13](13-Interop-Roundtrip.md).
 
 ---
 
-## 8. Restklassen (ehrlich offen)
+## 8. Restklassen & offene Spezifikationsfragen (ehrlich offen)
 
 Zwei Klassen, die durch keine Algorithmus-/UI-Aktion eindeutig werden:
 1. **Genealogische Ungewissheit** — der Forschende weiß es selbst nicht. Bleibt dauerhaft im Review (korrekt).
 2. **PLAC-Lücken außerhalb Hof-Kontext** — EDUC/GRAD/EVEN mit fremden Verwaltungs-Hierarchien ohne PO. Keine Hof-Themen; gehören in einen Orts-Review-Workflow im Orte-Tab (offen für später).
+
+Zusätzlich eine **aktuell in Überarbeitung befindliche Spezifikationsfrage** (kein Dauerzustand, sondern ein offener Auftrag):
+
+3. **Orte-Bootstrap: automatisch statt nur Opt-in.** ADR-v9-27 hatte entschieden, `placeObjects` NIE automatisch aus PLAC zu erzeugen (nur Opt-in-Vorschlag, §1.7 [K] „Orte-Bootstrap-Vorschlag"), um die kuratierte Natur der Cross-Stammbaum-Schicht (§2) zu bewahren. Nutzer-Rückmeldung nach Praxistest (2026-07-05): das ist aus User-Sicht inakzeptabel — Orte sind genealogische Standardinformation (anders als die Hof-Zusatzfunktion) und müssen nach JEDEM GEDCOM-Import sofort sichtbar sein, auch mit anfänglicher PLAC-Inkonsistenz, die dann über Tool-Unterstützung (Dubletten-Merge, String→PlaceObject-Verknüpfung) nachbearbeitbar sein muss. §2/§4.2 (Verwaltungs-Match-Pfade 3a/3b/3c setzen ein bereits existierendes PlaceObject voraus) und ADR-v9-27 sind entsprechend zu überarbeiten — ohne dabei die Hof-Erkennung (Konvention 1/2, §4.3) zu verwässern. **Noch nicht entschieden/umgesetzt** — Auftrag als Session-Task hinterlegt (Kurzfassung im Projekt-Memory, s. Claude-Session-Notizen), hier als Spec-Restklasse verankert, damit er nicht nur session-lokal existiert.
