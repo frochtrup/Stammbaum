@@ -29,6 +29,8 @@ Das v9-System ist vollständig in `specs/v9/` spezifiziert. **Einstieg: `specs/v
 - **Roundtrip-Treue (LP-1):** nach jeder Parser-/Writer-/Serializer-Änderung `roundtrip-verify`; `net_delta≠0` **nie** per Goldfile-Update übertünchen.
 - **Vereinfachen vor Erfinden:** zuerst fragen, was den Zweck mit *weniger* Mechanismus löst.
 - **Schicht-Invarianten ([02](specs/v9/02-Zielarchitektur-v9.md)):** INV-ARCH-1 (Abhängigkeiten nur nach unten; Kern DOM-/Framework-frei), INV-ARCH-2 (Kern build-frei testbar).
+- **Delegierte UI-/Insel-Bauabschnitte selbst gegenprüfen:** nach jeder Agenten-Delegation mit sichtbarer UI-Änderung eine eigene, unabhängige Browser-Verifikation (Screenshot/Snapshot/Inspect) fahren, bevor die Aufgabe als abgeschlossen gemeldet wird — der Agentenbericht allein reicht nicht (Lehre 2026-07-05: doppelte Kopfzeile + inkonsistenter Segment-Stil wurden vom Nutzer entdeckt, nicht vom Bauagenten selbst oder von mir vorab).
+- **Oracle vs. Spec ist ein zweischneidiges Schwert ([32 TST-6](specs/v9/32-Testframework.md)):** weder das gesamte v8-Verhalten eines Feature-Bereichs blind nachbauen (reproduziert die evolutionär gewachsene Form, die der Neuaufsatz auflösen soll) noch alles im Spec-Bullet nicht explizit Genannte automatisch als außer Scope behandeln (verliert genealogisch relevante Information still, s. ADR-v9-23/24/27). Diskrepanzen zwischen knappem Spec-Text und reichhaltigem Oracle-Feature explizit benennen, nicht in eine Richtung auflösen.
 
 ## Tests
 
@@ -39,6 +41,8 @@ Kern-Tests headless & build-frei (Vitest, [32](specs/v9/32-Testframework.md)). *
 
 UI-Schale: **Svelte 5 + Vite** (kein SvelteKit); Domänenkern framework-frei ([02](specs/v9/02-Zielarchitektur-v9.md)). Tests: Vitest + `@testing-library/svelte` ([32](specs/v9/32-Testframework.md)). Einmalige Voraussetzung: Node.js. **Baubeginn kann starten.**
 
-## Projektpfad (aktuell, transitorisch)
+## Projektpfade
 
-`/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
+- **Spec-Repo (dieses Repo):** `/Users/franzdecker/Documents/GitHub/Stammbaum`.
+- **v9-Code-Repo (Baufortschritt):** `/Users/franzdecker/dev/stammbaum-v9` (separates Git-Repo, `INV-DEV-1`/ADR-v9-08 — außerhalb iCloud). Bau-Agenten arbeiten dort.
+- **v8-Original (eingefroren, nur Referenz):** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`.
