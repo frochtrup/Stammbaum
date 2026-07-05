@@ -55,6 +55,8 @@ HofObject {
 | `event.placeId` / `event.hofId` | **runtime-only** | — | deterministische Re-Derivation (§3) |
 | bekannte Schema-Version | Konstante im Code | — | höhere Version in `orte.json` → Read-Only-Schreibstopp |
 
+**Herkunft der `placeObjects` (ADR-v9-28, ersetzt ADR-v9-27):** Beim Import werden Village-PlaceObjects **automatisch** aus den distinkten PLAC-Hierarchien der geladenen Ereignisse erzeugt (Seed-Vorpass, §4.2 Schritt 0) — Orte sind genealogische Standardinformation und nach *jedem* Import sofort sichtbar, ohne Nutzeraktion. Die Schicht ist damit **auto-seeded *und* kuratiert**: anfängliche PLAC-Inkonsistenz (Schreibvarianten desselben Orts über mehrere Zweige) ist bewusst akzeptiert und wird *nachgelagert* über die Kurationswerkzeuge bereinigt (Dubletten-Merge, String→PlaceObject-Verknüpfung, [20 §1.7](20-Funktionen.md)). Der frühere Opt-in-Vorschlag (ADR-v9-27) ist ersetzt (♻️). **Höfe bleiben unberührt** — sie entstehen ausschließlich über die Hof-Bootstrap-Pfade (§4.2/§4.3), nie über den Seed.
+
 Details `orte.json`-Format + Sync: [30 §3/§4](30-NFR-und-Persistenz.md).
 
 ---
@@ -64,6 +66,8 @@ Details `orte.json`-Format + Sync: [30 §3/§4](30-NFR-und-Persistenz.md).
 > **INV-PLACE (Reprojektions-Invariante):** Wenn `event.placeId` oder `event.hofId` gesetzt ist, ist `event.place` **ausschließlich** die zwischengespeicherte periodengerechte Projektion `buildPlacForGedcom(event, year)`. `event.place`/`event.addr` sind **Projektions-Cache, keine eigene Wahrheit**. Anzeige *und* Writer leiten beide LIVE aus dem Modell ab. Modelländerungen wirken sofort in Anzeige und Export. Stale-Cache ist strukturell ausgeschlossen, weil die Reprojektion am Ende **jedes** Auflösungspfads läuft.
 
 Analog: `event.lati/long` sind nur Render-Fallback; Wahrheit sind die Koordinaten am PlaceObject/HofObject.
+
+**Zeitpunkt der Reprojektion (ADR-v9-19, ✅ entschieden):** Die Reprojektion läuft an **zwei** Stellen, die INV-PLACE gemeinsam lückenlos garantieren: (a) beim **Laden** (voller Auflösungs-Pass, §4) und (b) in **jedem Modell-Mutations-Kommando**, das `placeId`/`hofId` setzt (z. B. `linkEventToPlace`, [20 §1.7](20-Funktionen.md)) — das Kommando reprojiziert `event.place` unmittelbar selbst per `buildPlacForGedcom` (reine Kern-Funktion, INV-ARCH-1-konform). Es gibt **keinen** Zwischenzustand, in dem `placeId` gesetzt, `event.place` aber veraltet ist. Persistiert wird weiterhin nur `placeId`/`hofId` (§2), nie `event.place` selbst.
 
 ---
 
@@ -75,18 +79,25 @@ Analog: `event.lati/long` sind nur Render-Fallback; Wahrheit sind die Koordinate
 - Eingabe: `(event.type, event.place, event.addr, event.date)`
 - Kontext: `(placeObjects, hofObjects)`
 
-Ausgeführt bei **jedem Laden**. Re-Derivation *ist* die Persistenz (LP-5). Keine Persistenz der Ergebnisse, keine Sidecar-Datei, keine Custom-Tags.
+Der volle Auflösungs-Pass wird bei **jedem Laden** ausgeführt; die Reprojektion (§3) läuft zusätzlich in **jedem `placeId`/`hofId`-setzenden Modell-Kommando** (ADR-v9-19). Re-Derivation *ist* die Persistenz (LP-5): persistiert werden nur `placeId`/`hofId`, keine Sidecar-Datei, keine Custom-Tags, nie `event.place` selbst.
 
 ### 4.2 Auflösungsreihenfolge (pro Event)
 
 ```
+0. SEED-VORPASS (einmal je Import, VOR der Auflösung — ADR-v9-28):
+   distinkte PLAC-Hierarchien → fehlende Village-PlaceObjects (+ enclosedBy-Kette).
+   Village-Segment-Wahl mit dem Konventions-Signal (§4.3): Konvention-1-Hof-Fall
+   (Hof-Typ + ADDR-Extract trifft Leitsegment) → Village = segs[1..];
+   sonst → Leitsegment. Erzeugt NIE einen Hof.
 1. Durchreich-REPROJECT — bereits gelinkt (aus GRAMPS-Parser oder vorigem Load)
                           → event.place auf periodengerechte Projektion aktualisieren
 2. Pfad A   — PLAC-Leitsegment matcht hof.addrs[] im Dorf-Anker (existierender Hof)
 3. Verwaltungs-Match:
    3a. atomare PLAC matcht placeObject per Identität
    3b. Hierarchie-PLAC matcht voll-projektions-exakt
-   3c. Hierarchie-PLAC matcht Leitname eindeutig + Existenzspanne + Anker
+   3c. Hierarchie-PLAC: Leitname eindeutig UND Elternkette verträglich (Konsistenz-Guard)
+   3c′. Leitname mehrdeutig → Eltern-Disambiguierung (enclosureChainAsOf): genau EIN
+        verträglicher Kandidat gewinnt, sonst → Review-Klasse P
 4. Pfad A'  — atomare PLAC ohne PO-Match → globaler hofObject-Lookup
 5. Pfad C   — rich-PLAC ohne Hof → Bootstrap eines Hofs aus Komma-Hierarchie
 6. Pfad B   — event.addr matcht hof.addrs[] im Dorf-Scope (existierender Hof)
@@ -98,7 +109,11 @@ REPROJECT am Pfad-Ende:
    event.addr  ← resolveAddrAsOf(hofId, year)   (nur wenn leer)
 ```
 
+**Schritt 0 — Village-Seed-Vorpass (ADR-v9-28, rein & deterministisch).** Vor der eigentlichen Auflösung erzeugt ein Vorpass (`seedPlacesFromEvents`) aus den distinkten PLAC-Hierarchien der Ereignisse die fehlenden **Village-PlaceObjects** (plus datierte `enclosedBy`-Kette aus den Folgesegmenten). Dadurch finden die Verwaltungs-Match-Pfade 3a/3b/3c anschließend ein existierendes PlaceObject vor — der frühere „leeres Orte-Tab bei reinem GEDCOM-Import" entfällt, **ohne** dass der Match-Algorithmus selbst geändert wird. **Kein Hof entsteht im Seed:** welches Segment das Village ist, entscheidet der Vorpass mit exakt dem Signal, das §4.3 ohnehin für Konvention 1 vs. 2 nutzt — liegt ein hof-relevanter Event-Typ **mit** `event.addr` vor, dessen Extract (Konvention α, §4.4) das PLAC-Leitsegment trifft (Konvention 1, „Hof, Dorf, …"), ist das Village `segs[1..]` (das Leitsegment bleibt dem Hof-Bootstrap überlassen); sonst ist das Leitsegment selbst das Village (Konvention 2 / einfache Orte). Der Seed läuft ausschließlich auf der Verwaltungs-Achse und weicht die Hof-Erkennung nicht auf. Anfängliche Schreibvarianten desselben Orts erzeugen zunächst getrennte PlaceObjects (akzeptiert) und werden über den **Dubletten-Merge** ([20 §1.7](20-Funktionen.md)) zusammengeführt.
+
 **Einschränkung:** Hof-Bootstrap-Pfade (A/A'/C) feuern nur für hof-relevante Event-Typen `{RESI, PROP, CENS, OCCU}`. BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN mit reichem PLAC (z. B. „Krankenhaus St. Joseph, Münster") werden NIE als Hof interpretiert. Pfad B (explizite `event.addr`) bleibt für alle Typen offen — explizite Adresseingabe ist Nutzer-Intent.
+
+**Konsistenz-Guard & Orts-Disambiguierung (3c/3c′, ADR-v9-29).** Ein eindeutiger Leitname genügt für 3c **nicht** — die Folgesegmente des PLAC müssen mit der `enclosureChainAsOf` des Kandidaten **verträglich** sein (Kette stimmt überein *oder* PLAC nennt keine Eltern). Ein widersprechender Elter ist ein **Veto**, kein Match (z. B. `Oldenburg, USA` bindet NICHT an ein PO „Oldenburg" mit Kette Niedersachsen/Deutschland — sonst stille Falschattribution). Trifft ein Leitname **mehrere** gleichnamige POs, disambiguiert **3c′** über die Elternkette; genau ein verträglicher Kandidat gewinnt. Bleibt es mehrdeutig (atomarer PLAC ohne Elter, oder kein/mehrere passende Kandidaten) → **Review-Klasse P** (§6), kein stilles Raten. **Dieselbe Verträglichkeits-Regel steuert den Seed-Dedup** (Schritt 0): gleicher Leitname + verträgliche Eltern → **ein** PO (hunderte `Ochtrup`, auch atomar+reich gemischt, bleiben ein Ort), widersprüchliche Eltern → **distinkte** POs (Oldenburg/Niedersachsen ≠ Oldenburg/USA). Der Dedup-Schlüssel ist damit **weder** name-only (verschmölze die Oldenburgs) **noch** Voll-Hierarchie-String (spaltete Ochtrup nach Schreibtiefe).
 
 ### 4.3 Wire-Konventions-Matrix
 
@@ -151,18 +166,20 @@ Vier zentrale Helfer — die **einzigen** korrekten Orts-/Hof-Reads außerhalb d
 
 ## 6. Daten-Lücken-UI (Review-Workflow)
 
-Ungewissheit wird sichtbar gemacht (LP-6). Ein „Hof-Zuweisungen prüfen"-Modal zeigt Events mit `event.addr` ohne aufgelösten Hof, klassifiziert:
+Ungewissheit wird sichtbar gemacht (LP-6). Ein „Zuordnungen prüfen"-Modal zeigt Events mit ungewisser Hof- **oder Orts**-Zuordnung, klassifiziert:
 
 | Klasse | Beschreibung | Aktionen |
 |---|---|---|
 | **A** | Non-Hof-Event-Typ mit ADDR ohne Hof-Match | „+ Hof anlegen" \| „Quelle schärfen" |
 | **C** | ≥2 Höfe gleicher Adresse im Dorf (mehrdeutig) | „Hof wählen" \| „Quelle schärfen" |
 | **D** | Norm-Drift: Adresse matcht keinen Hof, aber Höfe existieren im Dorf | „Variante zum Hof" \| „Hof wählen" \| „+ Hof anlegen" \| „Quelle schärfen" |
+| **P** | Verwaltungs-Ort mehrdeutig: atomarer PLAC oder rich-PLAC ohne disambiguierenden Elter trifft ≥2 gleichnamige PlaceObjects (oder einziger Kandidat per Konsistenz-Guard verworfen, §4.2) | „Ort wählen" \| „+ Ort anlegen" \| „Quelle schärfen" |
 
-Drei Aktionstypen, jeweils am *korrekten* Ort persistent:
-- **Quelle schärfen** → Event-Edit (Nutzer passt PLAC/ADDR an) → Anreicherung wandert in GED/GRAMPS (stammbaum-spezifisch).
+Aktionstypen, jeweils am *korrekten* Ort persistent:
+- **Quelle schärfen** → Event-Edit (Nutzer passt PLAC/ADDR an) → Anreicherung wandert in GED/GRAMPS (stammbaum-spezifisch). Für Klasse P der **deterministische** Weg: disambiguierenden Elter in den PLAC schreiben (`Oldenburg` → `Oldenburg, USA`) → Re-Derivation greift beim nächsten Load.
 - **Hof anlegen** → `findOrCreateHof(addr, placeId)` → Anreicherung wandert in `orte.json` (cross-stammbaum).
 - **Variante zum Hof** → hängt `addr` als neue `addrs[]`-Bezeichnung an → künftige Events greifen deterministisch via Pfad B.
+- **Ort anlegen / Ort wählen** (Klasse P) → upsert bzw. Auswahl eines PlaceObject → Anreicherung wandert in `orte.json` (cross-stammbaum).
 
 **Kein per-Event-Override.** Keine event-lokale Annotation, die dem Determinismus widerspräche. Genealogische Ungewissheit (der Forscher selbst weiß es nicht) bleibt dauerhaft im Review sichtbar — die korrekte Systemantwort auf Quell-Ungewissheit.
 
@@ -181,9 +198,10 @@ Vollständiges Format-Mapping: [13](13-Interop-Roundtrip.md).
 
 Zwei Klassen, die durch keine Algorithmus-/UI-Aktion eindeutig werden:
 1. **Genealogische Ungewissheit** — der Forschende weiß es selbst nicht. Bleibt dauerhaft im Review (korrekt).
-2. **PLAC-Lücken außerhalb Hof-Kontext** — EDUC/GRAD/EVEN mit fremden Verwaltungs-Hierarchien ohne PO. Keine Hof-Themen; gehören in einen Orts-Review-Workflow im Orte-Tab (offen für später).
+2. **PLAC-Lücken außerhalb Hof-Kontext** — EDUC/GRAD/EVEN mit fremden Verwaltungs-Hierarchien ohne PO. Keine Hof-Themen; inzwischen weitgehend durch Auto-Seed (ADR-v9-28) + Review-Klasse P (ADR-v9-29) adressiert; dauerhaft offen bleibt nur echte Quell-Ungewissheit (→ Klasse 1).
 
-Zusätzlich **zwei aktuell offene, zu entscheidende Spezifikationsfragen** (kein Dauerzustand, sondern offene Aufträge):
+Zwei zuvor offene Spezifikationsfragen sind inzwischen **entschieden** (hier nur noch als Verweis dokumentiert, kein offener Auftrag mehr — die Umsetzung folgt phasenweise im Code):
 
-3. **Orte-Bootstrap: automatisch statt nur Opt-in.** ADR-v9-27 hatte entschieden, `placeObjects` NIE automatisch aus PLAC zu erzeugen (nur Opt-in-Vorschlag, §1.7 [K] „Orte-Bootstrap-Vorschlag"), um die kuratierte Natur der Cross-Stammbaum-Schicht (§2) zu bewahren. Nutzer-Rückmeldung nach Praxistest (2026-07-05): das ist aus User-Sicht inakzeptabel — Orte sind genealogische Standardinformation (anders als die Hof-Zusatzfunktion) und müssen nach JEDEM GEDCOM-Import sofort sichtbar sein, auch mit anfänglicher PLAC-Inkonsistenz, die dann über Tool-Unterstützung (Dubletten-Merge, String→PlaceObject-Verknüpfung) nachbearbeitbar sein muss. §2/§4.2 (Verwaltungs-Match-Pfade 3a/3b/3c setzen ein bereits existierendes PlaceObject voraus) und ADR-v9-27 sind entsprechend zu überarbeiten — ohne dabei die Hof-Erkennung (Konvention 1/2, §4.3) zu verwässern. **Noch nicht entschieden/umgesetzt** — Auftrag als Session-Task hinterlegt (Kurzfassung im Projekt-Memory, s. Claude-Session-Notizen), hier als Spec-Restklasse verankert, damit er nicht nur session-lokal existiert.
-4. **Reprojektion bei UI-Verknüpfung: Load-only oder sofort? (Widerspruch ADR-v9-19 ↔ Code)** §3 (INV-PLACE) verlangt, dass bei gesetztem `placeId`/`hofId` `event.place` **ausschließlich** die periodengerechte Projektion `buildPlacForGedcom` ist. §4.1 legt zugleich fest: Reprojektion läuft „bei **jedem** Laden" — Re-Derivation *ist* die Persistenz. Das UI-Kommando „String→PlaceObject verknüpfen" (`linkEventToPlace`, §1.7 [K]) setzt aber nur `placeId` und reprojiziert `event.place` **nicht** sofort. Zwei unversöhnte Lesarten: **(a)** ADR-v9-19 rahmt das als **zu behebende Lücke** — jeder Mutationspfad, der `placeId`/`hofId` setzt, muss unmittelbar reprojizieren, sonst zeigt/exportiert die App zwischen Verknüpfung und nächstem Load eine veraltete `event.place`-Zeichenkette. **(b)** Der aktuelle Code-Kommentar (`core/places/commands.ts`) rahmt es als **Absicht** — Reprojektion gehört ausschließlich in den Load-Pfad (§4.1), ein Kommando setzt nur Identität, kein Parallel-Reprojektionscode. Beide können nicht gleichzeitig gelten. **Zu entscheiden:** Ist der maßgebliche Zeitpunkt der Reprojektion (i) **jeder Load** (dann ist die UI-Anzeige zwischen Kommando und Reload bewusst „stale bis Reload", und §3 ist als „spätestens beim nächsten Load konsistent" zu präzisieren) oder (ii) **jede Modelländerung** (dann muss `linkEventToPlace` — als Kern-Funktion, INV-ARCH-1-konform — selbst reprojizieren, und ADR-v9-19 wird umgesetzt statt zurückgestellt)? Die Entscheidung präzisiert §3/§4.1 und schließt ADR-v9-19 (setzt ihn auf ✅ mit Regressionstest bzw. ⛔, falls (i) gewählt wird).
+3. **Orte-Bootstrap: automatisch statt nur Opt-in — ENTSCHIEDEN (ADR-v9-28, ersetzt ADR-v9-27 ♻️).** PlaceObjects werden beim Import **automatisch** aus PLAC geseedet (§2 „Herkunft der `placeObjects`", §4.2 Schritt 0), Kuration erfolgt nachgelagert (Dubletten-Merge, String→PlaceObject-Verknüpfung). Die Verwaltungs-Match-Pfade 3a/3b/3c bleiben unverändert — sie finden die geseedeten POs vor. Hof-Erkennung (Konvention 1/2, §4.3) bleibt unangetastet. *Umsetzung:* Kern `seedPlacesFromEvents` (Phase 1) + Lade-Pipeline/UI (Phase 2).
+4. **Reprojektion bei UI-Verknüpfung — ENTSCHIEDEN: sofort im Kommando (ADR-v9-19 ✅).** Jeder `placeId`/`hofId`-setzende Mutationspfad (`linkEventToPlace` u. a.) reprojiziert `event.place` unmittelbar selbst (§3 „Zeitpunkt der Reprojektion", §4.1). Die frühere Lesart (b) des Code-Kommentars (nur Load-Pfad) ist damit verworfen. *Umsetzung + Regressionstest:* Phase 1.2.
+5. **Gleichnamige Orts-Disambiguierung — ENTSCHIEDEN (ADR-v9-29 ✅).** Seed-Dedup nach Name+Hierarchie-Verträglichkeit, Resolver-Konsistenz-Guard (3c) + Eltern-Disambiguierung (3c′) und **Review-Klasse P** (§4.2/§6) — löst die stille Falschverknüpfung `Oldenburg, USA` → deutscher Oldenburg, das Kollabieren von Oldenburg/NS + Oldenburg/USA und die verdeckte atomare Mehrdeutigkeit; hunderte `Ochtrup` bleiben dabei **ein** Ort. *Umsetzung:* Phase 1 (1.1a Seed-Dedup, 1.1b Guard/3c′, 1.1c Klasse P).

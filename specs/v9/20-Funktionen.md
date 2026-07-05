@@ -59,8 +59,9 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[K]** Ort-Steckbrief: Ereignisse nach Typ, Quellen, Namens-Zeitstrahl (SVG), Mini-Karte, periodengerechte Verwaltungszeitlinie.
 - **[K]** Bearbeitung: Name, Koordinaten, Typ, `pnames`, `enclosedBy`.
 - **[K]** String→PlaceObject verknüpfen (Re-Import-Erkennung erhält Identität über Roundtrip).
-- **[K]** Orte-Bootstrap-Vorschlag aus GEDCOM-PLAC-Hierarchien (ADR-v9-27): eine Aktion sammelt distinkte PLAC-Hierarchien aus den geladenen Ereignissen und bietet sie als PlaceObject-Entwürfe zur Sichtung/Bestätigung an — **Opt-in, nie automatisch** (bewahrt die kuratierte Natur von `placeObjects`, [11 §2](11-Orte-Hoefe-Identitaet.md)). Ohne diese Aktion bleiben Orte-/Höfe-Tab nach reinem GEDCOM-Import leer, weil die Verwaltungs-Match-Pfade ([11 §4.2](11-Orte-Hoefe-Identitaet.md) 3a/3b/3c) ein bereits existierendes PlaceObject voraussetzen — anders als der automatische Hof-Bootstrap.
-- **[S]** Nominatim-Geocoding (Einzel + Batch), GOV-Import (historisch datiert), Geo-Plausibilitäts-Validator, Dubletten-Merge (verlustfrei, Herkunfts-Pille), JSON-Import/Export mit Dedup + Multi-Device-Konflikterkennung.
+- **[K]** **Automatischer Orts-Seed beim Import** (ADR-v9-28, ersetzt den Opt-in-Vorschlag ADR-v9-27): beim Laden werden Village-PlaceObjects automatisch aus den distinkten PLAC-Hierarchien der Ereignisse erzeugt ([11 §4.2 Schritt 0](11-Orte-Hoefe-Identitaet.md)) — Orte sind nach *jedem* GEDCOM-Import sofort sichtbar, ohne Nutzeraktion. Anfängliche PLAC-Inkonsistenz ist akzeptiert und wird nachgelagert bereinigt (Dubletten-Merge + String→PlaceObject-Verknüpfung, [11 §2](11-Orte-Hoefe-Identitaet.md)). Höfe bleiben den Hof-Bootstrap-Pfaden vorbehalten (nicht auto-geseedet).
+- **[K]** Dubletten-Merge (verlustfrei, Herkunfts-Pille) — Kurations-Gegenstück zum automatischen Orts-Seed: führt Schreibvarianten desselben Orts zusammen.
+- **[S]** Nominatim-Geocoding (Einzel + Batch), GOV-Import (historisch datiert), Geo-Plausibilitäts-Validator, JSON-Import/Export mit Dedup + Multi-Device-Konflikterkennung.
 
 ### 1.8 Höfe-Tab *(Kern: [11](11-Orte-Hoefe-Identitaet.md))*
 - **[K]** Hof-Liste (aus Events aufgelöst, numerisch sortiert), Detail mit Bewohnern chronologisch.
