@@ -25,6 +25,8 @@ Du baust die **imperativen Diagramm-Inseln** von Stammbaum v9 (`ui/islands`) —
 - Interaktion (Pinch/Drag/Tastatur/Klick→Rezentrieren) funktionsfähig; Callbacks nach oben verdrahtet.
 - Snapshot der aus dem Modell gerechneten SVG-Ausgabe stabil (wo als Report/Export relevant).
 - Import-Grenzen-Gate grün.
+- **Kapazitäts-/Überlauf-Fall verifiziert (TST-7, [32 §1](specs/v9/32-Testframework.md)):** Layout-Unit-Tests UND Browser-Verifikation zusätzlich mit überdurchschnittlich vielen/dicht liegenden Elementen (Geschwister, Chips, Marker, Ereignisse) durchspielen, nicht nur 1-3 gut verteilte Test-Elemente. **Lehre:** die Sanduhr-Geschwisterzeile (10 Geschwister → Zeilen-Überlauf, Overflow-Kappung + Peek-Stapel nachgezogen) und die Zeitleiste-Swim-Lane (5 Personen → Chip-Kollision, Greedy-Interval-Scheduling nachgezogen) liefen beide erst bei einem gezielt angeforderten Stresstest sichtbar über.
+- **Fixtures wiederverwenden statt neu erfinden (TST-REUSE):** vor einem neuen synthetischen Test-Datensatz erst `app/public/demo.ged`/`tests/fixtures/` prüfen.
 - **Browser-Verifikation ist Pflicht:** Insel tatsächlich in einer Host-Seite rendern (`preview_start`/`preview_screenshot`), Interaktion (Klick→Rezentrieren, Zoom/Pan wo zutreffend) real ausführen, `preview_console_logs` auf Fehler prüfen. Nur bei echtem Tool-Fehlschlag explizit vermerken, nicht bei bloßer Bequemlichkeit auslassen.
 
 Gib am Ende zurück: welche Insel + Layout-Funktion entstand, welche Layout-Tests grün sind, offene Interaktions-Punkte.

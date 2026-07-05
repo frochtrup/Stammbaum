@@ -35,6 +35,11 @@ Struktur nach [02 §7](../../specs/v9/02-Zielarchitektur-v9.md): `core/` (framew
 - Roundtrip-Fixtures grün (`out1===out2`, `net_delta=0`), wo einschlägig.
 - Import-Grenzen-Gate grün.
 - Neue Bugs mit Regressions-Test verriegelt.
+- **Kapazitäts-/Überlauf-Fall verifiziert (TST-7):** jede Mehrfach-Element-Darstellung zusätzlich zum 1-3-Element-Happy-Path mit überdurchschnittlich vielen/dicht liegenden Elementen prüfen.
+- **Persistenz-Rundlauf verifiziert (TST-8):** jedes neue/geänderte Save-/Update-Kommando mit „speichern → neu laden → noch da" testen.
+- **Fixtures wiederverwenden statt neu erfinden (TST-REUSE):** vor einem neuen synthetischen Test-Datensatz erst `app/public/demo.ged`/`tests/fixtures/` prüfen.
+
+(Details/Begründung je Regel: [32 §1/§4/§8](../../specs/v9/32-Testframework.md).)
 
 ## Nach dem Bau
 

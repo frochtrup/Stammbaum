@@ -14,6 +14,8 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 - **TST-4 — Jeder Bug wird zum Test.** Ein reproduzierter Fehler bekommt zuerst einen roten Test, dann den Fix (Regressions-Verriegelung — die v8-Praxis).
 - **TST-5 — Testpyramide.** Viele schnelle Kern-Unit-Tests, wenige Komponenten-Tests, minimale E2E. Nicht umgekehrt.
 - **TST-6 — Das Orakel ist eng.** Die v8-Suite verbürgt **Datenerhalt** (Roundtrip, `net_delta=0`) — **nicht** v8-Verhalten, -Modell oder -UI. Bei Konflikt zwischen Orakel und Spec-Invariante **gewinnt die Spec**; jede bewusste Abweichung vom Orakel ist registriert ([§9](#9-orakel-disziplin--v8-abweichungs-register)).
+- **TST-7 — Kapazität/Überlauf ist Teil des Tests, nicht nur der Happy-Path.** Jede Mehrfach-Element-Darstellung (Listen, Chips, Kandidaten, Zeilen mit variabler Anzahl) wird zusätzlich zum 1-3-Element-Fall mit überdurchschnittlich vielen bzw. dicht beieinanderliegenden Elementen verifiziert — sowohl als Unit-Test der Layout-/Modell-Funktion (Grenzfälle, Determinismus) als auch in der Pflicht-Browser-Verifikation. **Lehre (2026-07-05):** Sanduhr-Geschwisterzeile und Zeitleiste-Swim-Lane liefen beide erst bei explizit angeforderten Stresstests (10 Geschwister, 5 Personen) sichtbar über — die anfängliche Browser-Verifikation mit 1-3 gut verteilten Elementen hatte das nicht gefangen.
+- **TST-8 — Persistenz-Rundlauf ist Pflicht bei jedem Save-/Update-Kommando.** Ein neues oder geändertes Kommando, das Zustand persistieren soll (App-State-Kommandos, Services-Schreibpfade), wird mit „speichern → neu laden → Zustand noch vorhanden" verifiziert — nicht nur mit „kein Fehler beim Speichern". **Lehre (2026-07-05):** `savePlace`/`saveHof` schrieben nie in den `orte.json`/IDB-Speicher zurück — unentdeckt, bis ein Bauabschnitt zufällig einen vollen Speichern-neu-laden-Zyklus prüfte; frühere Bauabschnitte, die dieselben Kommandos nutzten, hatten das nie getestet.
 
 ---
 
@@ -57,8 +59,10 @@ Liegen in `/tests/fixtures` ([31 §2](31-Dev-Umgebung.md)):
 | `Unsere Familie.gramps` (2894 Pers.) | GRAMPS-Roundtrip-Orakel (`xml1===xml2`) |
 | `scale-test-20000.ged` (regenerierbar) | Skalierung/Perf |
 | kuratierte Klein-Fixtures je Feature | ein Fixture pro Konvention/Kante (Hof-Konventionen 1/2/3a/3b, `_EVAL`, `_HYPO`, PEDI-Delta, Leer-Segment-Guard, ADDR=Village …) — aus den v8-Testgruppen übernommen |
+| `app/public/demo.ged` (fiktiv, mitgebauter Demo-Modus, [20 §1.2](20-Funktionen.md)) | rein erfundener, aber reichhaltiger Mehr-Feature-Datensatz (mehrere Ahnen-Ebenen, Voll-/Halbgeschwister, Mehrfach-Ehe, geokodierte Orte, Quellen mit gestaffelten QUAY-Stufen, jahrzehntelange Ereignisse) — erster Anlaufpunkt für Browser-Verifikation, bevor ein neuer Wegwerf-Datensatz gebaut wird |
 
 - **TST-FIX:** Fixtures sind eingecheckt und unveränderlich; ein bewusst geänderter Goldfile-Output wird explizit aktualisiert (Review-pflichtig), nie automatisch.
+- **TST-REUSE:** Vor dem Bau eines neuen synthetischen Test-/Verifikations-Datensatzes IMMER zuerst `app/public/demo.ged` und `tests/fixtures/` auf einen bereits passenden oder erweiterbaren Datensatz prüfen — keinen weiteren Wegwerf-Datensatz für dieselbe Art Verifikation anlegen. **Lehre (2026-07-05):** vor dem Demo-Modus-Bauabschnitt hat praktisch jeder Bauabschnitt seinen eigenen, einmaligen synthetischen GEDCOM-Schnipsel für die Browser-Verifikation gebaut (Doppelarbeit) — INV-UI-4 („eine Quelle statt N Kopien") gilt sinngemäß auch für Testdaten, nicht nur für CSS/Komponenten.
 
 Die v8-Fixtures sind ein **Datenerhalt-Orakel**, keine Verhaltens-Vorlage — der Umgang mit Abweichungen steht in [§9](#9-orakel-disziplin--v8-abweichungs-register).
 
@@ -114,6 +118,9 @@ Jede Zeile = Pflicht-Testabdeckung. Vollständigkeit ist Teil der Definition of 
 - Architektur-Gate grün (keine Grenzverletzung).
 - Neue Bugs mit Regressions-Test verriegelt (TST-4).
 - Keine **undokumentierte** Abweichung vom v8-Orakel — jede beabsichtigte Abweichung steht im Register mit verriegelndem Test (TST-DEV, [§9](#9-orakel-disziplin--v8-abweichungs-register)).
+- **Kapazitäts-/Überlauf-Fall verifiziert** bei jeder Mehrfach-Element-Darstellung — nicht nur der 1-3-Element-Happy-Path (TST-7).
+- **Persistenz-Rundlauf verifiziert** bei jedem neuen/geänderten Save-/Update-Kommando — „speichern → neu laden → noch da", nicht nur „kein Fehler beim Speichern" (TST-8).
+- **Bestehende Fixtures geprüft, bevor ein neuer Wegwerf-Testdatensatz gebaut wird** (`app/public/demo.ged`/`tests/fixtures/`, TST-REUSE).
 
 ---
 

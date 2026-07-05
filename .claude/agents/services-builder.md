@@ -23,6 +23,8 @@ Du baust die **Anwendungsdienste** (`services/`) von Stammbaum v9 — die Schich
 - INV-FILE-1/2/3 durch benannte Tests (Adapter gemockt) abgedeckt.
 - Jede Validierungsregel getestet; jeder Report erzeugt ein stabiles Goldfile.
 - Architektur-Gate grün.
+- **Persistenz-Rundlauf verifiziert (TST-8, [32 §1](specs/v9/32-Testframework.md)):** jeder neue/geänderte Persistenz-Schreibpfad (Arbeitskopie, `orte.json`-Sync, Config) mit „speichern → neu laden → noch da" testen, nicht nur „Adapter wurde mit den richtigen Argumenten aufgerufen". **Lehre:** `savePlace`/`saveHof` (UI-Kommandos, die auf `services/places` aufsetzen) schrieben nie tatsächlich in den IDB-Speicher zurück — Mock-Tests prüften nur den Funktionsaufruf, nicht den echten Rundlauf.
+- **Fixtures wiederverwenden statt neu erfinden (TST-REUSE):** vor einem neuen synthetischen Test-Datensatz erst `app/public/demo.ged`/`tests/fixtures/` prüfen.
 - Berührst du Export-Serialisierung, ist danach `roundtrip-verify` fällig (LP-1) — oder übergib das an den `interop-builder`.
 - Tragende Entscheidung → Skill `decision-log`.
 
