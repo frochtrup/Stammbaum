@@ -106,6 +106,7 @@ Formulare als Bottom-Sheets (Mobile) / Panels (Desktop) mit progressiver Offenle
 
 - **Person:** Identität (Name+Geschlecht) und **Geburt** (Datum+Ort+Quellen) immer offen. Taufe, Tod (+Todesursache), Bestattung, weitere Ereignisse (`events[]`) sowie die selten befüllten Identitätsfelder (Präfix/Suffix/Rufname/Titel/Religion/RESN/E-Mail/Website) gebündelt hinter einem Aufklapper „Weitere Angaben" / „Weitere Ereignisse".
 - **Familie:** Eltern-Zuordnung, **Heirat** (Datum+Ort+Quellen) und Kinder ± immer offen. Verlobung sowie weitere Ereignisse (`events[]`) hinter „Weitere Angaben".
+- **Sonder-Ereignisse behalten ihre Sondersemantik trotz Bündelung** ([10 §5.1](10-Domaenenmodell.md)): das gemeinsame Aufklapper-Versteck ändert nur die Standard-Sichtbarkeit — Taufe/Tod/Bestattung (bzw. Verlobung bei Familie) bleiben je eine eigene, fest benannte Sektion und werden NICHT mit `events[]` zu einer generischen Hinzufügen/Entfernen-Liste verschmolzen. Bleibt eine Sektion unangetastet, darf ihr Speichern das zugehörige Sonder-Ereignis nicht verändern — insbesondere `seen` (INV-P5) muss erhalten bleiben, sonst ginge ein leerer-aber-vorhandener Block (`1 CHR` ohne Sub-Tags) beim Speichern eines unbeteiligten Formularteils verloren (gleiches Dirty-Tracking-Prinzip wie beim Datum/Ort oben, eine Ebene höher).
 - Gilt analog für künftige Formulare (Quelle/Archiv/Ort/Hof): häufigstes Feld-Cluster zuerst offen, seltene Cluster gebündelt dahinter.
 
 **Struktureingaben:**
