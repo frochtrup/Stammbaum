@@ -103,11 +103,13 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
-## 6a. Kompakte Detail-Zeilen (ADR-v9-30)
+## 6a. Kompakte Zeilen — Anzeige UND Formular-Struktureingaben (ADR-v9-30)
 
-**INV-UI-5:** Eine Detail-Zeile (Ereignis, Zitat, Familien-Mitgliedszeile …) nutzt so wenige Zeilen wie ihr Inhalt zulässt. Label, Wert und Metadaten (Ort-Link, Kartenlink, Quellen-Badge) stehen in **derselben** Zeile, solange sie umbruchfrei passen (`flex-wrap`, nicht ein fester Block pro Einzelinformation). Kein einzelnes Element (z. B. ein einziger Kartenlink oder ein einziges Quellen-Badge) bekommt eine eigene volle Zeile, wenn es neben die vorherige Information passt.
+**INV-UI-5:** Ein zusammengehöriges Element — sowohl eine **Detail-Zeile** (Ereignis, Zitat, Familien-Mitgliedszeile …) als auch eine **Formular-Struktureingabe** (Datum: Qualifier+Tag/Monat/Jahr; Ort: 6-Felder-Toggle; …) — nutzt so wenige Zeilen wie sein Inhalt zulässt. Die Teilelemente stehen in **derselben** Zeile (`flex-wrap`), solange sie umbruchfrei passen; erst wenn die Breite nicht reicht, brechen sie um. Kein einzelnes Teilelement bekommt eine eigene volle Zeile, wenn es neben das vorherige passt — das gilt für Anzeige-Metadaten (Ort-Link, Kartenlink, Quellen-Badge) GENAUSO wie für Eingabefelder (ein Qualifier-Dropdown neben Tag neben Monat neben Jahr, nicht jedes in einer eigenen Zeile).
 
-**Befund (2026-07-06):** eine Geburts-Zeile in `PersonDetail`/`FamilyDetail` belegte bisher bis zu drei Zeilen (Datum+Ort · Kartenlink · Quellen-Badge einzeln), obwohl der Inhalt in zwei Zeilen passt (Datum+Ort+Kartenlink zusammen, Badge mitlaufend oder in einer zweiten Zeile mit weiteren Badges — nicht isoliert in einer dritten).
+**Befunde:**
+- (2026-07-06) Eine Geburts-Zeile in `PersonDetail`/`FamilyDetail` belegte bisher bis zu drei Zeilen (Datum+Ort · Kartenlink · Quellen-Badge einzeln), obwohl der Inhalt in zwei Zeilen passt (Datum+Ort+Kartenlink zusammen, Badge mitlaufend oder in einer zweiten Zeile mit weiteren Badges — nicht isoliert in einer dritten).
+- (2026-07-06) Die Datums-Struktureingabe in `PersonForm`/`FamilyForm` belegte vier Zeilen (Checkbox+Qualifier+Tag / Monat+Jahr einzeln gestapelt), obwohl Qualifier-Dropdown+Tag+Monat+Jahr (die Checkbox selbst entfällt ohnehin, s. o.) in eine Zeile passen (bzw. bei `BET`/`FROM` in zwei — eine je Datumshälfte). Gleiche Erwartung gilt für die 6-Felder-Ort-Eingabe ([20 §2](20-Funktionen.md)), sobald gebaut.
 
 ---
 
