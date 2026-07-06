@@ -193,7 +193,7 @@ Event {
 
 **Sonder-Ereignisse:** `birth`, `chr`, `death` (+`cause`), `buri` auf der Person sowie `marriage`, `engagement` auf der Familie sind eigene benannte Felder (nicht im `events[]`-Array) — feste UI-Position + Sondersemantik. v9 *darf* sie modellintern vereinheitlichen, muss aber Sonderdarstellung im UI und feste Position im Writer beibehalten.
 
-**Event-Feld-Tristate:** `date`/`place` unterscheiden `null` (Tag nicht vorhanden), `''` (Tag vorhanden, leer), `Wert` (belegt). Roundtrip-relevant.
+**Event-Feld-Tristate:** `date`/`place` unterscheiden `null` (Tag nicht vorhanden), `''` (Tag vorhanden, leer), `Wert` (belegt). Roundtrip-relevant. **UI-Konsequenz (ADR-v9-30):** ein Bearbeitungsformular darf diese Unterscheidung nicht durch bloßes Auswerten leerer Eingabefelder einebnen — rührt der Nutzer ein Datums-/Ort-Feld nicht an, muss der ursprüngliche Rohwert (inkl. `''`) unverändert erhalten bleiben (Dirty-Tracking statt Feld-Auswertung, [20 §2](20-Funktionen.md)).
 
 ### 5.2 Datumsmodell
 
