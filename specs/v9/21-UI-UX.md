@@ -114,6 +114,14 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6b. Detail-Kopfzeile: eine gemeinsame Quelle (INV-UI-4, Nachtrag 2026-07-06)
+
+**Befund am echten Code:** `EntityTab.svelte` rendert „← Zur Liste" als eigene, von der jeweiligen Detail-Komponente UNABHÄNGIGE Zeile (`.entity-tab__detail-header`) — direkt darüber sitzt dann `PersonDetail.svelte`/`FamilyDetail.svelte`s eigene `__hero`-Zeile (Titel + „✎ Bearbeiten" + „⧖ Im Baum anzeigen"). Zwei getrennte Komponenten erzeugen zwei optisch getrennte Zeilen für das, was inhaltlich EIN Kopfbereich ist. `PlaceDetail.svelte`/`HofDetail.svelte` haben denselben Bruch (eigener Bearbeiten-Button, aber „Zurück" kommt separat von `EntityTab`).
+
+**Konvention:** alle navigierenden/aktions-Funktionen einer Detail-Ansicht („← Zur Liste", „✎ Bearbeiten", „⧖ Im Baum anzeigen" und künftige View-spezifische Aktionen) stehen in EINER gemeinsamen Kopfzeile (`flex-wrap`, INV-UI-5/§6a) — NICHT in zwei gestapelten Zeilen aus zwei verschiedenen Komponenten. Der Titel (Personenname/Familienlabel/Ortsname/…) bekommt eine EIGENE Zeile darunter (er ist Inhalt, keine Navigations-Funktion). Diese Kopfzeile ist ein wiederkehrendes Muster über Person/Familie/Ort/Hof (und künftig Quelle/Archiv) hinweg — sie bekommt EINE gemeinsame Quelle (INV-UI-4): eine geteilte Komponente/CSS-Klasse statt fünf unabhängiger `__hero`-Umsetzungen mit potenziell abweichendem Verhalten (die exakte Umsetzung — geteilte Svelte-Komponente vs. reine CSS-Klasse — ist Implementierungsdetail, s. betroffenes Subsystem).
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
