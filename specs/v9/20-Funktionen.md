@@ -40,7 +40,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[K]** Sortier-Umschalter Name ⇄ Geburtsdatum (ein Toggle, ersetzt die Buchstaben-Trenner-Gruppierung im Datum-Modus durch schlichte chronologische Reihenfolge).
 - **[K]** Suche über Name/Titel/Ereignisse/Notizen/Religion (inkl. Namensvarianten, Soundex-Modus optional); erweiterte Filter: Geschlecht, Geburtsjahr-Bereich, Geburtsort (Textmatch auf Geburts-/Taufort), fehlende Felder (kein Sterbedatum · keine Quellen · keine Eltern).
 - **[S]** CSV-Export der gefilterten Liste.
-- **[K]** Detail: alle Ereignisse, Quellen-Badges `§N` (QUAY-Farbindikator), Geo-Links, Familien-Navigationszeilen — kompakte Zeilendarstellung (INV-UI-5, [21 §6a](21-UI-UX.md)).
+- **[K]** Detail: alle Ereignisse, Quellen-Badges `§N` (QUAY-Farbindikator), Geo-Links, Familien-Navigationszeilen — kompakte Zeilendarstellung (INV-UI-5, [21 §6a](21-UI-UX.md)). **Wesentliche Beziehungen vollständig sichtbar** (ADR-v9-30-Nachtrag 2026-07-06, Befund am echten Code: `person-detail-model.ts` zeigte bei der eigenen Familie bisher NUR den Ehepartner, keine Kinder): bei der eigenen Familie (`parentIn`) werden Ehepartner UND Kinder angezeigt, bei der Herkunftsfamilie (`childOf`) beide Eltern — alle Namen anklickbar (Cross-Tab-Navigation zur jeweiligen Person), kompakt dargestellt (INV-UI-5) statt eine Zeile je Kind.
 - **[S]** Fotos (Upload, Lightbox, Hauptfoto), Medien-Verwaltung, Kamera-Schnellzugriff.
 
 ### 1.5 Familien-Tab
