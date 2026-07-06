@@ -103,6 +103,14 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6a. Kompakte Detail-Zeilen (ADR-v9-30)
+
+**INV-UI-5:** Eine Detail-Zeile (Ereignis, Zitat, Familien-Mitgliedszeile …) nutzt so wenige Zeilen wie ihr Inhalt zulässt. Label, Wert und Metadaten (Ort-Link, Kartenlink, Quellen-Badge) stehen in **derselben** Zeile, solange sie umbruchfrei passen (`flex-wrap`, nicht ein fester Block pro Einzelinformation). Kein einzelnes Element (z. B. ein einziger Kartenlink oder ein einziges Quellen-Badge) bekommt eine eigene volle Zeile, wenn es neben die vorherige Information passt.
+
+**Befund (2026-07-06):** eine Geburts-Zeile in `PersonDetail`/`FamilyDetail` belegte bisher bis zu drei Zeilen (Datum+Ort · Kartenlink · Quellen-Badge einzeln), obwohl der Inhalt in zwei Zeilen passt (Datum+Ort+Kartenlink zusammen, Badge mitlaufend oder in einer zweiten Zeile mit weiteren Badges — nicht isoliert in einer dritten).
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):

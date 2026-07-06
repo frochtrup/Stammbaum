@@ -40,7 +40,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[K]** Sortier-Umschalter Name ⇄ Geburtsdatum (ein Toggle, ersetzt die Buchstaben-Trenner-Gruppierung im Datum-Modus durch schlichte chronologische Reihenfolge).
 - **[K]** Suche über Name/Titel/Ereignisse/Notizen/Religion (inkl. Namensvarianten, Soundex-Modus optional); erweiterte Filter: Geschlecht, Geburtsjahr-Bereich, Geburtsort (Textmatch auf Geburts-/Taufort), fehlende Felder (kein Sterbedatum · keine Quellen · keine Eltern).
 - **[S]** CSV-Export der gefilterten Liste.
-- **[K]** Detail: alle Ereignisse, Quellen-Badges `§N` (QUAY-Farbindikator), Geo-Links, Familien-Navigationszeilen.
+- **[K]** Detail: alle Ereignisse, Quellen-Badges `§N` (QUAY-Farbindikator), Geo-Links, Familien-Navigationszeilen — kompakte Zeilendarstellung (INV-UI-5, [21 §6a](21-UI-UX.md)).
 - **[S]** Fotos (Upload, Lightbox, Hauptfoto), Medien-Verwaltung, Kamera-Schnellzugriff.
 
 ### 1.5 Familien-Tab
@@ -57,7 +57,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[K]** Automatische Sammlung aus allen Ereignissen; Typ-Badge, Koordinaten-Indikator, Typ-Filter.
 - **[K]** Gruppen-Modus (String-Varianten unter PlaceObject-Titel), Admin-Filter (Verwaltungseinheiten ausblendbar).
 - **[K]** Ort-Steckbrief: Ereignisse nach Typ, Quellen, Namens-Zeitstrahl (SVG), Mini-Karte, periodengerechte Verwaltungszeitlinie.
-- **[K]** Bearbeitung: Name, Koordinaten, Typ, `pnames`, `enclosedBy`.
+- **[K]** Bearbeitung: Name, Koordinaten, Typ, `pnames`, `enclosedBy` — **als EIN Bearbeitungs-Modus** (Bearbeiten-Button schaltet den gesamten Steckbrief auf editierbar um, analog Person/Familie [§2](#2-bearbeitung--formulare)). ALLE editierbaren Felder gehören hinter diesen einen Modus — **kein** Add/Remove-Control (auch nicht `pnames`/`enclosedBy`) darf außerhalb des Bearbeitungs-Modus sichtbar sein (ADR-v9-30, Befund an `PlaceDetail.svelte`: Namensvarianten- und Verwaltungszugehörigkeits-Sektion zeigten ihre Add/Remove-Controls bisher unabhängig vom Bearbeiten-Modus, Name/Koordinaten/Typ waren dagegen korrekt gegated).
 - **[K]** String→PlaceObject verknüpfen (Re-Import-Erkennung erhält Identität über Roundtrip).
 - **[K]** **Automatischer Orts-Seed beim Import** (ADR-v9-28, ersetzt den Opt-in-Vorschlag ADR-v9-27): beim Laden werden Village-PlaceObjects automatisch aus den distinkten PLAC-Hierarchien der Ereignisse erzeugt ([11 §4.2 Schritt 0](11-Orte-Hoefe-Identitaet.md)) — Orte sind nach *jedem* GEDCOM-Import sofort sichtbar, ohne Nutzeraktion. Anfängliche PLAC-Inkonsistenz ist akzeptiert und wird nachgelagert bereinigt (Dubletten-Merge + String→PlaceObject-Verknüpfung, [11 §2](11-Orte-Hoefe-Identitaet.md)). Höfe bleiben den Hof-Bootstrap-Pfaden vorbehalten (nicht auto-geseedet).
 - **[K]** Dubletten-Merge (verlustfrei, Herkunfts-Pille) — Kurations-Gegenstück zum automatischen Orts-Seed: führt Schreibvarianten desselben Orts zusammen.
@@ -65,7 +65,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 
 ### 1.8 Höfe-Tab *(Kern: [11](11-Orte-Hoefe-Identitaet.md))*
 - **[K]** Hof-Liste (aus Events aufgelöst, numerisch sortiert), Detail mit Bewohnern chronologisch.
-- **[K]** Hof-Bearbeitung (Adressvarianten, Koordinaten, Notiz, Lebenszyklus).
+- **[K]** Hof-Bearbeitung (Adressvarianten, Koordinaten, Notiz, Lebenszyklus) — gleiche Anzeige/Bearbeitung-Trennung wie beim Orte-Tab (analog [§1.7](#17-orte-tab), ADR-v9-30).
 - **[K]** „Hof-Zuweisungen prüfen"-Review (Klassen A/C/D — [11 §6](11-Orte-Hoefe-Identitaet.md)).
 
 ### 1.9 Karte
@@ -96,15 +96,22 @@ Formulare als Bottom-Sheets (Mobile) / Panels (Desktop) mit progressiver Offenle
 |---|---|
 | Person | Name (Vor-/Nachname, Präfix, Suffix, Rufname), Geschlecht, Titel, Religion, Notiz, RESN, E-Mail, Website |
 | Ereignis | Typ, Datum (Qualifier + 3 Felder), Ort (Freitext oder 6-Felder), Adresse (RESI), Todesursache (DEAT), Quellen + Seite + QUAY (+ Evidenz-Achsen) |
-| Familie | Eltern (Dropdown), Heirat + Verlobung, Kinder ±, Quellen |
+| Familie | Eltern (Personen-Picker), Heirat + Verlobung, Kinder ± (Personen-Picker), Quellen |
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv, Signatur, Notiz |
 | Archiv | Name, Typ, Adresse, Telefon, Website, E-Mail, Findbuch-URL |
 | Ort | Name, Koordinaten, Typ, datierte Namensvarianten, übergeordnete Orte |
 | Hof | Adressvarianten, Koordinaten, Notiz, Dorf-Zuordnung, Lebenszyklus |
 
+**Progressive Offenlegung heißt konkret (ADR-v9-30):** die am häufigsten befüllten Felder liegen sofort offen und flach im Formular; seltene Felder liegen dahinter — aber nie einzelfeldweise, sondern immer als **geschlossene fachliche Einheit** (z. B. „Geburt" = Datum+Ort+Quellen zusammen, nicht das Datum separat aufklappbar von Ort/Quellen).
+
+- **Person:** Identität (Name+Geschlecht) und **Geburt** (Datum+Ort+Quellen) immer offen. Taufe, Tod (+Todesursache), Bestattung, weitere Ereignisse (`events[]`) sowie die selten befüllten Identitätsfelder (Präfix/Suffix/Rufname/Titel/Religion/RESN/E-Mail/Website) gebündelt hinter einem Aufklapper „Weitere Angaben" / „Weitere Ereignisse".
+- **Familie:** Eltern-Zuordnung, **Heirat** (Datum+Ort+Quellen) und Kinder ± immer offen. Verlobung sowie weitere Ereignisse (`events[]`) hinter „Weitere Angaben".
+- Gilt analog für künftige Formulare (Quelle/Archiv/Ort/Hof): häufigstes Feld-Cluster zuerst offen, seltene Cluster gebündelt dahinter.
+
 **Struktureingaben:**
-- **Datum:** Qualifier-Dropdown + Tag/Monat/Jahr; Monat akzeptiert Zahl + DE/EN-Namen ([10 §5.2](10-Domaenenmodell.md)).
+- **Datum:** Qualifier-Dropdown + Tag/Monat/Jahr — **immer direkt sichtbar und editierbar, kein Gate-Checkbox davor** (ADR-v9-30, Korrektur einer ersten Umsetzung, die ein „Datum erfasst"-Checkbox vor die Felder gesetzt hatte). Monat akzeptiert Zahl + DE/EN-Namen ([10 §5.2](10-Domaenenmodell.md)). Die Tristate-Semantik (`Event.date`: `null` = Tag fehlt) wird beim Speichern abgeleitet, nicht per UI-Vorwahl: bleiben Qualifier=Standard („exakt") und alle Tag/Monat/Jahr-Felder (inkl. zweiter Datumshälfte bei BET/FROM) leer, bleibt `date: null`; sobald ein Feld befüllt ist, entsteht ein echter Wert.
 - **Ort:** Toggle Freitext ↔ 6 Felder (Dorf/Stadt/PLZ/Landkreis/Bundesland/Staat) gemäß HEAD `PLAC.FORM`.
+- **Personen-Picker (ADR-v9-30):** einheitliches, durchsuchbares Auswahlfeld für JEDE Person-Referenz in Formularen (Ehemann/Ehefrau, Kind hinzufügen, künftig Assoziationen/Alias) — Tippen filtert nach Name/Namensvariante (analog globaler Suche, [§1.1](#11-navigation--views)), Ergebnisliste zeigt Name + Geburts-/Sterbejahr zur Disambiguierung. Ersetzt ein flaches `<select>` über alle Personen, das ab wenigen Dutzend Einträgen unpraktikabel wird. Enthält immer eine Option „+ Neue Person anlegen …" — öffnet das Personen-Formular für eine neu ID-vergebene Person, kehrt nach dem Speichern mit der neuen Person als getroffener Auswahl ins ursprüngliche Formular zurück (kein Kontextverlust).
 - **Quellen-Widget:** einheitlich in allen Formularen — Tags mit ✕, aufklappbarer Picker; im Ereignis-Formular zusätzlich Seitenfeld + QUAY-Dropdown + Evidenz-Aufklapper pro Quelle.
 - **Eingabe-Templates (Quick-Templates):** wiederverwendbare Vorlagen (app-privat, [30 §2](30-NFR-und-Persistenz.md)).
 
