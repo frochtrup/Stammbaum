@@ -38,6 +38,9 @@ Struktur nach 02 §7: `core/` (framework-frei, DOM-frei) · `services/` · `ui/`
 - **Kapazitäts-/Überlauf-Fall verifiziert (TST-7):** jede Mehrfach-Element-Darstellung zusätzlich zum 1-3-Element-Happy-Path mit überdurchschnittlich vielen/dicht liegenden Elementen prüfen.
 - **Persistenz-Rundlauf verifiziert (TST-8):** jedes neue/geänderte Save-/Update-Kommando mit „speichern → neu laden → noch da" testen.
 - **Fixtures wiederverwenden statt neu erfinden (TST-REUSE):** vor einem neuen synthetischen Test-Datensatz erst `app/public/demo.ged`/`tests/fixtures/` prüfen.
+- **Feld-Vollständigkeit bei Editier-Formularen (TST-9):** jedes Feld des editierten Domänenmodell-Typs abgedeckt oder bewusst ausgeschlossen (Kommentar) — kein stilles Weglassen.
+- **`untrack()` bei `$state`-Initialisierung aus Props (TST-10):** nie den Prop-Wert direkt an `$state()` übergeben.
+- **Layout-Verifikation auf 375px, nicht nur Desktop (TST-11):** jedes Layout, das auf der primären mobilen Zielbreite kompakt bleiben soll, dort explizit prüfen.
 
 (Details/Begründung je Regel: 32 §1/§4/§8.)
 
