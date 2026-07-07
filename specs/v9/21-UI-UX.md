@@ -14,7 +14,7 @@ Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentra
 |---|---|---|
 | **Entitäten** | Datenkategorien zum Browsen/Bearbeiten | Personen · Familien · Quellen · Orte · **Höfe** |
 | **Ansichten (Lenses)** | *dieselben* Daten anders betrachtet | **Baum** (Sanduhr/Nachkommen/Fächer) · Karte · Zeitleiste · Statistik · Story |
-| **Arbeitsflächen** | querschnittlich | **Suche** · Aufgaben/Forschung · Ausgaben · Einstellungen |
+| **Arbeitsflächen** | querschnittlich | **Suche** · Aufgaben/Forschung · Ausgaben · Einstellungen · Datei (Laden/Speichern) |
 
 **INV-UI-1:** Ansichten sind **Lenses, keine Nav-Ziele.** Der Wechsel zwischen ihnen läuft über *einen* einheitlichen Lens-Umschalter ([§4](#4-lens-umschalter)), nicht über verstreute Topbar-Glyphen.
 
@@ -28,7 +28,7 @@ Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentra
 
 - **Suche** ist erstklassig (in v8 versteckt) — das universelle „finde irgendwas".
 - **Personen** ist der Einstieg in die Entitäten; **Familien / Quellen / Orte / Höfe** über einen **Segment-Umschalter oben** auf der Listen-Fläche — eine *konsistente* Sub-Navigation statt versteckter Modi.
-- **Mehr** = Hub für die Lenses (Karte / Zeitleiste / Statistik / Story) + Ausgaben + Einstellungen.
+- **Mehr** = Hub für die Lenses (Karte / Zeitleiste / Statistik / Story) + Ausgaben + Einstellungen + **Datei** (Laden/Speichern, [20 §1.2](20-Funktionen.md)). **Nachtrag 2026-07-07:** Datei öffnen/Demo laden/Speichern standen ursprünglich als permanent sichtbare Aktionsleiste über JEDER Ansicht — Nutzer-Fund per Screenshot: das sind Session-Rand-Aktionen (Anfang/Ende), keine Aktionen, die während der Arbeit an Personen/Familien laufend sichtbar sein müssen; v8-Oracle bestätigt das Muster (`legacy-v8/UI-DESIGN.md` Zeile 61: „`☰ Menü` (Speichern, Backup, neue Datei, OneDrive-Aktionen)" lag im Menü, nicht permanent in der Topbar). Gehört daher in den Mehr-Hub statt in eine eigene Kopfzeile.
 - **Baum** bleibt als Signatur-Ansicht eigener Slot (häufigster Einstieg).
 
 **Interaktion:**
