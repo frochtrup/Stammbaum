@@ -79,7 +79,46 @@ Spalten: **Tag** · **Level** · **Bedeutung**. Die Zuordnung auf das v9-Modell 
 
 ### Proprietäre `_`-Tags
 
-Alle `_`-Tags werden im Roundtrip **verlustfrei erhalten** (Passthrough-Prinzip, [13 § 2](specs/v9/13-Interop-Roundtrip.md)). Modellierte `_`-Tags (editierbar gemacht) müssen vom Parser aus dem Passthrough **herausgelöst** werden, sonst Doppelschreibung. Beispiele modellierter Extensions: `_UID`, `_FREL`/`_MREL` (→ PEDI), `_EVAL` (Evidenz, [12](specs/v9/12-Forschungsdaten.md)), `_HYPO` (Hypothese), `_RTYPE`/`_FAURL` (Repository), `_TASK`/`_RLOG` (Forschung). Der Strict-Export lässt alle `_`-Tags weg ([13 § 5](specs/v9/13-Interop-Roundtrip.md)).
+Alle `_`-Tags werden im Roundtrip **verlustfrei erhalten** (Passthrough-Prinzip, [13 § 2](specs/v9/13-Interop-Roundtrip.md)). Modellierte `_`-Tags (editierbar gemacht) müssen vom Parser aus dem Passthrough **herausgelöst** werden, sonst Doppelschreibung. Beispiele modellierter Extensions: `_UID`, `_FREL`/`_MREL` (→ PEDI), `_EVAL` (Evidenz, [12](specs/v9/12-Forschungsdaten.md), noch nicht implementiert), `_HYPO` (Hypothese, implementiert), `_RTYPE`/`_FAURL` (Repository), `_TASK` (Forschungsaufgabe, implementiert), `_RLOG` (Forschungsprotokoll, implementiert). Wire-Formate aller drei 1:1 aus dem echten v8-Code (`gedcom-writer.js`/`gedcom-parser.js`) übernommen, NICHT neu erfunden (ADR-v9-37) — Byte-Kompatibilität mit evtl. vorhandenen echten v8-Dateien, die dieses Feature bereits genutzt haben. Der Strict-Export lässt alle `_`-Tags weg ([13 § 5](specs/v9/13-Interop-Roundtrip.md)).
+
+**`_TASK`** (Forschungsaufgabe, [12 § 1](specs/v9/12-Forschungsdaten.md), auf INDI **und** FAM, mehrfach wiederholbar, Level 1):
+
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `_TASK` | 1 | Werttext = Aufgaben-Text |
+| `_CAT` | 2 | Kategorie (Freitext) |
+| `_DONE` | 2 | `0`/`1` — wird **immer** geschrieben, beim Lesen aber **nicht** ausgewertet (redundant zu `_TSTAT`) |
+| `_TSTAT` | 2 | Status: `todo` \| `doing` \| `done` — **die Wahrheit**, `done`-Flag wird beim Parsen immer daraus abgeleitet |
+| `_DATE` | 2 | Anlagedatum (EIGENER Tag, NICHT Standard-`DATE`) |
+| `_ID` | 2 | Aufgaben-ID |
+| `SOUR` | 2 | optionaler Quellen-Bezug (Standard-Tag, roher `@Sxx@`-Xref) — `sourceRef`, v9-Ergänzung (ADR-v9-36) |
+
+**`_RLOG`** (Forschungsprotokoll, [12 § 2](specs/v9/12-Forschungsdaten.md), auf INDI **und** FAM, mehrfach wiederholbar, Level 1; kein `_ID` — index-adressiert):
+
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `_RLOG` | 1 | ohne Wert |
+| `DATE` | 2 | Standard-Tag (bewusst NICHT `_DATE` — v8 ist hier inkonsistent zu `_TASK`, aus Oracle-Treue übernommen) |
+| `REPO` | 2 | roher `@Rxx@`-Xref |
+| `SOUR` | 2 | roher `@Sxx@`-Xref |
+| `_QUERY` | 2 | Suchbegriff |
+| `_RESULT` | 2 | `found` \| `notfound` \| `pending` |
+| `NOTE` | 2 | Notiz, CONT-fähig |
+| `_TASKID` | 2 | optionaler Bezug zur auslösenden `ResearchTask.id` — v9-Ergänzung, kein Oracle-Vorbild (ADR-v9-36) |
+
+**`_HYPO`** (Hypothese, [12 § 4](specs/v9/12-Forschungsdaten.md), auf INDI **und** FAM, mehrfach wiederholbar, Level 1):
+
+| Tag | Level | Bedeutung |
+|---|---|---|
+| `_HYPO` | 1 | Werttext = die Behauptung |
+| `_ID` | 2 | Hypothesen-ID |
+| `_HSTAT` | 2 | Status: `open` \| `confirmed` \| `rejected` |
+| `_HWGT` | 2 | Forscher-Konfidenz: `low` \| `medium` \| `high` |
+| `_DATE` | 2 | Anlagedatum (EIGENER Tag, wie bei `_TASK`) |
+| `SOUR` | 2 | wiederholbar — ein `evidence[]`-Item pro Block (SID-Referenz, INV-H2) |
+| `PAGE` | 3 | gehört zum vorangehenden `SOUR`-Block (`evidence[].page`) |
+| `_RATIO` | 2 | Begründung (`rationale`), CONT-fähig |
+| `_CONCL` | 2 | Auflösungsnotiz (`conclusion`), CONT-fähig |
 
 ---
 
