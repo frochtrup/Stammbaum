@@ -112,7 +112,7 @@ jobs:
 
 ## 5. Vite / GitHub-Pages-Konfiguration
 
-- **`base`** in `vite.config.ts` auf den Repo-Pfad setzen (z. B. `/stammbaum-v9/`), sonst brechen Asset-Pfade auf Pages. Bei eigener Domain oder User-Pages entsprechend `/`.
+- **`base`** in `vite.config.ts` auf den Repo-Pfad setzen (z. B. `/stammbaum-v9/`), sonst brechen Asset-Pfade auf Pages. Bei eigener Domain oder User-Pages entsprechend `/`. **Zwingend command-abhängig setzen** (`defineConfig(({ command }) => ({ base: command === 'build' ? '/stammbaum-v9/' : '/' }))`), NICHT als statischer Top-Level-Wert — ein statisches `base` gilt auch für den lokalen Dev-Server (`vite`/`command === 'serve'`) und verschiebt die App dort unter denselben Unterpfad; Vite selbst redirected `/` → `/stammbaum-v9/` korrekt, aber lokales Tooling, das die Wurzel `/` erwartet (Preview-/Healthcheck-Tools), sieht die App dann nie als erreichbar. **Lehre (2026-07-07):** genau dieser Fehler ist beim ersten Pages-Deploy passiert („Vorschau startet nicht") und wurde erst durch den Nutzer-Hinweis entdeckt, nicht vorab.
 - **PWA:** `vite-plugin-pwa` (oder handgeschriebener Service Worker in `/app`) für Precache + Offline-Fallback ([30 NFR-2](30-NFR-und-Persistenz.md)). Cache-Version automatisch aus dem Build-Hash — kein manuelles Bumpen, keine „alter SW liefert veraltete Shell"-Falle.
 - **Ergebnis bleibt statisch:** `dist/` ist reines HTML/JS/CSS. Lokal-First und Offline (LP-2) unverändert; kein Server im Betrieb.
 
