@@ -57,6 +57,8 @@ HofObject {
 
 **Herkunft der `placeObjects` (ADR-v9-28, ersetzt ADR-v9-27):** Beim Import werden Village-PlaceObjects **automatisch** aus den distinkten PLAC-Hierarchien der geladenen Ereignisse erzeugt (Seed-Vorpass, §4.2 Schritt 0) — Orte sind genealogische Standardinformation und nach *jedem* Import sofort sichtbar, ohne Nutzeraktion. Die Schicht ist damit **auto-seeded *und* kuratiert**: anfängliche PLAC-Inkonsistenz (Schreibvarianten desselben Orts über mehrere Zweige) ist bewusst akzeptiert und wird *nachgelagert* über die Kurationswerkzeuge bereinigt (Dubletten-Merge, String→PlaceObject-Verknüpfung, [20 §1.7](20-Funktionen.md)). Der frühere Opt-in-Vorschlag (ADR-v9-27) ist ersetzt (♻️). **Höfe bleiben unberührt** — sie entstehen ausschließlich über die Hof-Bootstrap-Pfade (§4.2/§4.3), nie über den Seed.
 
+**Import-Zeit vs. UI-Zeit (ADR-v9-42, Präzisierung nach wiederholtem Fehlschluss):** Die Kurations-Sorge oben (Schreibvarianten, kein unkuratierter Wildwuchs) gilt für **automatische, massenhafte** Anlage beim Import — dort können hunderte PLAC-Varianten aus einer Fremd-Datei stammen, die niemand einzeln geprüft hat. Sie gilt NICHT für eine **einzelne, bewusste Nutzerhandlung** im Editier-Modus (z. B. „+ neuen Ort/Hof anlegen" aus einem Picker heraus, nachdem die Suche bereits gezeigt hat, dass der Kandidat fehlt) — das ist strukturell identisch zu „+ Neue Person/Familie/Quelle/Archiv anlegen" und braucht keine Ausnahme. Beide Vorgänger-ADRs dieses Dokuments (ADR-v9-40, ADR-v9-41) verwechselten das zunächst, bevor ADR-v9-42 es korrigierte — bei künftigen Ort/Hof-nahen Entscheidungen diese Zeile zuerst prüfen, statt die Verwechslung ein drittes Mal zu machen.
+
 Details `orte.json`-Format + Sync: [30 §3/§4](30-NFR-und-Persistenz.md).
 
 ---
