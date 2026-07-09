@@ -43,9 +43,10 @@ Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
                           └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
                                               │
 App:   20 Funktionen ◄── 10,11,12,13,14       │
-       21 UI/UX      ◄── 20                    │
+       21 UI/UX      ◄── 20, 02                │
                                               │
 Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
+         14 Dateihandling  ◄── 30 (Arbeitskopie-/orte.json-Speicherschichten, Kern+Betrieb-Doppelrolle)
          31 Dev-Umgebung   ◄── 02 (Schichten/Invarianten), 30 (PWA/Cache)
          32 Testframework  ◄── prüft Invarianten ALLER Specs; 02/30/31
 ```

@@ -59,17 +59,24 @@ HofObject {
 
 **Import-Zeit vs. UI-Zeit (ADR-v9-42, Präzisierung nach wiederholtem Fehlschluss):** Die Kurations-Sorge oben (Schreibvarianten, kein unkuratierter Wildwuchs) gilt für **automatische, massenhafte** Anlage beim Import — dort können hunderte PLAC-Varianten aus einer Fremd-Datei stammen, die niemand einzeln geprüft hat. Sie gilt NICHT für eine **einzelne, bewusste Nutzerhandlung** im Editier-Modus (z. B. „+ neuen Ort/Hof anlegen" aus einem Picker heraus, nachdem die Suche bereits gezeigt hat, dass der Kandidat fehlt) — das ist strukturell identisch zu „+ Neue Person/Familie/Quelle/Archiv anlegen" und braucht keine Ausnahme. Beide Vorgänger-ADRs dieses Dokuments (ADR-v9-40, ADR-v9-41) verwechselten das zunächst, bevor ADR-v9-42 es korrigierte — bei künftigen Ort/Hof-nahen Entscheidungen diese Zeile zuerst prüfen, statt die Verwechslung ein drittes Mal zu machen.
 
+**Vollständigkeit statt Anreicherungs-Gate (ADR-v9-44).** `placeObjects`/`hofObjects` werden **ungefiltert** persistiert — auch Einträge, die exakt dem Seed-Rohzustand entsprechen (kein zusätzlicher Name, keine datierte/zweite `enclosedBy`/`addrs`-Zeile, keine Koordinaten/Notiz/GOV-Referenz). Ein Persistenz-Gate „nur angereicherte Objekte schreiben" wurde geprüft und verworfen: es hätte zwei strukturelle Probleme geerbt — hängende `HofObject.villageId`-FKs auf nie persistierte Dörfer, und eine `PlaceId`-Vergabe (`mintId()` in `seed.ts`), die bei Namenskollisionen von der Verarbeitungsreihenfolge des jeweiligen Ladevorgangs abhängt, also nicht dateiübergreifend stabil ist. „Angereichert vs. plain" bleibt trotzdem eine scharfe, nützliche Unterscheidung — nur wirkt sie ausschließlich als **Anzeige-Prädikat** (§9), nicht als Schreibbedingung.
+
 Details `orte.json`-Format + Sync: [30 §3/§4](30-NFR-und-Persistenz.md).
 
 ---
 
 ## 3. Projektions-Invariante (zentral)
 
-> **INV-PLACE (Reprojektions-Invariante):** Wenn `event.placeId` oder `event.hofId` gesetzt ist, ist `event.place` **ausschließlich** die zwischengespeicherte periodengerechte Projektion `buildPlacForGedcom(event, year)`. `event.place`/`event.addr` sind **Projektions-Cache, keine eigene Wahrheit**. Anzeige *und* Writer leiten beide LIVE aus dem Modell ab. Modelländerungen wirken sofort in Anzeige und Export. Stale-Cache ist strukturell ausgeschlossen, weil die Reprojektion am Ende **jedes** Auflösungspfads läuft.
+> **INV-PLACE (Reprojektions-Invariante):** Wenn `event.placeId` oder `event.hofId` gesetzt ist, ist `event.place` **ausschließlich** die zwischengespeicherte periodengerechte Projektion `buildPlacForGedcom(event, year)`. `event.place`/`event.addr` sind **Projektions-Cache, keine eigene Wahrheit**. Anzeige *und* Writer leiten beide LIVE aus dem Modell ab. Modelländerungen wirken sofort in Anzeige und Export. Stale-Cache ist strukturell ausgeschlossen — durch **zwei komplementäre Mechanismen** (ADR-v9-47, Präzisierung nach Code-Befund), nicht einen:
 
-Analog: `event.lati/long` sind nur Render-Fallback; Wahrheit sind die Koordinaten am PlaceObject/HofObject.
+1. **Reprojektion am Cache** — läuft beim vollen Lade-Pass (§4.1) und in jedem `placeId`/`hofId`-*setzenden* Kommando (`linkEventToPlace`/`linkEventToHof`, ADR-v9-19): `event.place` wird dort unmittelbar überschrieben.
+2. **Live-Lesen statt Cache-Vertrauen** — für jede reine Orts-/Hof-**Attribut**-Änderung bei GLEICHER `placeId`/`hofId` (`savePlaceObject`/`saveHofObject`, z. B. eine neue datierte `enclosedBy`-Periode): hier läuft **keine** Reprojektion (kein Event-Walk, `savePlaceObject` kennt keine Events). Stattdessen gilt eine generalisierte **Chokepoint-Pflicht**: außerhalb der Reprojektion selbst darf `event.place`/`event.addr` bei gesetzter `placeId`/`hofId` **nirgends roh gelesen** werden — auch nicht im Writer oder im Dirty-Check. Jeder Konsument berechnet in diesem Fall selbst live über `buildPlacForGedcom`/`eventPlaceLabel`. Betrifft konkret: Writer (`applyDatabaseToRoots`/`write-back-emit.ts`), Dirty-Check (`write-back.ts::eventEqual`), Edit-Formular-Anfangswert (`PersonForm`/`FamilyForm`, [20 §2](20-Funktionen.md)) — dieselbe Disziplin, die die Listen-Anzeige (`eventPlaceLabel`, §5) bereits einhält.
 
-**Zeitpunkt der Reprojektion (ADR-v9-19, ✅ entschieden):** Die Reprojektion läuft an **zwei** Stellen, die INV-PLACE gemeinsam lückenlos garantieren: (a) beim **Laden** (voller Auflösungs-Pass, §4) und (b) in **jedem Modell-Mutations-Kommando**, das `placeId`/`hofId` setzt (z. B. `linkEventToPlace`, [20 §1.7](20-Funktionen.md)) — das Kommando reprojiziert `event.place` unmittelbar selbst per `buildPlacForGedcom` (reine Kern-Funktion, INV-ARCH-1-konform). Es gibt **keinen** Zwischenzustand, in dem `placeId` gesetzt, `event.place` aber veraltet ist. Persistiert wird weiterhin nur `placeId`/`hofId` (§2), nie `event.place` selbst.
+Mechanismus 1 lohnt sich für Massenänderungen (voller Lade-Pass, Identität kann sich ändern — z. B. neue `orte.json`). Mechanismus 2 ist der skalierbare Weg für die häufigere Einzel-Anreicherung (Identität bleibt gleich, nur die Projektion ändert sich): kein Event-Scan, keine Massen-Operation, O(1) Zusatzkosten pro ohnehin besuchtem Event.
+
+**Mechanismus 1 im Detail (ADR-v9-19, ✅ entschieden):** greift an **zwei** Stellen: (a) beim **Laden** (voller Auflösungs-Pass, §4) und (b) in **jedem Modell-Mutations-Kommando**, das `placeId`/`hofId` setzt (z. B. `linkEventToPlace`, [20 §1.7](20-Funktionen.md)) — das Kommando reprojiziert `event.place` unmittelbar selbst per `buildPlacForGedcom` (reine Kern-Funktion, INV-ARCH-1-konform). Zwischen (a)/(b) gibt es **keinen** Zwischenzustand, in dem `placeId` gesetzt, `event.place` aber veraltet ist. Persistiert wird weiterhin nur `placeId`/`hofId` (§2), nie `event.place` selbst.
+
+Analog: `event.lati/long` sind nur Render-Fallback; Wahrheit sind die Koordinaten am PlaceObject/HofObject — dieselbe Chokepoint-Pflicht gilt hier bereits (`eventCoords`, §5).
 
 ---
 
@@ -153,7 +160,7 @@ Die Hof-Identität (`hof.addrs[].value`) endet beim **ersten Komma ODER Zeilenum
 
 ## 5. Lese-Seite: die einzigen erlaubten Reads (Chokepoints)
 
-Vier zentrale Helfer — die **einzigen** korrekten Orts-/Hof-Reads außerhalb des Auflösungs-Codes. Sie sind zugleich die Naht zur UI-Schale ([02 §3.1](02-Zielarchitektur-v9.md)):
+Vier zentrale Helfer für die **Event→Ort/Hof-Auflösung** — die einzigen korrekten Reads dieser Art außerhalb des Auflösungs-Codes selbst. Sie sind zugleich die Naht zur UI-Schale ([02 §3.1](02-Zielarchitektur-v9.md)). Zwei weitere, objektseitige Prädikate ergänzen sie unten.
 
 | Helfer | Frage | Auflösung |
 |---|---|---|
@@ -163,6 +170,8 @@ Vier zentrale Helfer — die **einzigen** korrekten Orts-/Hof-Reads außerhalb d
 | `buildPlacForGedcom(ev, year)` | Welcher PLAC-String würde geschrieben? | Hof + Dorf-Hierarchie, periodengerecht |
 
 **Aggregatoren** (`collectPlaces`, `buildHofIndex`) sind **id-basiert** (nicht string-basiert): zwei gleichnamige Orte bleiben distinkt, mehrere Cache-Varianten desselben Orts kollabieren auf einen Eintrag.
+
+**Zwei weitere reine Prädikate** (ADR-v9-44/46, objekt- statt event-seitig, aber derselben Chokepoint-Disziplin unterworfen — Details §9): `isEnrichedPlace(po)`/`isEnrichedHof(hof)` (weicht das Objekt vom Seed-Rohzustand ab?) und `hasReference(id, events)` (löst mindestens ein Event der geladenen Datei auf dieses Objekt auf?). Beide sind reine Funktionen über vorhandene Felder bzw. Events — kein zusätzlicher persistierter Zustand.
 
 ---
 
@@ -189,7 +198,7 @@ Aktionstypen, jeweils am *korrekten* Ort persistent:
 
 ## 7. Wire-Mapping (Kurzfassung)
 
-- **GEDCOM:** `PLAC` aus `buildPlacForGedcom`; `MAP/LATI/LONG` aus `eventCoords`; `ADDR` = `event.addr` (byte-identisch); Hof-Notiz als `NOTE @N_HOF@` mit Präfix `[Hof] `. Historische Zeitachse (pnames, enclosedBy, addrs) wird beim GEDCOM-Export **kollabiert** (by design — GEDCOM kann sie nicht abbilden).
+- **GEDCOM:** `PLAC` aus `buildPlacForGedcom` — **live berechnet beim Schreiben** (ADR-v9-47; vorher am Code drifted: `write-back-emit.ts` schrieb den Projektions-Cache `event.place`, was eine Orts-Attribut-Änderung ohne Datei-Reload verlor), nicht aus `event.place` gelesen; `MAP/LATI/LONG` aus `eventCoords`; `ADDR` = `event.addr` (byte-identisch geschrieben) — bleibt bewusst bei der bestehenden Fill-if-empty-Regel (§4.2 REPROJECT: `resolveAddrAsOf` nur wenn `event.addr` leer ist), NICHT auf live-Neuberechnung bei jedem Schreiben umgestellt wie `PLAC`: die Hof-Adresse ist stärker nutzer-/quellen-eigen (Konvention α, Freitext-Erhaltung), PLAC dagegen vollständig herleitbar; Hof-Notiz als `NOTE @N_HOF@` mit Präfix `[Hof] `. Historische Zeitachse (pnames, enclosedBy, addrs) wird beim GEDCOM-Export **kollabiert** (by design — GEDCOM kann sie nicht abbilden).
 - **GRAMPS:** vollständig. `placeObjects` ↔ `<placeobj>`, `hofObjects` ↔ `<placeobj type="Building">` mit `<placeref>` aufs Dorf. Parser teilt deterministisch (Type `Building` → `hofObjects`).
 
 Vollständiges Format-Mapping: [13](13-Interop-Roundtrip.md).
@@ -207,3 +216,66 @@ Zwei zuvor offene Spezifikationsfragen sind inzwischen **entschieden** (hier nur
 3. **Orte-Bootstrap: automatisch statt nur Opt-in — ENTSCHIEDEN (ADR-v9-28, ersetzt ADR-v9-27 ♻️).** PlaceObjects werden beim Import **automatisch** aus PLAC geseedet (§2 „Herkunft der `placeObjects`", §4.2 Schritt 0), Kuration erfolgt nachgelagert (Dubletten-Merge, String→PlaceObject-Verknüpfung). Die Verwaltungs-Match-Pfade 3a/3b/3c bleiben unverändert — sie finden die geseedeten POs vor. Hof-Erkennung (Konvention 1/2, §4.3) bleibt unangetastet. *Umsetzung:* Kern `seedPlacesFromEvents` (Phase 1) + Lade-Pipeline/UI (Phase 2).
 4. **Reprojektion bei UI-Verknüpfung — ENTSCHIEDEN: sofort im Kommando (ADR-v9-19 ✅).** Jeder `placeId`/`hofId`-setzende Mutationspfad (`linkEventToPlace` u. a.) reprojiziert `event.place` unmittelbar selbst (§3 „Zeitpunkt der Reprojektion", §4.1). Die frühere Lesart (b) des Code-Kommentars (nur Load-Pfad) ist damit verworfen. *Umsetzung + Regressionstest:* Phase 1.2.
 5. **Gleichnamige Orts-Disambiguierung — ENTSCHIEDEN (ADR-v9-29 ✅).** Seed-Dedup nach Name+Hierarchie-Verträglichkeit, Resolver-Konsistenz-Guard (3c) + Eltern-Disambiguierung (3c′) und **Review-Klasse P** (§4.2/§6) — löst die stille Falschverknüpfung `Oldenburg, USA` → deutscher Oldenburg, das Kollabieren von Oldenburg/NS + Oldenburg/USA und die verdeckte atomare Mehrdeutigkeit; hunderte `Ochtrup` bleiben dabei **ein** Ort. *Umsetzung:* Phase 1 (1.1a Seed-Dedup, 1.1b Guard/3c′, 1.1c Klasse P).
+
+---
+
+## 9. Kuration: Anreicherung, Massen-Dedup, Referenz-Sichtbarkeit (ADR-v9-44/45/46)
+
+Drei zusammenhängende Regeln, die die volle (§2) statt gefilterte Persistenz von `orte.json` handhabbar halten — Anzeige-/Kurations-Werkzeuge, keine Schreibbeschränkung.
+
+### 9.1 Anreicherungs-Prädikat (ADR-v9-44)
+
+`isEnrichedPlace(po)` ist **falsch** genau dann, wenn `po` bit-identisch dem `seedPlacesFromEvents`-Rohzustand entspricht: `type=''`, `pnames=[]`, genau ein `enclosedBy`-Eintrag mit `from=null,to=null`, `lat=null`, `long=null`, `note=''`, `existsFrom=null`, `existsTo=null`, `govId=null`, `govTypes=null`. Jede Abweichung (weiterer Name, datierte oder zweite `enclosedBy`-Zeile, gesetzte Koordinaten/Notiz/Existenz-Spanne/GOV-Referenz/Typ) macht das Objekt „angereichert".
+
+`isEnrichedHof(hof)` ist **falsch** genau dann, wenn `hof.addrs.length === 1` mit `addrs[0].from === null && addrs[0].to === null` (undatiert), sowie `lat=null`, `long=null`, `note=''`, `existsFrom=null`, `existsTo=null`, `predecessor=null`, `successor=null`, `govId=null`, `govTypes=null` — bit-identisch dem Bootstrap-Rohzustand aus `findOrCreateHof()` (`core/places/hof-id.ts`). Jede Abweichung (Adress-Historie, Lebenszyklus-Verweis, Koordinaten, Notiz) macht den Hof „angereichert".
+
+Beide Prädikate sind reine, headless testbare Kern-Funktionen (`core/places`), **nicht** als persistiertes Feld geführt (würde bei Mutation veralten können — LP-5 eine Ebene tiefer angewandt: „ist angereichert" ist selbst wieder deterministisch aus den vorhandenen Feldern berechenbar).
+
+**Verwendung — Pillen-Text bewusst ohne Herkunfts-Aussage:** Orte-/Höfe-Tab ([20 §1.7/§1.8](20-Funktionen.md)) markiert plain (`!isEnriched…`) Einträge mit einer Pille „**ohne Zusatzangaben**" (nicht „automatisch erkannt" — das Prädikat prüft nur den INHALT, nicht die Herkunft: ein von Hand über „+ neuen Ort anlegen" ([20 §2](20-Funktionen.md), ADR-v9-42) frisch angelegter, noch nicht weiter ausgefüllter Ort erfüllt dieselbe Bedingung wie ein Seed-Ergebnis, wurde aber nicht automatisch erkannt — ein Herkunfts-Claim wäre hier schlicht falsch). Keine Auswirkung auf Persistenz, Auflösung oder Export — reine Anzeige-Information.
+
+### 9.2 Massen-Dedup (ADR-v9-45)
+
+**Eine** Funktion, nicht zwei getrennte — `findPlaceDuplicates(items, kind, toleranceKm = 1)`, reine, deterministische Funktion (analog v8: `items` ist `placeObjects` für `kind ∈ {'places','all'}`, `hofObjects` für `kind='farms'`). Liefert Kandidatengruppen (`{ ids: (PlaceId|HofId)[] }[]`, ≥ 2 Mitglieder) nach drei Kriterien (Union-Find):
+
+1. **Verträglichkeits-Key-Kollision** — bei `kind ∈ {'places','all'}`: gleicher normalisierter Leitname (`normPlaceName`) UND verträgliche Elternketten (§4.2, ADR-v9-29-Regel: eine Kette ist Präfix der anderen, oder leer), **nicht** roher Fold-Key-Vergleich (v8-Abweichung, s. u.). Bei `kind='farms'`: gleiche normalisierte Adresse (`normHofAddr`, §4.4 Konvention α) UND gleiches `villageId` — Hof-Identität läuft über Adresse+Dorf, nicht über Namens-Hierarchie.
+2. **Koordinaten-Nähe** (≤ `toleranceKm`) bei gleichem Titel-Fold — gilt für alle `kind`.
+3. **Bare↔reich Cross-Achse** — NUR bei `kind ∈ {'places','all'}`: ein plain PO (§9.1) ohne `enclosedBy`/`pnames` mit Komma-Titel wird gegen ein angereichertes PO verglichen, dessen Titel dem Leitsegment entspricht. Durch ADR-v9-44 (alle plain Einträge bleiben dauerhaft in `orte.json`) tritt dieser Fall in v9 häufiger auf als im v8-Vorbild. Bei `kind='farms'` übersprungen (wie im v8-Vorbild) — Hof-Identität kennt kein Komma-Titel-Äquivalent.
+
+`kind` unterscheidet `'places'` (Farm/Building ausgeschlossen), `'farms'` (nur Hof-Äquivalent), `'all'` (Migrations-/Test-Zweck).
+
+**Abweichung vom v8-Vorbild (bewusst):** v8s `findPlaceDuplicates` nutzte für Kriterium 1 (Places) einen reinen Fold-Key-Vergleich ohne Eltern-Verträglichkeits-Check — das hätte in v9 den ADR-v9-29-Schutz unterlaufen (Oldenburg/Niedersachsen und Oldenburg/USA dürfen NIE als Dublette vorgeschlagen werden). v9 nutzt stattdessen dieselbe Verträglichkeits-Logik wie der Seed-Dedup (§4.2).
+
+**Merge:** `mergePlaceObjects(places, hofObjects, survivorId, mergedIds: PlaceId[])` — Erweiterung der bestehenden paarweisen Kern-Funktion (§-intern: dünner Wrapper, mehrfacher Aufruf der Einzel-Merge-Logik, keine Duplizierung) auf mehrere Verlierer. Analog `mergeHofObjects`. Verlustfrei wie die bestehende paarweise Fassung: Namens-/Zugehörigkeits-Union (dedupliziert), Lücken-Auffüllung (nur leere Gewinner-Felder), alle Fremdreferenzen (`event.placeId`/`hofId`, andere `enclosedBy`/`villageId`) umgehängt.
+
+**Automatischer Hof-Nachlauf nach Dorf-Merge (ADR-v9-45, Nachtrag 2026-07-10 — korrigiert v8-Abweichung von oben zurück).** Ursprünglich als „bewusst nicht übernommen" entschieden (kein Analogon zu v8s `_reconcileFarmsUnderVillage`, stattdessen ein zweiter manueller Dedup-Lauf) — das war falsch, aus zwei Gründen: (1) **Entdeckbarkeit** — niemand stößt Massen-Dedup von selbst direkt nach einem thematisch anderen Vorgang (Dorf-Merge) noch mal an. (2) **Echte Resolver-Regression, kein reines Unordnungsproblem** — `hof-registry.ts::findByAddr` liefert bei ≥2 Kandidaten `null` („strikt eindeutig — sonst Review"), das Event fällt in Review-Klasse C (§6). Zwei gleichnamige Höfe waren vor dem Dorf-Merge unter verschiedenen Dörfern eindeutig auflösbar; nach dem Merge hängen beide am selben Dorf — bei GEDCOM-Quellen kippt das bei JEDEM folgenden vollen Reload (`hofId` nie persistiert, §2) von „eindeutig" auf „mehrdeutig". Der fehlende Nachlauf ist damit keine Frage der Aufräum-Ordnung, sondern eine stille Verschlechterung der Auflösungsqualität für zuvor korrekt funktionierende Events.
+
+Anders als das allgemeine Massen-Dedup (Kriterium 1 bei Orten ist eine Heuristik, „wahrscheinlich derselbe Ort") braucht dieser Fall **keine** neue Nutzer-Entscheidung: `(villageId, normalisierte Adresse)` ist bereits die strukturelle Identität eines Hofs (§4.4, Kriterium 1 oben) — sobald der Nutzer „Dorf A = Dorf B" per Dorf-Merge bestätigt hat, folgt „zwei Höfe mit identischer Adresse im resultierenden Dorf sind derselbe Hof" zwingend daraus.
+
+`mergePlaceObjects` bekommt daher zwei zusätzliche, feste Schritte (kein separates Nutzer-Kommando):
+
+```
+mergePlaceObjects(places, hofObjects, survivorId, mergedIds):
+  … Schritte 1–5 (Namen/enclosedBy vereinigen, HofObject.villageId umhängen)
+  6. Höfe unter survivorId nach normalisierter Adresse gruppieren
+     → jede Gruppe ≥2 automatisch zusammenführen (Gewinner-Heuristik wie
+       oben: Verwendungszahl → Koordinaten → Notiz → kleinste ID) —
+       ruft dieselbe verlustfreie Merge-Logik von oben auf, kein neuer
+       Mechanismus.
+  7. Toast, falls konsolidiert wurde: „N Hof-Dubletten unter ⟨Dorf⟩
+     automatisch zusammengeführt" (Transparenz, LP-6 — analog dem
+     Konvention-2-Übergangs-Toast, §4.3).
+```
+
+Automatisierung ist hier sicher: die Merge-Operation selbst ist bereits verlustfrei, und es ist keine unabhängige menschliche Abwägung mehr nötig — der Nutzer hat sie mit dem Dorf-Merge bereits getroffen (derselbe Fehlschluss-Typ wie ADR-v9-40→42: eine Spannung fälschlich als „braucht neue Bestätigung" behandeln, obwohl eine bereits getroffene Entscheidung sie strukturell schon auflöst).
+
+**UI** ([20 §1.7/§1.8](20-Funktionen.md)): Massen-Dedup-Ansicht zeigt vorgeschlagene Gruppen mit Gewinner-Vorschlag (Heuristik: Verwendungszahl → Koordinaten vorhanden → Notiz vorhanden → kleinste ID — Vorschlag, vom Nutzer änderbar), „Zusammenführen" pro Gruppe als explizites, bestätigtes Kommando. Kein automatisches Zusammenführen beim Laden.
+
+### 9.3 Referenz-Sichtbarkeit (ADR-v9-46)
+
+`hasReference(id, events)` — reine Funktion: mindestens ein Event der aktuell geladenen Datei löst via `eventPlaceId`/`eventHofId` (§5) auf `id` auf.
+
+Die **Haupt**-Orte-/Höfe-Liste ([20 §1.7/§1.8](20-Funktionen.md)) zeigt nur referenzierte Objekte (`hasReference === true`). Referenzlose Objekte (existieren in `orte.json`, aber kein Event der geladenen Datei zeigt (mehr) darauf) erscheinen in einem separaten Filter/Abschnitt „Ohne Bezug" — dort vollständig editierbar und löschbar wie jedes andere Objekt. **Keine automatische Löschung** — referenzlose Objekte bleiben bestehen, bis der Nutzer aktiv löscht oder eine spätere Datei/ein Merge sie wieder referenziert.
+
+**Bewusste Abweichung vom v8-Orakel:** v8 blendet referenzlose `placeObjects` nicht aus der Hauptliste aus, sondern zeigt sie dort mit einer „Nicht verknüpft"-Badge. v9 trennt stärker (separate Sichtbarkeit statt Badge in derselben Liste) — explizite v9-Entscheidung, keine Nachbau-Lücke (Oracle-vs-Spec-Disziplin, [32 TST-6](32-Testframework.md)).
+
+**Schnittmenge mit §9.1:** ein Objekt kann gleichzeitig plain UND referenzlos sein (z. B. Rest eines gelöschten Events oder einer rückgängig gemachten Bearbeitung) — der Hauptkandidat für eine spätere manuelle Aufräumaktion über §9.2, aber ohne eigenen Automatismus.

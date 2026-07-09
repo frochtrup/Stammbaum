@@ -87,6 +87,7 @@ jobs:
         with: { node-version: 20, cache: npm }
       - run: npm ci
       - run: npm run check:arch    # Import-Boundary + Kern-Reinheit (INV-ARCH-1)
+      - run: npm run check:csp     # CSP-Test-Gate (NFR-3, ADR-v9-39)
       - run: npm run lint          # ESLint + Typen (tsc --noEmit)
       - run: npm test              # Roundtrip + Unit + Component + Snapshot (LP-1)
 
