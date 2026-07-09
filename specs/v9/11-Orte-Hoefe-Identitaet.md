@@ -207,9 +207,10 @@ Vollständiges Format-Mapping: [13](13-Interop-Roundtrip.md).
 
 ## 8. Restklassen & offene Spezifikationsfragen (ehrlich offen)
 
-Zwei Klassen, die durch keine Algorithmus-/UI-Aktion eindeutig werden:
+Drei Klassen, die durch keine Algorithmus-/UI-Aktion eindeutig werden:
 1. **Genealogische Ungewissheit** — der Forschende weiß es selbst nicht. Bleibt dauerhaft im Review (korrekt).
 2. **PLAC-Lücken außerhalb Hof-Kontext** — EDUC/GRAD/EVEN mit fremden Verwaltungs-Hierarchien ohne PO. Keine Hof-Themen; inzwischen weitgehend durch Auto-Seed (ADR-v9-28) + Review-Klasse P (ADR-v9-29) adressiert; dauerhaft offen bleibt nur echte Quell-Ungewissheit (→ Klasse 1).
+3. **Gleichnamige Orte mit widersprüchlicher, aber real identischer Verwaltungshistorie — bewusst außerhalb von Massen-Dedup (ADR-v9-49).** `findPlaceDuplicates` (§9.2) gruppiert bei Namensgleichheit nur, wenn die Elternketten **verträglich** sind (ADR-v9-29-Guard) — bei echten historischen Brüchen (Gebiets-/Kreisreform, uneinheitliche Quellen-Konventionen) können zwei Einträge desselben realen Orts widersprüchliche Ketten haben und werden dem Nutzer NIE vorgeschlagen, wenn beide zusätzlich koordinatenlos sind (kein Kriterium-2-Fangnetz). Bewusst kein Kern-Fix (der Guard bleibt strikt, um Fälle wie Oldenburg/Niedersachsen vs. Oldenburg/USA weiter sicher zu trennen) — der bestehende **paarweise Dubletten-Merge** in der Orts-Detailansicht ([20 §1.7](20-Funktionen.md)) bleibt der Weg für diese Fälle, dort entscheidet ausschließlich der Mensch. Analog zu Klasse 1: der fehlende automatische Vorschlag ist hier korrekt, keine Lücke.
 
 Zwei zuvor offene Spezifikationsfragen sind inzwischen **entschieden** (hier nur noch als Verweis dokumentiert, kein offener Auftrag mehr — die Umsetzung folgt phasenweise im Code):
 
@@ -225,7 +226,7 @@ Drei zusammenhängende Regeln, die die volle (§2) statt gefilterte Persistenz v
 
 ### 9.1 Anreicherungs-Prädikat (ADR-v9-44)
 
-`isEnrichedPlace(po)` ist **falsch** genau dann, wenn `po` bit-identisch dem `seedPlacesFromEvents`-Rohzustand entspricht: `type=''`, `pnames=[]`, genau ein `enclosedBy`-Eintrag mit `from=null,to=null`, `lat=null`, `long=null`, `note=''`, `existsFrom=null`, `existsTo=null`, `govId=null`, `govTypes=null`. Jede Abweichung (weiterer Name, datierte oder zweite `enclosedBy`-Zeile, gesetzte Koordinaten/Notiz/Existenz-Spanne/GOV-Referenz/Typ) macht das Objekt „angereichert".
+`isEnrichedPlace(po)` ist **falsch** genau dann, wenn `po` bit-identisch dem `seedPlacesFromEvents`-Rohzustand entspricht: `type=''`, `pnames=[]`, **höchstens EIN** `enclosedBy`-Eintrag mit `from=null,to=null` (Top-Level-Länder werden mit `enclosedBy=[]` geseedet — kein Elternteil, nicht „genau einer"; Korrektur 2026-07-10, beim Bau am echten `seed.ts`-Verhalten gefunden, s. ADR-v9-48), `lat=null`, `long=null`, `note=''`, `existsFrom=null`, `existsTo=null`, `govId=null`, `govTypes=null`. Jede Abweichung (weiterer Name, datierte oder zweite `enclosedBy`-Zeile, gesetzte Koordinaten/Notiz/Existenz-Spanne/GOV-Referenz/Typ) macht das Objekt „angereichert".
 
 `isEnrichedHof(hof)` ist **falsch** genau dann, wenn `hof.addrs.length === 1` mit `addrs[0].from === null && addrs[0].to === null` (undatiert), sowie `lat=null`, `long=null`, `note=''`, `existsFrom=null`, `existsTo=null`, `predecessor=null`, `successor=null`, `govId=null`, `govTypes=null` — bit-identisch dem Bootstrap-Rohzustand aus `findOrCreateHof()` (`core/places/hof-id.ts`). Jede Abweichung (Adress-Historie, Lebenszyklus-Verweis, Koordinaten, Notiz) macht den Hof „angereichert".
 
