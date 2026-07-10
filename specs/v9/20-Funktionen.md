@@ -68,7 +68,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[S]** Nominatim-Geocoding (Einzel + Batch), GOV-Import (historisch datiert), Geo-Plausibilitäts-Validator, JSON-Import/Export mit Dedup + Multi-Device-Konflikterkennung. **JSON-Import löst einen vollen `resolveEvents()`-Neuauflauf** über die aktuell geladenen Events aus (Massen-Pfad, [11 §3](11-Orte-Hoefe-Identitaet.md) Mechanismus 1) — eine importierte `orte.json` kann Orte mit unterschiedlichen Verwaltungshierarchien zusammenführen, also die Identitäts-Zuordnung selbst ändern, nicht nur Attribute. Nutzer akzeptiert dafür explizit Bearbeitungszeit (Nutzervorgabe, ADR-v9-47) — kein Live-Lesen-Kurzweg wie bei der Einzel-Anreicherung.
 
 ### 1.8 Höfe-Tab *(Kern: [11](11-Orte-Hoefe-Identitaet.md))*
-- **[K]** Hof-Liste (aus Events aufgelöst, numerisch sortiert), Detail mit Bewohnern chronologisch.
+- **[K]** Hof-Liste (aus Events aufgelöst), gruppiert nach Dorf (alphabetisch, ADR-v9-57), innerhalb eines Dorfs alphabetisch nach Straße, dann numerisch nach Hausnummer. Detail zeigt Bewohner UND Eigentümer in EINER zeitlich integrierten Liste, chronologisch (bei gleichem Jahr: Eigentümer vor Bewohner, ADR-v9-56), Differenzierung über ein Rollen-Label je Zeile.
 - **[K]** Hof-Bearbeitung (Adressvarianten, Koordinaten, Notiz, Lebenszyklus) — gleiche Anzeige/Bearbeitung-Trennung wie beim Orte-Tab (analog [§1.7](#17-orte-tab), ADR-v9-30).
 - **[K]** „Hof-Zuweisungen prüfen"-Review (Klassen A/C/D — [11 §6](11-Orte-Hoefe-Identitaet.md)).
 - **[K]** Anreicherungs-Pille, Massen-Dedup, Referenz-Filter — gleiche drei Kurations-Werkzeuge wie im Orte-Tab, auf Höfe angewandt (ADR-v9-44/45/46, [11 §9](11-Orte-Hoefe-Identitaet.md)).
