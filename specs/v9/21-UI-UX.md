@@ -153,6 +153,8 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 **Kompaktheit (Nutzer-Fund 2026-07-10, "Kompaktheit ist das Ziel"):** `.person-detail__event`s Padding/Margin wurde reduziert (0.6rem/0.8rem Padding + 0.5rem Margin → 0.4rem/0.65rem + 0.3rem) — mehrere Kategorien mit je eigenem Header brauchten sonst insgesamt mehr statt weniger Vertikalraum als die vorherige flache Liste.
 
+**Sortierung innerhalb "Beruf" (Nachtrag 2026-07-10):** Zeilen innerhalb einer Kategorie behalten normalerweise die Einfüge-Reihenfolge aus `person.events[]` (keine Neusortierung) — AUSSER innerhalb "Beruf": dort steht ein OCCU-Ereignis immer vor allen anderen (z. B. "Beschäftigung"-Synonym-Zeilen), danach chronologisch nach Jahr (`sortWithinCategory` in `person-detail-model.ts`). Andere Kategorien wurden NICHT geändert — nur für "Beruf" explizit angefragt.
+
 ---
 
 ## 7. Symbol-Konventionen (verschlankt)
