@@ -143,6 +143,18 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6e. Deutsche Ereignistyp-Labels + Kategorie-Gruppierung (INV-UI-8, ADR-v9-58)
+
+**INV-UI-8:** Jede Stelle, die einen GEDCOM-Ereignistyp-Tag (BIRT/OCCU/GRAD/RESI/…) als Text zeigt — Detail-Zeilen-Label, Formular-Pill, `<select>`-Option, Formular-Card-Header, Gruppen-Header einer typisierten Liste — übersetzt ihn ins Deutsche über **EINE** Quelle (`ui/shell/event-labels.ts::eventTypeLabel`), nicht roh und nicht mit einer eigenen lokalen Übersetzungstabelle. Ein freier `TYPE`-Sub-Wert (`ev.eventType`, z. B. „Schule" bei einem `EDUC`-Ereignis) hat PRIORITÄT vor der generischen Übersetzung, wenn gesetzt.
+
+**Befund (2026-07-10):** Nur BIRT/CHR/DEAT/BURI (Person) und ENGA/MARR (Familie) waren übersetzt — über FÜNF unabhängige, sich überschneidende `SPECIAL_LABELS`/`PERSON_SPECIAL_LABELS`-Kopien (`person-detail-model.ts`, `family-detail-model.ts`, `hof-detail-model.ts`, `place-detail-model.ts` ×2). Jeder generische Typ (GRAD, EDUC, OCCU, RESI, …) erschien roh — „Ereignisse lesen sich unruhig, wenn deutsche und rohe Bezeichnungen gemischt sind". Konsolidiert auf `event-labels.ts`; alle fünf Kopien entfernt, `PersonForm.svelte`/`FamilyForm.svelte`s Pills/`<select>`-Optionen/Card-Header/aria-Labels ebenfalls umgestellt (Lese- UND Bearbeiten-Ansicht zeigen jetzt konsistent dieselbe Übersetzung).
+
+**Kategorie-Gruppierung (nur `PersonDetail`, Nutzer-Vorgabe 2026-07-10):** die „Ereignisse"-Sektion gruppiert in eine FESTE Reihenfolge — `EVENT_CATEGORY_ORDER` in `event-labels.ts`: **Lebensdaten** (BIRT/CHR/DEAT/BURI) → **Bildung** (EDUC/GRAD) → **Beruf** (OCCU/RETI) → **Wohnen & Eigentum** (RESI/PROP/CENS) → **Weitere Ereignisse** (alles andere). Ein Tag mit eigener Kategorie-Bedeutung entscheidet immer zuerst; NUR bei kategorie-losen Tags (EVEN/FACT) prüft die Zuordnung zusätzlich den freien `TYPE`-Text gegen bekannte Synonyme (`CATEGORY_BY_CUSTOM_TEXT`, aktuell: „Beschäftigung" → Beruf) — ein `EVEN`-Ereignis mit `TYPE Beschäftigung` landet dadurch in derselben Gruppe wie ein `OCCU`-Ereignis, nicht in „Weitere Ereignisse". Umgesetzt via `groupByKey`s neuem optionalen `order`-Parameter ([21 §6b](21-UI-UX.md)-Mechanismus, INV-UI-4 — keine neue Gruppierungsfunktion).
+
+**Kompaktheit (Nutzer-Fund 2026-07-10, "Kompaktheit ist das Ziel"):** `.person-detail__event`s Padding/Margin wurde reduziert (0.6rem/0.8rem Padding + 0.5rem Margin → 0.4rem/0.65rem + 0.3rem) — mehrere Kategorien mit je eigenem Header brauchten sonst insgesamt mehr statt weniger Vertikalraum als die vorherige flache Liste.
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
