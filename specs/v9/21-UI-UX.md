@@ -122,6 +122,22 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6c. Personen-Disambiguierung bei Namensgleichheit (INV-UI-6, ADR-v9-51)
+
+**INV-UI-6:** Jede Stelle, die eine Person als anklickbaren Namen in einer Liste/Zeile referenziert — Kinder-/Ehepartner-/Eltern-Zeilen in Personen- UND Familien-Detail, Entitäts-Picker-Ergebnisse ([20 §2](20-Funktionen.md) `Picker.svelte`), globale Suche, künftige Duplikat-/Merge-Ansichten — zeigt bei Namensgleichheits-Risiko ein disambiguierendes Sekundärmerkmal (Geburtsjahr, ggf. +Ort) über **denselben** `yearPlaceSummary`-Mechanismus (`ui/shell/person-display.ts`) — kein View entscheidet das unabhängig neu (INV-UI-4-Grundsatz, hier auf Daten- statt nur Layout-Ebene angewandt).
+
+**Befund (2026-07-10, ADR-v9-51):** `FamilyDetail`s Kinder-Zeile bekam das Geburtsjahr bereits (Nachtrag 2026-07-06 zu [20 §1.5](20-Funktionen.md) — Grund: mehrere Personen mit identischem Namen im Datenbestand, nur über Geburtsjahr unterscheidbar). `PersonDetail`s strukturell identische Kinder-Zeile (`FamilyNavRow.children`, dieselben Personen, andere Aufrufkette) hatte dasselbe Geburtsjahr NICHT — zwei unabhängige Implementierungen derselben fachlichen Entscheidung liefen auseinander, obwohl die Begründung identisch gilt. Gefixt: `FamilyNavRow.children` führt jetzt `summary: yearPlaceSummary(child.birth, ctx)`, gerendert analog `FamilyDetail`. **Offen (Folgearbeit, ADR-v9-52):** `PersonDetail`s `fam.members` (Ehepartner bei `parentIn`, Eltern bei `childOf`) haben denselben Mangel weiterhin — kein Geburtsjahr, obwohl `FamilyDetail`s Eltern-Boxen (`.stb-person-box__meta`) es für dieselben Personen bereits zeigen. Entitäts-Picker/globale Suche wurden nicht geprüft, ob sie INV-UI-6 bereits erfüllen.
+
+---
+
+## 6d. Ereigniszeile-Inhaltshierarchie (INV-UI-7, ADR-v9-53)
+
+**INV-UI-7:** Die typspezifische Nutzlast eines Ereignisses (`value` bei OCCU/GRAD/…, `addr` bei RESI/PROP/CENS/OCCU) ist der Headline-Inhalt der Zeile — sie steht **immer direkt nach dem Label**, in derselben Textfarbe/-größe wie das Label-Umfeld (kein Kursiv/Dimmen). Datum/Ort (`summary`) ist nachrangiger Kontext und folgt **danach**. Sind `value` UND `addr` beide gesetzt (z. B. GRAD mit Abschlussbezeichnung UND Institution), erscheinen beide vor der Summary, in derselben Typografie. Reihenfolge: `Label → value → addr → summary → Geo-/Ort-/Hof-Links → Quellen-Badges`.
+
+**Befund (2026-07-10, ADR-v9-53):** Bei der Einführung von `value`/`addr` (ADR-v9-51-Vorarbeit) stand `value` bereits korrekt als Erstes, `addr` dagegen nach der Summary, gedimmt-kursiv — als wäre die Adresse eine Randnotiz. Für RESI/PROP/CENS ist die Adresse aber der eigentliche Punkt der Zeile, genau wie der Beruf bei OCCU. Gefixt in `PersonDetail.svelte`/`FamilyDetail.svelte`.
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
