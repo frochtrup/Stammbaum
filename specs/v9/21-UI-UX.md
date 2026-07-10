@@ -173,3 +173,31 @@ Am v8-Code verifiziert (nicht nur an der Doku):
 | **B5** | Desktop = Mobile + Spalten, `!important`-Vollbild-Hacks | eigenständiges Desktop-Modell ([§3](#3-desktop-modell-eigenständig-designt)): Sidebar + Multi-Pane + ⌘K |
 | **B6** | Symbol-/Topbar-Wildwuchs, `⌂` doppelbelegt, Icon-only kryptisch | verschlankte Symbolik ([§7](#7-symbol-konventionen-verschlankt)), Labels, Lens-Umschalter |
 | **B7** | aktiver Tab kaum sichtbar · Icon-Leisten ohne Labels · Aktionsreihen scrollen weg · FAB-Überlappung · Suchfeld ohne ✕ · `Unknown`-Badge | als Baseline gefixt: deutlicher Aktiv-Zustand, Labels, Umbruch, FAB-Abstand, Such-✕, „Unbekannt" |
+
+---
+
+## 10. Listen-/Detail-Primitiven der Gesamtüberarbeitung (ADR-v9-52/54)
+
+Konkrete, baubereite Entscheidungen für den 12-Punkte-Befundkatalog aus ADR-v9-52 (Screenshot-Review 2026-07-10). INV-UI-6/7 (§6c/§6d) sind bereits gebaut; die folgenden Punkte sind spezifiziert, **noch nicht gebaut**.
+
+**a) FilterBar (Punkt 1).** Neue Shell-Komponente `ui/shell/FilterBar.svelte`: geschlossen per Default, Trigger-Button zeigt „Filter" bzw. bei aktiven Kriterien „Filter · N" (N = Anzahl gesetzter Filterfelder). Klick öffnet die vorhandenen Filterfelder in einem Bottom-Sheet (Mobile) / Popover unterhalb des Buttons (Desktop) — kein Layout-Verdrängen des darunterliegenden Listeninhalts mehr. Ersetzt die unabhängig kopierten `{#if showFilters}`-Blöcke in `PersonList.svelte`/`FamilyList.svelte`/`PlaceList.svelte` (INV-UI-4). Die Filterfelder selbst (Geschlecht, Geburtsjahr-Range, …) bleiben unverändert — nur der Container ändert sich. Nicht verpflichtend für `SourceList`/`RepositoryList`/`HofList`, solange dort keine Filterfelder existieren.
+
+**b) Gruppierte/paginierte lange Listen (Punkt 2).** Neue Shell-Komponente `ui/shell/PagedList.svelte` (oder gleichwertige Hilfsfunktion `pageSlice(items, pageSize)`): initial max. 30 Einträge, „N weitere laden"-Button hängt die nächsten 30 an. Keine Virtualisierung (kein neuer Dependency-Zweig, Einfachheit vor Performance-Feinschliff bei realistischer Referenzzahl). `SourceDetail.svelte`s Referenzen-Liste nutzt dies UND gruppiert vorher nach Ereignistyp (analog `PlaceDetail`s „Ereignisse nach Typ", §6c-Nachbarprinzip) — Paginierung greift je Gruppe, nicht global.
+
+**c) List-Toolbar-Ownership (Punkt 3).** Eine Liste besitzt ihre gesamte Toolbar (Suche, Sortierung, Gruppieren-Toggle, Filter-Trigger, Bulk-Aktionen wie „Massen-Dedup") in EINER Komponente — `EntityTab.svelte` rendert nie listen-spezifische Aktions-Buttons, nur den Entitäts-Segment-Umschalter. Der „Massen-Dedup"-Button wandert von `EntityTab.svelte` in `PlaceList.svelte`/`HofList.svelte` (Slot-Reihenfolge: Sortierung → Neu-Anlegen → Suche → Gruppieren/Filter → Bulk-Aktionen, rechtsbündig wo sinnvoll).
+
+**d) SourceCitationRow (Punkt 4).** Neue Shell-Komponente `ui/shell/SourceCitationRow.svelte`: EINE `flex-wrap`-Zeile (Quellenname als Link + Seite-Input + QUAY-Dropdown + Notiz-Input + ✕), ersetzt die 3-zeilige Entitäts-Card pro Zitat in `PersonForm.svelte`/`FamilyForm.svelte` (INV-UI-5-Nachrüstung). Quellenname bleibt Klartext/Link, kein `.stb-person-box`-Kartenstil mehr für Zitate (der bleibt Entitäts-Pickern vorbehalten).
+
+**e) Redundanter Hero-Titel (Punkt 5).** `FamilyDetail.svelte`s Titelzeile („Ehemann ⚭ Ehefrau") entfällt als eigene große Zeile; der `DetailHeader` (§6b) trägt stattdessen ein kompaktes Label in der Kopfzeile selbst (kein zweiter, informationsärmerer Titel unter den bereits informativeren Eltern-Boxen).
+
+**f) Leerzustand-Suppression generalisiert (Punkt 6).** Verallgemeinert den bereits akzeptierten Quellen-Widget-Präzedenzfall ([20 §2](20-Funktionen.md)) auf alle Detail-View-Sektionen: eine strukturell **optionale** Sektion (Kinder, Namens-Varianten, „Weitere Ereignisse") rendert bei leerem Inhalt **weder Header noch „Keine X"-Satz** — sie erscheint erst, sobald Inhalt vorhanden ist. Eine strukturell **erwartbare Hauptsektion** (z. B. „Ereignisse" auf `PersonDetail`) behält ihren Header, aber ohne redundante „Keine X erfasst"-Zeile, wenn eine vorhandene Aktions-Affordanz (z. B. „+ Ereignis") die Leere bereits impliziert.
+
+**g) Prosa-als-Dokumentation → Label+Disclosure (Punkt 7).** Dauerhaft sichtbare Erklärsätze über Berechnungsmechanismen (`PlaceDetail`s „Volle Kette, berechnet aus…") werden zu einem kompakten Label + einer ⓘ-Affordanz (Klick/Tap zeigt die Erklärung in einem Tooltip/Popover, analog Formular-Feldhilfen). Mechanismus-Jargon in Sektionstiteln (z. B. „(Herkunfts-Pillen)") entfällt aus dem sichtbaren Titel, bleibt höchstens als Code-Kommentar.
+
+**h) Eigene-Seite-Redundanz unterdrückt (Punkt 8).** Neue Regel: eine Ereignis-/Referenzzeile auf der Detailseite der Entität X wiederholt niemals X' eigene volle Identitätskette, wenn die Seite selbst bereits X ist — nur abweichende/ergänzende Information wird gezeigt (z. B. `PlaceDetail`s „Ereignisse nach Typ" zeigt Person+Datum, nicht die volle Ortskette, die die Seite selbst schon trägt).
+
+**i) Quellen-Badge-Konvention durchgängig (Punkt 9).** `PlaceDetail.svelte`s „Quellen"-Sektion nutzt `SourceBadge` (dieselbe Komponente wie `PersonDetail`/`FamilyDetail`/`SourceDetail`) statt reinem Text — INV-UI-4.
+
+**j) Hof/Ort-Ereignisgruppierung vereinheitlicht (Punkt 10).** Neue geteilte Komponente `ui/shell/EventsByType.svelte` (oder gleichwertig), von `PlaceDetail.svelte` UND `HofDetail.svelte` genutzt. `HofDetail`s „Bewohner (chronologisch)" wird zu zwei Gruppen: „Bewohner" (RESI/CENS) und „Eigentümer" (PROP) — kein Sektionstitel, der für PROP-Zeilen sachlich falsch ist.
+
+**k) `addr`/`note`-Duplikat-Beobachtung (Punkt 12, ADR-v9-53).** Vor einem Fix: `core/interop`-Parser-Pfad prüfen, ob `ADDR` und `NOTE` bei GEDCOM-Import systematisch denselben Rohwert erhalten (Einzelfall vs. Muster) — Untersuchung, kein feststehender Fix.
