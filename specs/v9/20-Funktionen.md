@@ -97,6 +97,8 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 
 Formulare als Bottom-Sheets (Mobile) / Panels (Desktop) mit progressiver Offenlegung. In v9 gehören sie in die **reaktive Schale** ([02 §2](02-Zielarchitektur-v9.md)); Speichern läuft über Kommandos (`savePerson(model)` …), nicht über DOM-Lesen ([02 §3.2](02-Zielarchitektur-v9.md)).
 
+**Einzel-Ereignis-Editor (ADR-v9-60, Nutzer-Vorgabe 2026-07-11):** zusätzlich zum vollständigen Personen-/Familien-Formular öffnet ein ✎-Icon je Ereigniszeile in `PersonDetail`/`FamilyDetail` ein fokussiertes `EventEditModal` — nur die Felder DIESES EINEN Ereignisses (Datum, Ort, Adresse bei Hof-relevanten Typen, Wert, Notiz, Quellen), ohne den Umweg über das gesamte Formular. Speichert über denselben Kommando-Chokepoint (`savePerson`/`saveFamily` mit dem vollen Objekt) wie das große Formular — kein zweiter Schreibpfad.
+
 | Entität | Felder |
 |---|---|
 | Person | Name (Vor-/Nachname, Präfix, Suffix, Rufname), Geschlecht, Titel, Religion, Notiz, RESN, E-Mail, Website |
