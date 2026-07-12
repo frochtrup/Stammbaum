@@ -9,6 +9,7 @@ MeineDaten_ancestris.ged
 *.pdf
 !GEDCOM551.pdf
 Decker_story.html
+Testdateien/*.json
 
 # Lokale Entwicklungsumgebung (nur Projekt-Skills + Bau-Agenten versioniert)
 .claude/*
