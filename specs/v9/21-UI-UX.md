@@ -170,6 +170,17 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 
 ---
 
+## 6g. Direkt-Kommandos ohne Modal brauchen von Anfang an eine ebenso leichte Rücknahme (INV-UI-10, ADR-v9-65)
+
+**INV-UI-10:** Jede neue Ein-Klick-Sofort-Aktion — ein Direkt-Kommando ohne Modal, ohne Bestätigungsdialog, das sofort einen Zustand setzt (z. B. „als verstorben markieren", ein leeres Ereignis per Pill anlegen) — wird **im selben Bau-Auftrag** um eine ebenso leichte Rücknahme ergänzt, solange der gesetzte Zustand noch „leer/unbestätigt" ist (kein nachträglich ergänzter Inhalt). Die Rücknahme ist selbst wieder ein Direkt-Kommando (kein Modal, keine Bestätigung) — dieselbe Interaktions-Leichtigkeit wie die ursprüngliche Aktion, sonst entsteht eine Einbahnstraße: leicht anzulegen, schwer/unmöglich zu korrigieren.
+
+**Befund (2026-07-12, zweimal in derselben Sitzung, einmal am konkreten Einzelfall, einmal generalisiert):** „☠ Verstorben markieren" (ADR-v9-62) wurde zunächst OHNE Rücknahme spezifiziert und gebaut — ein Nutzer-Fund bei der eigenen Test-Verifikation deckte auf, dass eine versehentliche Markierung nicht mehr rückgängig zu machen war, ohne echte (leere) Sterbedaten anzulegen. Direkt danach zeigte sich beim Versuch, eigene Testdaten aufzuräumen, dass dieselbe Lücke JEDES per Pill/Menü frisch angelegte, noch leere Ereignis betraf (Beleg: [32 TST-13](32-Testframework.md)) — nicht nur den Tod-Sonderfall. Beide Male deckte erst eine NACHTRÄGLICHE Rückfrage/Beobachtung es auf, nicht die ursprüngliche Spezifikation selbst — obwohl die Notwendigkeit einer Rücknahme bei jeder Ein-Klick-Aktion grundsätzlich vorhersehbar gewesen wäre.
+
+**Anwendung:** Beim Entwurf eines neuen Direkt-Kommandos die Rücknahme-Frage explizit mitdenken, BEVOR ein Nutzer-Fund sie aufdeckt — „kann dieser Klick versehentlich/vorschnell ausgelöst werden, und wenn ja, wie leicht kommt man zurück?" ist Teil der Spezifikation der Aktion selbst, kein separater Folge-Punkt. Sobald der Zustand echten, recherchierten Inhalt trägt, ist die leichte Rücknahme NICHT mehr die richtige Stelle (destruktiv, bräuchte Bestätigung) — das bleibt einer künftigen, größeren Lösch-Funktion vorbehalten, s. [20 §2](20-Funktionen.md).
+
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
