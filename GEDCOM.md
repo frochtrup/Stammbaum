@@ -34,7 +34,8 @@ Spalten: **Tag** · **Level** · **Bedeutung**. Die Zuordnung auf das v9-Modell 
 | `NOTE` | 1/2 | Inline-Text (mehrere akkumuliert) oder `@Ref@` |
 | `ADDR` | 2 | Adresse + Sub-Tags (CITY, POST, CONT, …) |
 | `SOUR` / `PAGE` / `QUAY` | 1–4 | Zitat auf jeder Ebene; PAGE = Seite, QUAY = Zuverlässigkeit 0–3 |
-| `OBJE` / `FILE` / `TITL` | 1/2/3 | Medien-Referenz (FILE = relativer Pfad) |
+| `OBJE` / `FILE` / `FORM` / `_TYPE` | 1/2/2/2 | Medien-Objekt-Ebene (global, gilt für ALLE Referenzen — `Media`, [10 §4](specs/v9/10-Domaenenmodell.md)): FILE = relativer Pfad (einzige Wahrheitsquelle), FORM = Dateiformat, `_TYPE` = Medientyp (Foto/Dokument/…) |
+| `OBJE` / `TITL` / `_DATE` / `NOTE` / `_PRIM` (an der Referenzstelle) | 1–2 | Referenz-spezifische Ebene (NUR für DIESE Verknüpfung — `MediaCitation`, [10 §4](specs/v9/10-Domaenenmodell.md)): TITL = Beschriftung in diesem Kontext, `_DATE` = Aufnahmedatum in diesem Kontext, `_PRIM` = Hauptfoto für diesen Datensatz |
 | `FAMC` | 1 | Mitgliedschaft als Kind |
 | `PEDI` | 2 | Eltern-Kind-Verhältnis: `birth` \| `adopted` \| `foster` \| `sealing` |
 | `FAMS` | 1 | Mitgliedschaft als Elternteil |
@@ -139,6 +140,8 @@ Der Parser liest 5.5.1 **und** 7.0; der Writer gibt 7.0 nur bei `gedVersion === 
 | `CHAR UTF-8` im HEAD | vorhanden | entfällt |
 | `GEDC`/`VERS` | `5.5.1` | `7.0` |
 | `SCHMA` | — | deklariert alle `_`-Tags (`2 TAG _xyz https://…`) |
+
+**Orts-/Namensübersetzung — Domänenmodell:** Personen nutzen `NameTranslation[]` (`Person.nameTrans`, Spec 10 §2). Orte nutzen denselben Struct-Typ (`PlaceObject.translations`, Spec 11 §1).
 
 ---
 

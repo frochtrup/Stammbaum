@@ -35,7 +35,7 @@ LogEntry {
   taskId: string | ''                   // optionaler Bezug: welche Aufgabe hat diesen Sucheintrag ausgelöst
 }
 ```
-GEDCOM `_RLOG` (Wire-Struktur analog `_TASK` bei Umsetzung festzulegen — noch nicht implementiert, weder Parser noch Write-Back, keine UI). Pro Person/Familie + globaler Protokoll-Tab + Markdown-Export.
+GEDCOM `_RLOG` (Wire-Struktur analog `_TASK`, [13 §2.3](13-Interop-Roundtrip.md)). **Status (korrigiert ADR-v9-66 — vorherige Fassung war stale):** Parser + Write-Back gebaut (ADR-v9-37), globaler Protokoll-Tab (`LogView.svelte`) inkl. Markdown-Export gebaut. **Noch offen:** Research-Timeline-Umschalter (chronologische Alternativansicht, [20 §1.11(b)](20-Funktionen.md)), Ergebniswert „teilweise" (Handbuch-Vorbild, aktuell nur gefunden/nicht gefunden/ausstehend), UI-Kurzweg „aus Aufgabe direkt Protokolleintrag anlegen" trotz vorhandener `taskId`-Kernverknüpfung.
 
 **`taskId`-Verknüpfung (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** verbindet einen Sucheintrag mit der Aufgabe, die ihn veranlasst hat — schließt die bislang fehlende Verbindung zwischen „was ist zu tun" (Task) und „was habe ich gesucht" (Log), die weder im v8-Oracle noch in der ursprünglichen v9-Spec bestand. Bewusst NUR ein optionaler Vorwärts-Verweis (Log → Task), keine erzwungene 1:1-Kopplung oder automatisches Schließen der Aufgabe — eine Aufgabe kann mehrere Sucheinträge brauchen, bevor sie erledigt ist; das Schließen bleibt eine bewusste Nutzerhandlung (`status`), kein abgeleiteter Seiteneffekt.
 
@@ -57,6 +57,8 @@ EvidenceEval { sourceType, infoQuality, evidence, informant }
 ```
 
 `evalToQuay()` leitet einen QUAY-*Vorschlag* ab (`original+primary`→3, `negative`→0, `authored/undetermined/indirect`→1, sonst 2). Serialisiert als **modellierter** `_EVAL`-Subtree unter SOUR (nicht verbatim — [13 §2.3](13-Interop-Roundtrip.md)). Validator-Regel `MISSING_EVAL` bewusst **default-off** (opt-in-Disziplin, [20 §3](20-Funktionen.md)).
+
+**Status (korrigiert ADR-v9-66):** `evalToQuay()`/`makeEvidenceEval()` gebaut und getestet (`core/research/eval.ts`). UI-Verdrahtung (Bewertungs-Aufklapper an der Zitat-Zeile, [20 §1.11(c)](20-Funktionen.md)) noch offen — im Code selbst als TODO markiert (`ui/shell/SourceCitationRow.svelte`).
 
 ---
 
@@ -89,4 +91,6 @@ GEDCOM `_HYPO`-Subtree auf INDI/FAM.
 ```
 Project { id, name, color, scope: {surnames[], places[], yearFrom, yearTo, personIds[]}, note, created }
 ```
-Reist **nicht** mit der Datei (app-privat, geräteweit — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)). Scope-Filter über die Personenliste; aktives Projekt als Chip-Selektor. UI: [20](20-Funktionen.md).
+Reist **nicht** mit der Datei (app-privat, geräteweit — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)). Scope-Filter über die Personenliste; aktives Projekt als Chip-Selektor. UI: [20 §1.11(f)](20-Funktionen.md), Budget-Platzierung [21 §6h](21-UI-UX.md).
+
+**Status (korrigiert ADR-v9-66):** Typ + Konstruktor (`makeProject`) gebaut (`core/research/project.ts`), keine Persistenz, keine UI. **Noch offen:** die Scope-Matching-Funktion selbst (welche Personen erfüllen `ProjectScope` — UND-Verknüpfung der drei Achsen, leere Achse schränkt nicht ein) existiert noch nicht, nur der Typ.

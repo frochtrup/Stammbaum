@@ -178,6 +178,47 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 
 **Anwendung:** Beim Entwurf eines neuen Direkt-Kommandos die Rücknahme-Frage explizit mitdenken, BEVOR ein Nutzer-Fund sie aufdeckt — „kann dieser Klick versehentlich/vorschnell ausgelöst werden, und wenn ja, wie leicht kommt man zurück?" ist Teil der Spezifikation der Aktion selbst, kein separater Folge-Punkt. Sobald der Zustand echten, recherchierten Inhalt trägt, ist die leichte Rücknahme NICHT mehr die richtige Stelle (destruktiv, bräuchte Bestätigung) — das bleibt einer künftigen, größeren Lösch-Funktion vorbehalten, s. [20 §2](20-Funktionen.md).
 
+---
+
+## 6h. Befehlsflächen-Budget (INV-UI-11, ADR-v9-66)
+
+**INV-UI-11:** Der permanente Kopfbereich einer Arbeitsfläche (Segment-Reihe + Toolbar, VOR jedem Inhalt) darf auf der primären mobilen Zielbreite (375px) höchstens **zwei** Zeilen und **fünf** dauerhaft sichtbare Bedienelemente belegen. Segment-/Tab-Buttons selbst zählen NICHT mit (sie sind Navigation, [§1](#1-view-rollen-modell-kern), kein Befehl) — aber jedes weitere Bedienelement geht zu Lasten dieses Budgets, nicht obendrauf. v9 wiederholt sonst v8s Altlast §10 (Diagramm-Toggles/Toolbars als unkoordiniert wachsende, verstreute Glyphenreihen) auf einer neuen Fläche, nur additiv statt evolutionär entstanden.
+
+**Zuordnungsregeln (kein View erfindet sein eigenes Muster, INV-UI-4):**
+- **Filter** → immer hinter `FilterBar` (§10a unten), nie als Dauer-Pillenreihe mit mehr als einem sichtbaren Element.
+- **Alternativansicht-Umschalter** (Liste⇄Board, Liste⇄Timeline, künftige Fälle) → EIN geteilter `ViewModeToggle`-Mechanismus, ein Icon-Slot — nicht pro View eine eigene Implementierung desselben „Liste ⇄ Alternativdarstellung"-Konzepts.
+- **Seltene/schwere Konfiguration** (Regel-Schwellenwerte, Export-Feinoptionen) → Bottom-Sheet hinter EINEM Einstiegspunkt, niemals ein Dauer-Icon in der Kopfzeile (gleiche Disclosure-Logik wie seltene Formularfelder, ADR-v9-30, hier auf Befehlsflächen übertragen).
+- **Cross-cutting Scope-Filter** (z. B. ein aktives Forschungsprojekt, das mehrere Segmente gleichzeitig einschränkt, [20 §1.11](20-Funktionen.md)) → EINMAL auf der Umbrella-Ebene der Arbeitsfläche, NICHT in jedem Kind-View dupliziert.
+- **Export einer gefilterten Liste** (↓ MD, CSV, …) gehört fachlich zum Filter-Kontext, nicht als eigenständiges Dauer-Icon daneben — wandert mit hinter die Filter-Disclosure.
+
+**Vor dem Bau eines neuen Toolbar-Elements:** das Budget der Ziel-View am echten Screenshot bei 375px nachzählen (nicht schätzen) — ist es bereits ausgeschöpft, MUSS ein bestehendes Element hinter Disclosure wandern, bevor ein neues hinzukommt.
+
+**Ist-Zustand `TasksView`/`LogView` ([20 §1.11](20-Funktionen.md)):** überschreiten das Budget — Aufgaben-Tab zeigt 3 gestapelte Kopfzeilen (Segmente/Filter/Aktionen) mit 9 dauerhaft sichtbaren Elementen (Alle/Offen/Erledigt, ▦/↓/„+ Aufgabe"), Protokoll-Tab 2 Zeilen mit 6 Elementen, dessen Filterreihe (Alle/Gefunden/Nichts gefunden/Ausstehend) bei 375px bereits ohne Restbreite endet. Der `FilterBar`-Retrofit auf beide Views ist Voraussetzung für jede weitere Ergänzung der Forschungs-Arbeitsfläche ([20 §1.11](20-Funktionen.md)), nicht optionale Nacharbeit danach.
+
+**Konsolidierte Ziel-Struktur für die Forschungs-Arbeitsfläche** (`ResearchTab`, [20 §1.11](20-Funktionen.md)):
+```
+Zeile 1: [Aufgaben] [Protokoll] [Hypothesen] [Dashboard]   ← Segmente, zählen nicht ins Budget
+Zeile 2: [Alle Projekte ▾]  ← EIN Chip-Selektor, cross-cutting, kollabiert wenn "Alle" aktiv
+─── ab hier segment-spezifisch, Budget = 1 Zeile / max. 3 Elemente ───
+Aufgaben:    [Filter · N] [⊞ Board] [+ Aufgabe]
+Protokoll:   [Filter · N] [🕒 Timeline] [+ Eintrag]
+Hypothesen:  [Filter · N] [+ Hypothese]
+Dashboard:   [Projekt-Kontext geerbt] [⚙ Konfigurieren]
+```
+Vier Segmente in Zeile 1 sind zulässig, weil `EntityTab`s Segment-Reihe bei derselben Breite bereits fünf Segmente (Personen/Familien/Quellen/Orte/Höfe) umbruchfrei zeigt — die Wortlängen sind vergleichbar; bei tatsächlichem Bau am echten Screenshot gegenprüfen, nicht nur annehmen.
+
+---
+
+## 6i. Barrierefreiheit — operationalisierter Kontrakt (LP-8, ADR-v9-67)
+
+Operationalisierung von [01 LP-8](01-Vision-und-Prinzipien.md)/[30 NFR-5](30-NFR-und-Persistenz.md) auf Mechanismus-Ebene — vier Teilanforderungen, je auf konkrete v9-Komponenten/-Muster heruntergebrochen:
+
+- **Tastaturbedienbarkeit — app-weit, nicht auf Desktop beschränkt.** „Tastatur-first überall" ([§3](#3-desktop-modell-eigenständig-designt)) gilt für Mobile UND Desktop gleichermaßen: kein Keyboard-Trap in Bottom-Sheets/Modals (`EventEditModal`, Picker, Assoziations-/Ortsübersetzungs-Add-Zeilen), sinnvolle Fokus-Reihenfolge, Escape schließt jedes Overlay — auch auf Mobile mit externer Tastatur/Switch-Control.
+- **Screenreader-Beschriftung — jede interaktive Kontrolle, nicht nur Icon-only.** Jede Liste, jeder Button, jedes Formularfeld hat einen korrekten zugänglichen Namen (`aria-label`/`aria-labelledby`/verknüpftes `<label>`) — ein sichtbares Label allein (z. B. eine `.stb-role-label`-Pille ohne semantisches Element) ist kein zugänglicher Name. Segment-Reihen (`role="tablist"`, `ResearchTab.svelte`) und `Picker.svelte`-Ergebnislisten sind Referenzimplementierung (am häufigsten wiederverwendet, INV-UI-4).
+- **`prefers-reduced-motion`.** Betrifft die imperativen SVG-Inseln ([§8](#8-layout-algorithmen-imperative-inseln)): Baum-Zentrierung/-Zoom-Übergänge, Karte-Migrationsmodus (Play/Pause/Loop-Animation, [20 §1.9](20-Funktionen.md)), Zeitleiste-Übergänge. Bei gesetzter Systemeinstellung „Bewegung reduzieren" springen Zustandswechsel direkt statt zu animieren — EIN zentraler Check (`window.matchMedia('(prefers-reduced-motion: reduce)')`), von allen Inseln gemeinsam gelesen (INV-UI-4), nicht pro Insel neu abgefragt.
+- **Kontrast AA — über alle Ansichten.** Gilt für jede zum jeweiligen Zeitpunkt existierende Ansicht, Light- UND Dark-Mode — keine auf eine feste Anzahl Ansichten eingegrenzte Liste.
+
+**Test-Gate:** [32 TST-15](32-Testframework.md) — automatisiert wo möglich (analog `check:csp`), manuelle Stichprobe für das, was Automation nicht zuverlässig fängt (tatsächlich wahrgenommene Fokus-Reihenfolge in den imperativen Inseln, ob reduzierte Bewegung sich auch "richtig" anfühlt).
 
 ---
 
@@ -200,6 +241,8 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 ## 8. Layout-Algorithmen (imperative Inseln)
 
 Sanduhr-, Nachkommen- und Fächer-Baum, Karte und Zeitleiste sind imperative SVG-Inseln ([02 §5](02-Zielarchitektur-v9.md)). Die konkreten Layout-Konstanten (Kartengrößen, GAPs, ancSpan-Slots, Kekule-Vergabe, Pinch/Drag/Tastatur, T-Linien) sind in `legacy-v8/UI-DESIGN.md` dokumentiert und als *Algorithmus* aus v8 wiederverwendbar. Sie hängen nicht am View-State und werden bei jeder (Re-)Zentrierung vollständig neu berechnet.
+
+**Vollständigkeits-Heatmap ([20 §1.3](20-Funktionen.md)) — Dateneingabe, keine Berechnung in der Insel selbst.** Die Sanduhr-Insel bekommt für jede sichtbare Person eine vorberechnete Befundschwere (aus derselben Validierungs-Engine wie das Qualitäts-Dashboard, [20 §1.11](20-Funktionen.md)) als reinen Rendering-Input übergeben — sie wertet KEINE eigenen Kriterien aus (kein zweiter, insel-lokaler Mini-Validator wie im v8-Vorbild). Ring-Rendering folgt derselben Reduced-Motion-Regel wie jede andere Übergangsanimation der Insel (§6i oben).
 
 ---
 

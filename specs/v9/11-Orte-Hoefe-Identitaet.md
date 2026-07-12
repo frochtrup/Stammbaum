@@ -16,6 +16,7 @@ PlaceObject {
   type: string                     // Country/State/County/Town/Parish/Church/Cemetery …
                                    //   NIE Farm/Building — Höfe sind separate Entität
   pnames: DatedName[]              // datierte Namensvarianten (sprachlich/orthographisch/historisch)
+  translations: NameTranslation[]  // mehrsprachige Namensform (sprachlich, NICHT zeitlich)
   enclosedBy: DatedRef[]           // datierte Hierarchie (Zeitachse der Verwaltungszugehörigkeit)
   lat, long: number
   note: string
@@ -24,6 +25,8 @@ PlaceObject {
   govTypes: […]
 }
 ```
+
+**`translations` vs. `pnames` — zwei Achsen, bewusst getrennte Felder:** `pnames` beantwortet „wie hieß der Ort WANN" (Zeitachse, `{value, from, to}`), `translations` beantwortet „wie heißt derselbe Ort JETZT in welcher Sprache" (Sprachachse, `NameTranslation {lang, value}`, [10](10-Domaenenmodell.md) — derselbe Typ, den Person bereits für `nameTrans` nutzt, INV-UI-4 auf Datenebene: EIN Übersetzungs-Struct für beide Entitäten, nicht zwei). Beide sind „alternative Bezeichnung desselben Orts", aber mit orthogonalen Diskriminatoren — ein gemeinsames Feld mit optionalem `lang`-ODER-`from/to`-Diskriminator wurde geprüft und verworfen: die beiden GEDCOM-Wire-Formate (`_HIST`-artige Datumsvarianten vs. `TRAN`/`_TRAN`+`LANG`) sind strukturell verschieden, ein gemeinsames Feld würde den Writer nur verkomplizieren, ohne dass die UI dadurch weniger Code bräuchte (beide nutzen ohnehin dieselbe Zeilen-Komponente, s. u.). Historisches Beispiel, das den Unterschied zeigt: *Breslau* → *Wrocław* ist eine Übersetzung (`translations`, Grenzverschiebung 1945, dieselbe Stadt heißt auf Polnisch anders), *Sassenbergk* → *Sassenberg* ist eine Zeitvariante (`pnames`, historische Schreibweise desselben deutschen Namens).
 
 **HofObject — Hof als eigenständige Entität:**
 ```
@@ -217,6 +220,7 @@ Vier zuvor offene Spezifikationsfragen sind inzwischen **entschieden** (hier nur
 4. **Reprojektion bei UI-Verknüpfung — ENTSCHIEDEN: sofort im Kommando (ADR-v9-19 ✅).** Jeder `placeId`/`hofId`-setzende Mutationspfad (`linkEventToPlace` u. a.) reprojiziert `event.place` unmittelbar selbst (§3 „Zeitpunkt der Reprojektion", §4.1). Die frühere Lesart (b) des Code-Kommentars (nur Load-Pfad) ist damit verworfen. *Umsetzung + Regressionstest:* Phase 1.2.
 5. **Gleichnamige Orts-Disambiguierung — ENTSCHIEDEN (ADR-v9-29 ✅).** Seed-Dedup nach Name+Hierarchie-Verträglichkeit, Resolver-Konsistenz-Guard (3c) + Eltern-Disambiguierung (3c′) und **Review-Klasse P** (§4.2/§6) — löst die stille Falschverknüpfung `Oldenburg, USA` → deutscher Oldenburg, das Kollabieren von Oldenburg/NS + Oldenburg/USA und die verdeckte atomare Mehrdeutigkeit; hunderte `Ochtrup` bleiben dabei **ein** Ort. *Umsetzung:* Phase 1 (1.1a Seed-Dedup, 1.1b Guard/3c′, 1.1c Klasse P).
 6. **Gleichnamige Orte mit widersprüchlicher, aber real identischer Verwaltungshistorie — ENTSCHIEDEN (ADR-v9-50 ✅ inkl. Nachtrag, ersetzt ADR-v9-49 ♻️).** Zunächst (ADR-v9-49) bewusst als Restklasse OHNE Kern-Fix dokumentiert; nach zwei Nutzer-Rückfragen final gelöst (§9.2): Kriterium 1 in `findPlaceDuplicates` gruppiert JEDE Namensgleichheit, UNABHÄNGIG von Eltern-Verträglichkeit (auch Oldenburg/Niedersachsen vs. Oldenburg/USA) — als `conflict: true`-markierte Gruppe mit voller Namenskette (`buildFullPlaceName`) statt bloßem Titel. Eine zunächst erwogene Zwischenlösung („gemeinsamer Vorfahre irgendwo in der Kette") wurde verworfen, weil sie Fälle wie `Ochtrup, Preußen, Deutsches Reich` vs. `Ochtrup, NRW, Deutschland` (real derselbe Ort, aber komplett umbenannte Kette) ebenso ausgeschlossen hätte wie Oldenburg — keine Ketten-Heuristik kann das zuverlässig trennen. Sicher, weil Massen-Dedup nie automatisch zusammenführt: ADR-v9-29 bleibt für `resolve.ts`/`seed.ts` (die automatischen Pfade) unangetastet.
+7. **Geo-Plausibilitätsprüfung (Bounding-Box, Zeitachsen-Inkonsistenz, `enclosedBy`-Zirkel, `HOF_NO_COORD`, `HOF_FAR`) — ENTSCHIEDEN (ADR-v9-68), spezifiziert in [20 §3](20-Funktionen.md), NICHT hier dupliziert.** Bewusst in dieselbe Validierungs-Engine integriert wie die Personen-/Familien-Regeln (EIN „✓ Daten prüfen", EIN Dashboard) statt v8s separatem Orte-Tab-Badge — Details/Schwellenwerte/Schweregrade s. dort.
 
 ---
 

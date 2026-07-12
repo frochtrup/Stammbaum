@@ -49,7 +49,7 @@ Genuine Mehrdeutigkeit / fehlendes Wissen wird sichtbar gemacht (Review-Workflow
 Bedienung primär für Touch/Portrait; Desktop bietet zusätzliche Dichte (Zweispalten, Tastatur, mehr Baum-Ebenen), nie weniger.
 
 **LP-8 — Barrierefreiheit & Sicherheit als Baseline.**
-WCAG 2.1 AA (0 Violations). CSP ohne `unsafe-inline`/`eval`. Konsequentes Escaping aller Nutzerstrings. Keine Information nur über Farbe.
+WCAG 2.1 AA (0 Violations) über alle Ansichten — vollständige Tastaturbedienbarkeit, Screenreader-Beschriftung aller interaktiven Elemente, Respekt vor `prefers-reduced-motion`, Kontrast AA in Light- und Dark-Mode. CSP ohne `unsafe-inline`/`eval`. Konsequentes Escaping aller Nutzerstrings. Keine Information nur über Farbe. Konkretisiert in [30 NFR-5](30-NFR-und-Persistenz.md), operationalisiert auf Mechanismus-Ebene in [21 §6i](21-UI-UX.md), Test-Gate [32 TST-15](32-Testframework.md).
 
 **LP-9 — Kein Datenverlust bei Multi-Device.**
 Gleichzeitige Bearbeitung auf mehreren Geräten darf nicht zu stillem last-write-wins-Verlust führen. Für `orte.json`: Erkennung per Revision/Device → Union-Merge ([11 §2](11-Orte-Hoefe-Identitaet.md)). Für die Genealogie-Datei: Konflikte sind OS-Konflikte des Sync-Ordners; Milderung per Disk-Timestamp-Hinweis beim Öffnen ([14 §5](14-Dateihandling.md)).

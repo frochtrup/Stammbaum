@@ -29,7 +29,8 @@
 - DSGVO-Anonymisierung beim Export ([13 §7](13-Interop-Roundtrip.md)).
 
 **NFR-5 Barrierefreiheit (LP-8):**
-- WCAG 2.1 AA, 0 Violations. Tastaturbedienbarkeit, aria-labels, Kontraste, nicht-nur-Farbe.
+- WCAG 2.1 AA, 0 Violations. Tastaturbedienbarkeit, aria-labels, Kontraste, nicht-nur-Farbe, `prefers-reduced-motion`.
+- Operationalisierter Kontrakt (konkrete Mechanismen je Teilanforderung, Beispiele, Cross-Refs): [21 §6i](21-UI-UX.md). Test-Gate: [32 TST-15](32-Testframework.md).
 
 **NFR-6 Testbarkeit (kritisch — [02 INV-ARCH-2](02-Zielarchitektur-v9.md)):**
 - Alle Kern-Domänenlogik headless testbar (kein Browser, kein Nutzer, **kein Build**): Roundtrip-Tests (GEDCOM + GRAMPS), Unit-Tests der reinen Funktionen, Snapshot-Test kritischer Render-Ausgaben, CSP-Gate.

@@ -64,7 +64,7 @@ Person {
   associations: Association[]       // ASSO/personref — Pate, Zeuge, Informant …
 
   // Medien & Notizen
-  media: MediaRef[]
+  media: MediaCitation[]              // s. §4
   noteText: string
   noteRefs: NoteId[]
 
@@ -95,6 +95,8 @@ ChildLink {
 ```
 
 **PersonName (extraNames):** `{ nameRaw, given, surname, prefix, suffix, type, citations: Citation[] }`
+
+**NameTranslation (nameTrans, GED7 `NAME`/`TRAN`):** `{ lang: string, value: string }` — mehrsprachige Namensform, GED7-Feature. Kein eigenes UI-Bullet in [20](20-Funktionen.md): derselbe Mechanismus wie die Orts-Übersetzung ([11 §1](11-Orte-Hoefe-Identitaet.md), Sprachkürzel+Text, INV-UI-4) — Personen-UI dafür ist noch nicht spezifiziert, verwendet bei Bedarf dieselbe Komponente wie Orts-Übersetzungen.
 
 **Association (ASSO ↔ GRAMPS personref):**
 ```
@@ -141,7 +143,7 @@ Source {
   callMedia (MEDI): string
   dataEvents: SourceDataEvent[]    // DATA/EVEN/DATE/PLAC — Ereignis-Abdeckung
   externalRefs (REFN): {value, type}[]
-  media: MediaRef[]
+  media: MediaCitation[]              // s. §4
   lastChanged: string
 }
 
@@ -156,11 +158,30 @@ Repository {
 }
 
 Note { id, type: 'NOTE' | 'SNOTE', text }
-
-MediaRef { file, title, /* + strukturierte Sub-Attribute wo relevant */ }
 ```
 
-`MediaRef.file` ist ein **relativer Pfad** (bezogen auf den Datei-Ordner / Sync-Ordner, siehe [14 §7](14-Dateihandling.md)) — die einzige Wahrheitsquelle für Medien.
+**Medien — Vorschlag, noch nicht entschieden.** Der aktuelle `MediaRef { file, title }` wird je Kontext dupliziert eingebettet (`Citation.media`, `Event.media`, `Person.media`, `Family.media`, `Source.media`) — mehrere unabhängige Kopien desselben Datensatzes, wenn ein Foto mehrfach verknüpft ist, nur über den `file`-Pfad identifiziert. Vorgeschlagene Auflösung, analog zu Orten (`PlaceObject`+`event.placeId`) und Quellen (`Source`+`Citation`):
+
+```
+Media {
+  id: MediaId
+  file: string                      // FILE — relativer Pfad (Datei-/Sync-Ordner, [14 §7](14-Dateihandling.md)), einzige Wahrheitsquelle
+  form: string                      // FORM — Dateiformat (jpg, pdf, …)
+  type: string                      // MEDI — Medientyp (Foto/Dokument/Ton/Video …)
+  lastChanged: string
+}
+
+MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Medium ↔ EINE Entität/Ereignis/Zitat
+  mediaId: MediaId
+  title: string                     // TITL — Beschriftung NUR für diesen Kontext
+  date: string                      // _DATE — Aufnahmedatum in diesem Kontext
+  note: string                      // NOTE
+  primary: bool                     // _PRIM — Hauptfoto/-dokument für DIESEN Datensatz
+}
+```
+`Person.media`/`Family.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (statt `MediaRef[]`) — EIN Medium, viele typisierte Referenzen mit eigenen Feldern, gleiche Rollenverteilung wie `Source`/`Citation`. Voraussetzung für die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)) — mit dupliziert-flachen Kopien nicht baubar (keine Medien-Identität über Referenzen hinweg, nur Pfad-String-Zufallstreffer).
+
+**Vor Umsetzung Pflicht:** betrifft Parser/Writer an fünf Call-Sites (`gedcom-parse.ts`/`write-back-emit.ts`) — `roundtrip-verify` auf allen Fixtures nach der Migration (LP-1).
 
 ---
 
@@ -187,7 +208,7 @@ Event {
 
   note: string
   citations: Citation[]
-  media: MediaRef[]
+  media: MediaCitation[]              // s. §4
 }
 ```
 
@@ -227,7 +248,7 @@ Citation {
   page (PAGE): string
   quay (QUAY): 0 | 1 | 2 | 3         // Zuverlässigkeit
   note: string
-  media: MediaRef[]                   // OBJE unter SOUR (strukturiert)
+  media: MediaCitation[]              // OBJE unter SOUR (strukturiert), s. §4
   eval: EvidenceEval | null           // 3-Achsen-Evidenzmodell (siehe 12 §3)
   deepLinkUrl: string                 // = media[0].file (OBJE/FILE), NICHT page
 }
