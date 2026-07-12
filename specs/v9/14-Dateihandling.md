@@ -102,7 +102,13 @@ Robuster als app-verwaltete Graph-Calls und null Komplexität für die App. **LP
 
 ## 6. `orte.json` (Cross-Stammbaum-Wissen)
 
-`orte.json` ([11 §2](11-Orte-Hoefe-Identitaet.md)) folgt demselben Prinzip: liegt **neben der Genealogie-Datei im Sync-Ordner**, das OS synct. Die Revision/Device-Konflikterkennung (`_rev`/`_device`) bleibt — sie ist gegen *nebenläufige* Bearbeitung nötig, egal ob der Sync per OS oder Cloud läuft. Union-Merge bei Konflikt. Kein Graph-API-Pfad mehr.
+`orte.json` ([11 §2](11-Orte-Hoefe-Identitaet.md)) folgt demselben Prinzip: liegt **im Sync-Ordner**, das OS synct — der Nutzer platziert die Datei dort selbst (z. B. neben der Genealogie-Datei), die App entdeckt sie nicht automatisch über ein Verzeichnis-Handle. Die Revision/Device-Konflikterkennung (`_rev`/`_device`) bleibt — sie ist gegen *nebenläufige* Bearbeitung nötig, egal ob der Sync per OS oder Cloud läuft. Union-Merge bei Konflikt. Kein Graph-API-Pfad mehr.
+
+Persistenzschichten (Spec 11 §2): ein geräteweiter **IndexedDB-Spiegel** (immer vorhanden, `PlacesSyncService`) plus ein optionaler **Datei-Ein-/Ausgang** über dasselbe Adapter-Muster wie die Genealogie-Datei ([§4](#4-fileservice-die-einzige-plattform-verzweigung)) — ein eigenes, von der Genealogie-Arbeitskopie getrenntes FS-Handle:
+- **Export** („Orte exportieren"): serialisiert den IDB-Spiegel-Stand zu JSON und schreibt ihn über `exportToFile` (Tier 1 in-place, falls Handle gemerkt, sonst Tier 2 Share/Download) — dasselbe Rohr wie der Genealogie-Export (INV-FILE-2).
+- **Import** („Orte importieren"): liest eine gewählte `orte.json` über denselben `PickerAdapter`, gleicht sie über `reconcileAndSave` (Union-Merge, Schema-Gate) gegen den IDB-Spiegel ab — wie ein Stand von einem anderen Gerät.
+
+Kein stiller Schreib-Sync bei jeder einzelnen Orts-/Hof-Mutation (auf Tier-2-Plattformen wäre das Share-Sheet-Spam bei jedem Edit) — Export/Import bleiben explizite Nutzeraktionen.
 
 ---
 

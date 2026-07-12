@@ -47,7 +47,7 @@
 |---|---|
 | **Datei** (GEDCOM/GRAMPS) im **OS-Sync-Ordner** | Wahrheit für Genealogie (LP-3); Geräte-Sync macht das OS (iCloud/OneDrive-Ordner), nicht die App |
 | **Arbeitskopie (IndexedDB)** | *eine* kanonische Text-Kopie: Auto-Load, Absturz-Recovery, Offline; Foto-Cache (pfad-basiert), App-Konfiguration |
-| **`orte.json`** (im Sync-Ordner) | Cross-Stammbaum Orts-/Hofwissen (LP-4) mit Revision/Device-Konflikterkennung |
+| **`orte.json`** (IndexedDB-Spiegel immer; Datei im Sync-Ordner optional) | Cross-Stammbaum Orts-/Hofwissen (LP-4) mit Revision/Device-Konflikterkennung; Datei-Ein-/Ausgang über eigenes FS-Handle, explizite Export-/Import-Aktion ([14 §6](14-Dateihandling.md)) |
 
 > Es wird der **Datei-Text** gecacht (Arbeitskopie), nicht das In-Memory-Modell (Sets/Referenzen nicht trivial serialisierbar; die Datei ist ohnehin die Wahrheit). Vollständiges Dateihandling: [14](14-Dateihandling.md).
 
