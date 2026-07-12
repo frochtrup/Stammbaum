@@ -172,6 +172,8 @@ Vier zentrale Helfer für die **Event→Ort/Hof-Auflösung** — die einzigen ko
 | `eventCoords(ev)` | Welche Koordinaten? | placeObject/hofObject primär, `ev.lati/long` Fallback |
 | `buildPlacForGedcom(ev, year)` | Welcher PLAC-String würde geschrieben? | Hof + Dorf-Hierarchie, periodengerecht |
 
+**Überlappende `enclosedBy`-Perioden — Tie-Break-Regel:** widersprechen sich zwei `enclosedBy`-Einträge für dasselbe Jahr (z. B. fehlerhaft importierte oder manuell überlappend eingetragene Zeiträume), gewinnt der Eintrag mit dem **höheren Startjahr** (`from`) — die zeitlich näher liegende Periode. `buildPlacForGedcom`/`enclosureChainAsOf` markieren den Fall mit einem Warnhinweis (⚠, Ort-Steckbrief), still gewählt wird trotzdem deterministisch, kein Blockieren der Projektion.
+
 **Aggregatoren** (`collectPlaces`, `buildHofIndex`) sind **id-basiert** (nicht string-basiert): zwei gleichnamige Orte bleiben distinkt, mehrere Cache-Varianten desselben Orts kollabieren auf einen Eintrag.
 
 **Drei weitere reine Prädikate/Helfer** (ADR-v9-44/46/50, objekt- statt event-seitig, aber derselben Chokepoint-Disziplin unterworfen — Details §9): `isEnrichedPlace(po)`/`isEnrichedHof(hof)` (weicht das Objekt vom Seed-Rohzustand ab?), `hasReference(id, events)` (löst mindestens ein Event der geladenen Datei auf dieses Objekt auf?) und `buildFullPlaceName(reg, id)` (volle, periodenunabhängige Namenskette eines Orts — für Kuration/Anzeige OHNE Event-/Jahres-Kontext, z. B. Massen-Dedup §9.2; anders als `buildFormString` mit `year=null`, das bewusst nur den atomaren Einzelnamen liefert). Alle drei sind reine Funktionen über vorhandene Felder bzw. Events — kein zusätzlicher persistierter Zustand.

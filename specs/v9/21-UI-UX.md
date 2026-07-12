@@ -52,7 +52,7 @@ Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 
   Labels + Icons, immer sichtbar → löst „kryptische Icon-Leiste" und „aktiver Zustand" strukturell.
 - **Multi-Pane Master-Detail:** Navigations-/Listen-Pane + Detail-Pane dauerhaft nebeneinander; optionaler dritter Kontext-Pane (z. B. Quellen zum aktuellen Ereignis).
-- **Tastatur-first überall** (nicht nur im Baum): konsistente Shortcuts über alle Listen/Views.
+- **Tastatur-first überall** (nicht nur im Baum): konsistente Shortcuts über alle Listen/Views. Baum-Navigation (Sanduhr/Nachkommen/Fächer, [20 §1.3](20-Funktionen.md)): ↑ zum Vater, ↓ zum ersten Kind, → zum Ehepartner, Tab zykelt zwischen sichtbaren Kacheln, Enter/Leertaste öffnet die fokussierte Kachel. App-weit: `Cmd/Ctrl+F` öffnet die Suche, `Cmd/Ctrl+S` speichert.
 - **Command-Palette (⌘K)** = Desktop-Pendant zur Suche; nutzt denselben Such-Kern ([20](20-Funktionen.md)).
 - **Vollbild** ist ein sauberer Layout-Modus (eine State-Klasse), keine `!important`-Kaskade wie in v8.
 

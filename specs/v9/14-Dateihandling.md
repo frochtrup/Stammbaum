@@ -52,6 +52,14 @@ Modell → serialize(format) → Bytes → save()
 - GRAMPS (gzip) läuft durch dasselbe Rohr, weil es **Bytes** behandelt, nicht Text.
 - **INV-FILE-2:** Jeder Format-Export geht durch dasselbe Save-Rohr. Keine format-spezifische Save-Maschinerie.
 
+### 3.3 Diagnose & Wartung (lokaler Zustand)
+
+Zwei Nutzer-seitige Selbsthilfe-Aktionen in den Einstellungen, für den Fall eines inkonsistenten lokalen Zustands:
+- **„Ortsdaten zurücksetzen"** — löscht nur den `orte.json`-IDB-Spiegel ([§6](#6-ortejson-cross-stammbaum-wissen)); die geladene Datei selbst bleibt unberührt, Orte werden beim nächsten Laden neu aufgelöst ([11 §4](11-Orte-Hoefe-Identitaet.md)).
+- **„Alle lokalen Daten löschen"** — setzt Arbeitskopie ([§3.1](#31-arbeitskopie-plattformübergreifende-konstante)) und `orte.json`-Spiegel vollständig zurück, App startet leer.
+
+Beide Aktionen betreffen ausschließlich lokal abgeleiteten/zwischengespeicherten Zustand — keine Datei-Löschung auf Betriebssystem-Ebene, kein Datenverlust an der eigentlichen GEDCOM-/GRAMPS-Datei.
+
 ---
 
 ## 4. FileService: die einzige Plattform-Verzweigung

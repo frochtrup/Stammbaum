@@ -84,6 +84,8 @@ Vollwertiges Zweitformat (gzip XML). Vollständiger Passthrough aller nicht-mode
 - Roundtrip `xml1===xml2`. Notizen/Zitate werden dedupliziert (gemeinsame Handles) — stabil, kein Datenverlust.
 - **Test-Seam:** synchrone `buildXMLText(db)` / `parseXMLText(xml)` ohne gzip/Blob, damit der GRAMPS-Roundtrip headless ohne Web-Plattform-APIs testbar ist.
 
+**Offene Frage: dedizierte GRAMPS-Tags-/Attribute-UI.** GRAMPS kennt neben den in `<attribute>` verpackten Forschungsartefakten auch eigene `<tag>`-Referenzen und freie `<attribute>`-Paare außerhalb des Forschungsdaten-Modells (Anwenderklassifikation, Notizen-Kategorien). Datenerhalt ist bereits über den generischen Passthrough garantiert (LP-1) — offen ist nur, ob eine GRAMPS-spezifische Anzeige-/Bearbeitungs-Oberfläche dafür entsteht (Tag-Pillen, editierbarer Attribut-Abschnitt) oder ob Passthrough-Erhalt ohne eigene UI genügt. Entscheidung vertagt bis zum GRAMPS-Import-Bauabschnitt.
+
 ---
 
 ## 7. Anonymisierter Export (DSGVO)
