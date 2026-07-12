@@ -157,6 +157,19 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6f. Datums-Anzeigetiefe folgt dem Kontext (INV-UI-9, ADR-v9-64)
+
+**INV-UI-9:** Die Anzeigetiefe eines Ereignis-Datums richtet sich danach, OB die Detail-Seite die eigenen Ereignisse der gerade betrachteten Entität zeigt, oder ob eine Liste FREMDER Entitäten zur schnellen Unterscheidung durchsucht wird:
+
+- **Eigene-Ereignis-Kontext** (die Detail-Seite EINER Person/Familie zeigt IHRE EIGENEN Ereigniszeilen — `PersonDetail`/`FamilyDetail`s „Ereignisse"-Sektion): **volles, lokalisiertes Datum** — Tag+Monat wo vorhanden, Qualifier-Präfix (`ca.`/`vor`/`nach`/…), Zeitraum-Format bei `BET`/`FROM`. Das Datum IST hier der Seiteninhalt, den der Nutzer recherchiert und verifiziert hat — jede Verkürzung ist ein Informationsverlust in der Anzeige (Genauigkeit bleibt im Modell erhalten, LP-1, nur die Darstellung war unvollständig).
+- **Disambiguierungs-/Übersichts-Kontext** (eine Liste MEHRERER Personen in einer fremden Detail-Seite oder Übersicht — Kinder-/Ehepartner-/Eltern-Zeilen [INV-UI-6](#6c-personen-disambiguierung-bei-namensgleichheit-inv-ui-6-adr-v9-51), Ort-/Hof-Bewohnerlisten, globale Suche): **Jahr genügt** — dient nur der groben zeitlichen Einordnung/Unterscheidung zwischen mehreren gleichnamigen oder ähnlichen Einträgen, ein volles Datum wäre hier Rauschen statt Hilfe.
+
+Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Parser (`parseDateValue`), nicht zwei unabhängige Implementierungen — nur die Formatierungstiefe unterscheidet sich (INV-UI-4).
+
+**Befund (2026-07-12, Nutzer-Fund):** Vor dieser Invariante nutzten `PersonDetail`/`FamilyDetail`s EIGENE Ereigniszeilen denselben Jahr-only-Mechanismus (`yearPlaceSummary`) wie die Disambiguierungs-Listen — beide Kontexte wurden nicht unterschieden. Tag/Monat/Qualifier waren im `EventEditModal` korrekt eingebbar und wurden roundtrip-sicher gespeichert, verschwanden aber in JEDER Lese-Ansicht der eigenen Ereignisse spurlos. Siehe [10 §5.2](10-Domaenenmodell.md) für das Anzeigeformat je Qualifier.
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):

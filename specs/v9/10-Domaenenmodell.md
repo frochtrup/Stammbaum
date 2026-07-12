@@ -211,7 +211,10 @@ GEDCOM-Datumsangaben intern als **normalisierter Raw-String** (nach Groß-/Klein
 | `FROM…TO…` | Zeitraum | `FROM 1985 TO 2005` |
 
 - **Eingabe:** Qualifier-Dropdown + Tag/Monat/Jahr; Monat akzeptiert Zahl (1–12) + DE/EN-Namen, normiert auf `JAN`–`DEC`.
-- **Anzeige:** lokalisiert (`FROM 1985 TO 2005` → `1985–2005`, `ABT` → `ca.`).
+- **Anzeige — zwei Genauigkeitsstufen, siehe [21 INV-UI-9](21-UI-UX.md) für den Kontextunterschied:**
+  - **Volles Datum** (Eigene-Ereignis-Kontext): Tag+Monat+Jahr wo vorhanden, deutscher Monatsname (`12. März 1890`), fehlender Tag → nur `März 1890`, nur Jahr → `1890`. Qualifier-Präfix: `ABT` → `ca. 1875`, `CAL` → `errechnet 1875`, `EST` → `geschätzt 1875`, `BEF` → `vor 1900`, `AFT` → `nach 1850`, `BET…AND…` → `zwischen 1880 und 1890`, `FROM…TO…` → `1985–2005`.
+  - **Jahr-only** (Disambiguierungs-/Übersichts-Kontext): wie bisher, nur die Jahreszahl — kein Qualifier-Präfix, keine Monats-/Tagesangabe (der Qualifier ist hier ohnehin irrelevant, es geht nur um grobe zeitliche Einordnung zur Unterscheidung).
+  - **Befund (2026-07-12, Nutzer-Fund):** vor dieser Präzisierung nutzte die Anzeige AUSSCHLIESSLICH die Jahr-only-Form — auch im Eigene-Ereignis-Kontext (`PersonDetail`/`FamilyDetail`s eigene Ereigniszeilen). Tag/Monat waren im Editor eingebbar, verschwanden aber in JEDER Lese-Ansicht spurlos; derselbe Mangel betraf den Qualifier (kein „ca."/„vor"/… sichtbar). Nicht nur ein Kosmetik-Fehler: bei Datumsangaben mit Tag+Monat (z. B. Kirchenbuch-Einträge) ging die recherchierte Präzision für den Nutzer unsichtbar verloren, obwohl sie korrekt gespeichert war (kein Datenverlust, nur ein Anzeige-Fehler — roundtrip-sicher).
 - **Sortierung:** deterministischer Sortierschlüssel; undatierte Einträge ans Ende.
 
 ### 5.3 Zitationsmodell (Citation)
