@@ -26,6 +26,7 @@ Du baust die **reaktive UI-Schale** von Stammbaum v9 in **Svelte 5 + Vite** (kei
 
 ## Definition of Done
 - INV-VS + INV-UI-1/2/3 durch Komponenten-Tests abgedeckt; betroffene Features aus Spec 20 umgesetzt.
+- **Orts-/Hof-bezogene Verifikation deckt BEIDE Zustände ab (TST-16, [32 §1](specs/v9/32-Testframework.md)):** angereichert UND plain/unangereichert (`isEnrichedPlace`/`isEnrichedHof`, [11 §9.1](specs/v9/11-Orte-Hoefe-Identitaet.md)) — nicht nur ein bereits kuratiertes Beispiel. **Lehre (2026-07-14):** ein Kartenlink-Sprung wurde mit einem bereits angereicherten Ort erfolgreich verifiziert (echte Komponente, kein Mock) — der häufigere unangereicherte Fall (Koordinaten nur als Event-Fallback, kein eigenes PlaceObject-Feld) blieb dabei unbemerkt kaputt, weil niemand ihn ausprobiert hatte, obwohl er nach ADR-v9-28/44 der Regelfall direkt nach Import ist.
 - CSP-Gate + Import-Grenzen-Gate grün.
 - Neue Bugs mit Regressions-Test verriegelt.
 - **Kapazitäts-/Überlauf-Fall verifiziert (TST-7, [32 §1](specs/v9/32-Testframework.md)):** jede Mehrfach-Element-Darstellung (Listen, Kandidaten, Chips, Suchergebnisse) zusätzlich zum 1-3-Element-Happy-Path mit überdurchschnittlich vielen/dicht liegenden Elementen prüfen — nicht erst warten, bis danach gefragt wird.

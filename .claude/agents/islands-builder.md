@@ -22,6 +22,7 @@ Du baust die **imperativen Diagramm-Inseln** von Stammbaum v9 (`ui/islands`) —
 
 ## Definition of Done
 - Layout-Funktion durch benannte Unit-Tests abgedeckt (Modell→Positionen, deterministisch).
+- **Orts-/Hof-bezogene Verifikation deckt BEIDE Zustände ab (TST-16, [32 §1](specs/v9/32-Testframework.md)):** angereichert UND plain/unangereichert (`isEnrichedPlace`/`isEnrichedHof`, [11 §9.1](specs/v9/11-Orte-Hoefe-Identitaet.md)) — besonders relevant für die Karte-Insel (Marker-Zentrierung/-Hervorhebung hängt an vorhandenen Koordinaten). **Lehre (2026-07-14):** die Karte-Insel-Seite eines Kartenlink-Sprungs wurde live mit einem bereits angereicherten Ort verifiziert (Marker zentriert/hervorgehoben, korrekt) — ein unangereicherter Ort (Koordinaten nur als Event-Fallback am Ereignis, kein eigenes PlaceObject-Feld) fand dagegen keinen Marker zum Zentrieren und blieb unbemerkt kaputt, bis eine gezielte Nachverifikation genau diesen Fall ausprobierte.
 - Interaktion (Pinch/Drag/Tastatur/Klick→Rezentrieren) funktionsfähig; Callbacks nach oben verdrahtet.
 - Snapshot der aus dem Modell gerechneten SVG-Ausgabe stabil (wo als Report/Export relevant).
 - Import-Grenzen-Gate grün.
