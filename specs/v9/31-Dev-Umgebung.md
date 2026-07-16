@@ -55,13 +55,16 @@ Verzeichnisschichten entsprechen [02 §7](02-Zielarchitektur-v9.md). `node_modul
     "test:core":  "vitest run tests/core",                     // nur Kern (build-frei, schnell)
     "test:round": "vitest run tests/roundtrip",
     "test:watch": "vitest",
-    "lint":       "eslint . && tsc --noEmit",                  // Stil + Typen
-    "check:arch": "node tests/arch-boundary/check-arch-boundary.mjs"  // INV-ARCH-1 Gate
+    "lint":       "eslint . && tsc --noEmit && npm run check:svelte",  // Stil + Typen (.ts UND Templates)
+    "check:svelte": "svelte-check --tsconfig ./tsconfig.check.json --threshold error",  // Template-Typen (ADR-v9-83)
+    "check:arch": "node tests/arch-boundary/check-arch-boundary.mjs",  // INV-ARCH-1 Gate
+    "check:csp":  "node tests/csp/check-csp.mjs"                // CSP-Gate (NFR-3, ADR-v9-39)
   }
 }
 ```
 
 - **Test-Runner:** `vitest` (nutzt Vite-Transform, kann TypeScript direkt, läuft in Node — headless, ohne Browser). Erfüllt [30 NFR-6](30-NFR-und-Persistenz.md) und [02 INV-ARCH-2](02-Zielarchitektur-v9.md): Kern-Tests brauchen **keinen** Bundle-Schritt.
+- **`check:svelte`** (ADR-v9-83) schließt die Lücke, dass `tsc --noEmit` **nur `.ts`-Dateien** prüft — Svelte-**Templates** (Props, Bindings, Markup-Ausdrücke) sah bis 2026-07-16 gar kein Gate; der erste Lauf fand vier echte, von 1663 Tests unentdeckte Fehler im Produktionscode. Nutzt eine eigene `tsconfig.check.json`, die `tests` ausnimmt: `@testing-library/svelte`s `render()` verliert die Generic-Bindung generischer Komponenten (`<script generics="T">`) — 37 Fehler ohne Produktionsrisiko. Sollen Test-Dateien später mitgeprüft werden, ist der Weg eine Harness-Komponente je generischer Komponente (Projekt-Muster, `EventsByTypeHarness.svelte`), nicht das Aufweichen dieser Konfiguration.
 - **`check:arch`** ist ein eigenes, abhängigkeitsfreies Node-Skript (regex-basiert: verbotene Aufwärts-Imports + verbotene Plattform-Globals im Kern), **kein** ESLint-Plugin — bewusste Vereinfachung (ADR-v9-10). Bleibt austauschbar, falls Grenzfälle es sprengen.
 
 ---
@@ -88,7 +91,7 @@ jobs:
       - run: npm ci
       - run: npm run check:arch    # Import-Boundary + Kern-Reinheit (INV-ARCH-1)
       - run: npm run check:csp     # CSP-Test-Gate (NFR-3, ADR-v9-39)
-      - run: npm run lint          # ESLint + Typen (tsc --noEmit)
+      - run: npm run lint          # ESLint + Typen (tsc --noEmit) + Svelte-Templates (check:svelte)
       - run: npm test              # Roundtrip + Unit + Component + Snapshot (LP-1)
 
   deploy:
