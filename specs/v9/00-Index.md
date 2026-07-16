@@ -20,7 +20,8 @@ Dann je nach Arbeitsschwerpunkt.
 | **01** | [Vision & Prinzipien](01-Vision-und-Prinzipien.md) | Meta | Produktvision, Zielgruppe, Leitprinzipien LP-1…9, Systemkontext, Nicht-Ziele, Glossar |
 | **02** | [Zielarchitektur v9](02-Zielarchitektur-v9.md) | Meta | Schichtenmodell (Ansatz C), Kern-↔-Schale-Grenze, imperative Diagramm-Inseln, Framework-Wahl, Verzeichnis-Layout |
 | **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
-| **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen (Pflege via Skill `decision-log`) |
+| **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen — **nur die bindende Entscheidung** (Pflege via Skill `decision-log`) |
+| **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — wächst mit dem Bau, wird nur bei Bedarf gelesen |
 | **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
 | **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
@@ -57,7 +58,8 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 
 | Dokument | Reifegrad | Bemerkung |
 |---|---|---|
-| 00–04 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt; 04 Entscheidungslog laufend gepflegt |
+| 00–04 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt; 04 Entscheidungslog laufend gepflegt (nur bindende Entscheidungen) |
+| 04a | 🟢 laufend | Bau-Chronik: ADR-Nachträge (Status/Commits/Lehren), ausgelagert aus 04 am 2026-07-16 |
 | 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
 | 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
 | 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
