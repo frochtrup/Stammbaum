@@ -222,11 +222,25 @@ Operationalisierung von [01 LP-8](01-Vision-und-Prinzipien.md)/[30 NFR-5](30-NFR
 
 ---
 
+## 6j. Affordanz sitzt am bedeutungstragenden Element (INV-UI-12, ADR-v9-87)
+
+**INV-UI-12:** Eine Aktion/Navigation hängt an dem Element, das ihre Bedeutung ohnehin schon trägt — **nicht** an einer zusätzlichen, separaten „Tu X →"-Textzeile daneben. Zwei Ausprägungen:
+
+- **(a) Navigation zu einer verwandten Entität** macht das bereits sichtbare Label/den Namen dieser Entität selbst zum Link. Beispiel: das Rollen-Label „Herkunftsfamilie"/„Eigene Familie" (`PersonDetail`) navigiert selbst zur Familien-Detailseite — **kein** separater „Familie ansehen →"-Button daneben.
+- **(b) Sekundäre/externe Aktion ohne eigenes Textlabel** wird ein kompaktes, **monochromes** Symbol + Tooltip (via `use:tooltip`, [§7](#7-symbol-konventionen-verschlankt)) — kein ausgeschriebener Link-Text. Beispiel: „↗ OpenStreetMap" → „↗" + Tooltip „Auf OpenStreetMap öffnen" (`CoordIndicator`). Emoji sind hier fehl am Platz (farbig, brechen die Gold-Monochrom-Ästhetik) — ein Glyph in Textfarbe.
+
+Ziel: verschlankte, konsistente Oberfläche (verstärkt INV-UI-5) mit EINEM kanonischen Klickweg je Ziel (INV-UI-2/3), statt redundanter Beschreibungstexte. Screenreader-Name bleibt über `aria-label` erhalten (LP-8, §6i). **Test:** `PersonDetail.component.test.ts` (Rollen-Label navigiert, kein „Familie ansehen") + `CoordIndicator.component.test.ts` (OSM-`aria-label`).
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
 - `📎` = ausschließlich Medien/OBJE (nie Quellen).
-- `§N` (`.src-badge`) = Quellen-Zitat, N = numerischer ID-Teil; QUAY-Farbindikator q0–q3; Tooltip = Quellentitel.
+- `§N` (`.src-badge`) = Quellen-Zitat, N = numerischer ID-Teil; QUAY-Farbindikator q0–q3; Tooltip = Quellenname + Referenz (PAGE). Führt die Referenz einen Weblink (Zitat-`OBJE/FILE`-URL bzw. `deepLinkUrl`, Altdaten auch PAGE-als-URL), erscheint direkt neben der Pille ein klickbares `↗` (öffnet die Webseite in neuem Tab). Eintragbar je Referenz in `SourceCitationRow` als eigenes Weblink-Feld — ADR-v9-86.
+- **Tooltips generell** laufen über EINE geteilte Svelte-Action `use:tooltip={text}` (`ui/shell/tooltip.ts`, INV-UI-4), NICHT über das native `title`-Attribut: native Tooltips erscheinen auf Touch/iPad gar nicht und auf dem Desktop nur verzögert. Die Action zeigt sofort bei Hover UND Tastatur-Fokus, auf Touch per Long-Press; Screenreader-Text liegt auf `aria-label`. **Alle reaktiven Svelte-Views/Shell sind migriert** (Quellen-Pille, Koordinaten-Glyph, ✕-Rücknahme, Export-/Ansichts-Icons, Info-Pillen/-Badges, ⓘ-Icon, Statistik-Balken) — ADR-v9-86/87. Ausnahme: die imperativen SVG-Inseln ([§8](#8-layout-algorithmen-imperative-inseln), `hourglass-tree`/`timeline-view`) tragen weiter natives `title` — ihre Pan/Pinch/Drag-Gestensteuerung verträgt sich nicht ungeprüft mit den Touch-Listenern der Action; eigener Folgeschritt.
+- `◎`/`◌` (`CoordIndicator`) = Koordinaten vorhanden/fehlen; `◎` ist zugleich der interne Karte-Sprung (ADR-v9-78/80), Tooltip „Koordinaten vorhanden/fehlen".
+- `↗` = „externen Link in neuem Tab öffnen" — EINE Bedeutung: Quellen-Weblink (`SourceBadge`), externe Kartenansicht (`CoordIndicator`, Tooltip „Auf OpenStreetMap öffnen", INV-UI-12b). Monochrom-Gold, nie Emoji.
 - Geschlecht im Baum: `data-sex` → Border-Farbe (M blau, F rosa, U keine).
 - `☰` Menü, `✎` Bearbeiten, `＋` Neu.
 
