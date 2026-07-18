@@ -90,7 +90,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
-| BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | offen |
 | BL-55 | — | feature | basis | `shortName` + Listen zeigen `shortName ?? title` | [11 §1](11-Orte-Hoefe-Identitaet.md), [ADR-v9-90](04-Entscheidungslog.md) | `txt:shortName@core/places/types.ts` | offen |
 | BL-56 | S | feature | kür | Research-Timeline-Umschalter (Protokoll chronologisch) | [12 §2](12-Forschungsdaten.md) | `sym:buildResearchTimeline` | offen |
 | BL-57 | S | feature | basis | Evidenz-Bewertung: Aufklapper an der Zitat-Zeile | [12 §3](12-Forschungsdaten.md) | `!txt:TODO@ui/shell/SourceCitationRow.svelte` | offen |
@@ -164,6 +163,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-47 | — | defekt | blockiert | Orts-Resolver: Registry-Neubau pro Event (89 s bei 20k) | [ADR-v9-88](04-Entscheidungslog.md), [11 §4.2](11-Orte-Hoefe-Identitaet.md) | `test:tests/perf/scale.perf.test.ts` | gebaut |
 | BL-48 | — | hygiene | basis | Perf-Gate in CI verdrahten | [31 §4](31-Dev-Umgebung.md), [32 §7](32-Testframework.md) | `txt:test:perf@.github/workflows/ci.yml` | gebaut |
 | BL-01 | K | feature | blockiert | Undo/Redo (Snapshot-Stack ≥30, „Revert to Saved“) | [20 §1.2](20-Funktionen.md), [ADR-v9-92](04-Entscheidungslog.md) | `test:tests/ui/app-state-undo.test.ts` | gebaut |
+| BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | gebaut |
 
 ## Typen
 
@@ -218,12 +218,31 @@ UI zu Kern 4:1). Als Risikozeile wäre das ein Gradient ohne Fertig-Zustand — 
 Umwandlung in eine Schwelle. Ist-Verteilung (2026-07-18): **Median 195 Zeilen**, 12 Dateien
 über 400, **9 über 500**.
 
-Vorgesehen ist dasselbe Ratschen-Muster wie beim Perf-Budget (ADR-v9-88): eine
-`max-lines`-Regel für `.svelte` bei **600 Zeilen**, die 9 Altfälle einzeln als Ausnahme
-eingetragen. Neue Dateien laufen sofort gegen die Schwelle; die Altfälle werden beim
-nächsten inhaltlichen Anfassen zerlegt und ihre Ausnahme dabei gestrichen. **Die
-Ausnahmeliste ist der Fortschrittsanzeiger** — schrumpft sie nicht, ist das sichtbar,
+Umgesetzt ist dasselbe Ratschen-Muster wie beim Perf-Budget (ADR-v9-88): eine
+`max-lines`-Regel für `.svelte` bei **600 Zeilen** in `eslint.config.js`, die Altfälle
+einzeln eingetragen. Neue Dateien laufen sofort gegen die Schwelle; die Altfälle werden
+beim nächsten inhaltlichen Anfassen zerlegt und ihre Zeile dabei gestrichen. **Die
+Altfall-Liste ist der Fortschrittsanzeiger** — schrumpft sie nicht, ist das sichtbar,
 statt in einer Risikoliste zu verschwinden.
+
+Zwei Präzisierungen beim Bau (2026-07-18):
+
+- **Fünf Altfälle, nicht neun.** Die Planzeile übernahm die „9 über 500" aus der
+  Ist-Verteilung, obwohl die Schwelle bei 600 liegt: über 600 liegen nur
+  `PlaceDetail` (921), `TasksView` (676), `HofDetail` (641), `PersonDetail` (621),
+  `HypothesesView` (608). Ein Eintrag für die vier Dateien zwischen 500 und 600 hätte
+  sie von der 600er-Schwelle **ausgenommen** — also den Schutz abgeschaltet, den er
+  vorgibt zu dokumentieren.
+- **Der Eintrag ist keine Freistellung, sondern eine Ratsche auf dem Ist-Wert**
+  (`'ui/views/place/PlaceDetail.svelte': 921`): schrumpfen erlaubt, wachsen nicht.
+  `max-lines: 'off'` hätte den größten Dateien als einzigen unbegrenztes Wachstum
+  erlaubt.
+
+**Wirkung verifiziert, nicht nur Exit-Code** (die Lehre aus BL-47/48, ADR-v9-91): neue
+Datei mit 601 Zeilen → Fehler, mit 600 → grün; ein Altfall um eine Zeile verlängert →
+Fehler („Maximum allowed is 608"), zurückgesetzt → grün. Die Zählung umfasst dabei die
+**ganze Datei inkl. Markup**, nicht nur den `<script>`-Block — bei diesen Views der
+überwiegende Teil, ohne den die Regel fast nichts gemessen hätte.
 
 ## Lint-Regeln (Erweiterung von `spec-lint`)
 
