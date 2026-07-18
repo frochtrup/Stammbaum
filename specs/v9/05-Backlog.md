@@ -34,6 +34,13 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 4. **IDs werden nie wiederverwendet.** Erledigte Zeilen bleiben stehen (`gebaut`) — sie
    sind der Drift-Schutz in die zweite Richtung: verschwindet das Symbol durch
    Umbenennung, schlägt der Lint an.
+
+   Eine **irrtümlich angelegte** Zeile darf dagegen entfernt werden — sie ist nicht
+   „erledigt", und eine Zeile, die dauerhaft auf `offen` steht, ohne je einen Fertig-
+   Zustand zu haben, ist genau die Risikoliste, die es hier bewusst nicht gibt. **Ihre ID
+   bleibt trotzdem verbraucht.** Bisher zurückgezogen: **BL-79** (angelegt und am
+   selben Tag entfernt, 2026-07-18, Commit `1de1bc9`). Wer die nächste ID vergibt, nimmt
+   also nicht `max+1` aus der Tabelle, sondern zählt diese Liste mit.
 5. **Priorität** `[K]`/`[S]`/`[E]` wird aus dem Spec übernommen, nicht hier neu erfunden.
    Die Reihenfolge-Aussage steht in `Klasse`, nicht in einer Zahl.
 6. **Jeder Beleg soll ein Wächter sein, kein Meilenstein.** Ein *Wächter* sagt aus, was
@@ -86,7 +93,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
 | BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | offen |
 | BL-55 | — | feature | basis | `shortName` + Listen zeigen `shortName ?? title` | [11 §1](11-Orte-Hoefe-Identitaet.md), [ADR-v9-90](04-Entscheidungslog.md) | `txt:shortName@core/places/types.ts` | offen |
-| BL-79 | — | defekt | kür | **Latent** (heute keine Zusicherung verletzt): `findOrCreateHof` scannt je Bootstrap alle Höfe → O(Höfe²) in der HOF-Zahl, nicht in der Ereigniszahl. Gemessen 2026-07-18: 2.196 Höfe → 46 ms = 2,4 % der Auflösung; Anteil SINKT beim Skalieren (5k P: 6,6 % → 20k P: 2,4 %), weil die Hof-Zahl sättigt. Beißt erst bei hof-dichten Beständen (~10k Höfe ≈ 1 s, ~50k ≈ 24 s). Fertig-Bedingung ist eine Skalen-Messung über die HOF-Achse, die es heute nicht gibt | [11 §4.2](11-Orte-Hoefe-Identitaet.md), [30 §1](30-NFR-und-Persistenz.md) | `test:tests/perf/hof-scale.perf.test.ts` | offen |
 | BL-56 | S | feature | kür | Research-Timeline-Umschalter (Protokoll chronologisch) | [12 §2](12-Forschungsdaten.md) | `sym:buildResearchTimeline` | offen |
 | BL-57 | S | feature | basis | Evidenz-Bewertung: Aufklapper an der Zitat-Zeile | [12 §3](12-Forschungsdaten.md) | `!txt:TODO@ui/shell/SourceCitationRow.svelte` | offen |
 | BL-58 | S | feature | kür | Forschungsprojekte: Scope-Matching + UI | [12 §5](12-Forschungsdaten.md) | `sym:matchesScope` | offen |
