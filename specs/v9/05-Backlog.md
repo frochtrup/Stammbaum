@@ -91,7 +91,7 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
-| BL-55 | — | feature | basis | `shortName` + Listen zeigen `shortName ?? title` | [11 §1](11-Orte-Hoefe-Identitaet.md), [ADR-v9-90](04-Entscheidungslog.md) | `txt:shortName@core/places/types.ts` | offen |
+| BL-55 | — | feature | basis | Orts-Anzeigetiefe (INV-UI-14): `shortName` + `buildListPlaceName` (Ort/Hof/Rohtext), Kette in Tooltip + Detailzeile | [11 §1/§5](11-Orte-Hoefe-Identitaet.md), [21 §6l](21-UI-UX.md), [ADR-v9-90](04-Entscheidungslog.md), [ADR-v9-100](04-Entscheidungslog.md) | `test:tests/ui/place-display-depth.test.ts` | offen |
 | BL-56 | S | feature | kür | Research-Timeline-Umschalter (Protokoll chronologisch) | [12 §2](12-Forschungsdaten.md) | `sym:buildResearchTimeline` | offen |
 | BL-57 | S | feature | basis | Evidenz-Bewertung: Aufklapper an der Zitat-Zeile | [12 §3](12-Forschungsdaten.md) | `!txt:TODO@ui/shell/SourceCitationRow.svelte` | offen |
 | BL-58 | S | feature | kür | Forschungsprojekte: Scope-Matching + UI | [12 §5](12-Forschungsdaten.md) | `sym:matchesScope` | offen |

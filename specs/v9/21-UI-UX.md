@@ -250,6 +250,29 @@ Ziel: verschlankte, konsistente Oberfläche (verstärkt INV-UI-5) mit EINEM kano
 
 ---
 
+## 6l. Orts-Anzeigetiefe folgt dem Kontext (INV-UI-14, ADR-v9-90/-100)
+
+**INV-UI-14:** Die Anzeigetiefe eines Ortsnamens richtet sich — wie die Datumstiefe in [INV-UI-9](#6f-datums-anzeigetiefe-folgt-dem-kontext-inv-ui-9-adr-v9-64), nach derselben Kontext-Grenze — danach, OB der Ort der recherchierte Seiteninhalt ist oder ob eine Liste überflogen wird:
+
+- **Eigene-Ereignis-Kontext** (die Detail-Seite EINER Person/Familie/eines Orts zeigt IHRE EIGENEN Ereigniszeilen, `EventLine`): **volle periodengerechte Verwaltungskette** (`buildPlacForGedcom`) — genau der String, der auch exportiert würde. Die Kette IST hier Inhalt.
+- **Disambiguierungs-/Übersichts-Kontext** (Personen-/Familien-/Orte-/Höfe-Listen, globale Suche, Entitäts-Picker, Kinder-/Ehepartner-/Eltern-Zeilen, **Zeitleisten-Insel**): **ein zeitinvarianter Kurzname**, nie eine abgeleitete Kettenform. Die volle Kette bleibt per `use:tooltip` (ADR-v9-86) an derselben Zeile erreichbar — es geht keine Information verloren, sie wechselt nur die Ebene.
+
+**Was „Kurzname" je Fall heißt** — EINE Kern-Funktion `buildListPlaceName(ev, ctx)` ([11 §5](11-Orte-Hoefe-Identitaet.md)), kein View-lokaler Zuschnitt (INV-UI-4), drei Fälle in dieser Reihenfolge:
+
+| Fall | Anzeige | Anteil (gemessen) |
+|---|---|---|
+| `hofId` gesetzt | `Hofadresse, <Dorf-Kurzname>` — zwei Glieder, Dorfkette abgeschnitten | 15 % |
+| `placeId` gesetzt | `shortName ?? title` des Orts | 83 % |
+| ungelinkt, nur Rohtext | erstes Komma-Segment von `ev.place` (`atomic()`) | 1,2 % |
+
+Der Hof behält sein Dorf, weil eine Hausnummer allein („Oster 82a") zwischen Dörfern nicht eindeutig ist; die Verwaltungskette hinter dem Dorf ist derselbe Ballast wie im Orts-Fall. Der Rohtext-Fall ist bewusst nicht „ehrlich lang": es sind genau die Zeilen, die sonst am schlechtesten aussehen, und die Verkürzung ist rein anzeigeseitig — Auflösung und Review-Klassifikation ([11 §6](11-Orte-Hoefe-Identitaet.md)) sehen den Rohwert unverändert.
+
+**Zwei bewusste Ausnahmen, die die Kette behalten**, weil dort Unterscheiden der Zweck ist, nicht Überfliegen: die Kandidatenliste der Review-Klasse P („Oldenburg › Niedersachsen" vs. „Oldenburg › USA", [11 §6](11-Orte-Hoefe-Identitaet.md)) und der Massen-Dedup ([11 §9.2](11-Orte-Hoefe-Identitaet.md), `buildFullPlaceName`).
+
+**Test:** `tests/ui/place-display-depth.test.ts` — die drei Kurzformen, die Detailzeile mit voller Kette, und der Negativ-Beweis, dass ein gesetzter `shortName` den exportierten PLAC nicht verändert.
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
