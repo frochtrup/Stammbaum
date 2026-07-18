@@ -22,6 +22,7 @@ Dann je nach Arbeitsschwerpunkt.
 | **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
 | **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen — **nur die bindende Entscheidung** (Pflege via Skill `decision-log`) |
 | **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — wächst mit dem Bau, wird nur bei Bedarf gelesen |
+| **05** | [Backlog](05-Backlog.md) | Meta | **Die einzige Status-Wahrheit:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L4). Specs 10–32 treffen KEINE Status-Aussage mehr |
 | **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
 | **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
@@ -39,6 +40,7 @@ Dann je nach Arbeitsschwerpunkt.
 01 Vision/Prinzipien ─────────────┐ (gilt für alle)
 02 Zielarchitektur ───────────────┤
 04 Entscheidungslog ──────────────┤ (protokolliert Entscheidungen zu 02/14/21/31/32 …)
+05 Backlog ───────────────────────┤ (Status ALLER Specs; 10–32 sagen selbst nichts über den Bau)
                                   │
 Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
                           └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
@@ -60,6 +62,7 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 |---|---|---|
 | 00–04 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt; 04 Entscheidungslog laufend gepflegt (nur bindende Entscheidungen) |
 | 04a | 🟢 laufend | Bau-Chronik: ADR-Nachträge (Status/Commits/Lehren), ausgelagert aus 04 am 2026-07-16 |
+| 05 | 🟡 in Arbeit | Backlog: [K]-Inventur vollständig (46 Zeilen, am Code verifiziert). Offen: [S]/[E]-Inventur, Status-Wörter aus 10–32 entfernen (L3), Lint-Regeln in `spec-lint` |
 | 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
 | 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
 | 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |

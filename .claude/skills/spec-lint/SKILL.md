@@ -23,8 +23,20 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 8. **ADR ↔ Spec-Widerspruch (semantisch, Mensch-assistiert):** Für jeden **✅**-ADR in `specs/v9/04-Entscheidungslog.md` die in `Refs:` genannten Abschnitte darauf ansehen, ob die unter **Verworfen** genannte Alternative dort noch als **Vorgabe/Beispiel** steht (der ADR überstimmt die Spec still statt sie zu ändern). Voll-automatisch ist das nicht prüfbar; als Heuristik: markante Begriffe der verworfenen Alternative (Tool-Name, Ansatz) im Ziel-Abschnitt `grep`en und die Treffer im Kontext beurteilen. Ein „Vorgabe/Entwurf"-markierter Abschnitt, dessen Subsystem längst **gebaut** ist, ist ein Drift-Kandidat (die Vorschrift wurde nach dem Bau nie mit der Realität abgeglichen).
 9. **Selbstwiderspruch bei mehrteiligen Sitzungs-Ergänzungen (Mensch-assistiert, Lehre ADR-v9-48):** Wurde DERSELBE Abschnitt in einer Sitzung über mehrere Gesprächsrunden hinweg wiederholt erweitert (z. B. ein §-Abschnitt, der über drei/vier ADRs hinweg wächst), reicht das Gegenlesen des jeweils letzten Diffs nicht — jede Einzeländerung kann lokal plausibel wirken und trotzdem der vorherigen widersprechen. Den ganzen betroffenen Abschnitt **am Stück** lesen, nicht nur den Diff. Konkrete Musterfälle, auf die zu achten ist: (a) zwei konkurrierende „es gibt N Fälle/Stellen/Mechanismen"-Aufzählungen im selben Abschnitt (eine neu hinzugefügt, eine ältere stehengelassen, beide über dieselbe Sache, aber mit unterschiedlicher Zählung/Struktur); (b) widersprüchliche Funktionssignaturen für dieselbe Funktion im selben Absatz (z. B. einmal als zwei getrennte Funktionen benannt, einen Satz später als eine Funktion mit Parameter beschrieben). Beide Muster wurden in [11 §3](../../../specs/v9/11-Orte-Hoefe-Identitaet.md)/§9.2 real gefunden, erst durch einen dedizierten Voll-Durchlauf, nicht beim Schreiben selbst.
 
+10. **Backlog-Status ↔ Code (mechanisch, ZUERST ausführen):**
+
+    ```
+    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L4
+    node .claude/skills/spec-lint/check-backlog.mjs --selftest  # prüft den Prüfer
+    ```
+
+    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (aktuell 33, sinkt mit BL-50 auf 0); **L4** warnt bei unauflösbaren Spec-Links. Exit 0 = konsistent.
+
+    Zwei Eigenheiten, die beim Bau erzwungen wurden und nicht „vereinfacht" werden dürfen: das Skript liest alle Dateien **selbst statt per `grep`** (das lokale ugrep liefert auf manchen Dateien still ein leeres Ergebnis — belegt an `core/places/curation.ts`), und eine **unbekannte Beleg-Art wirft**, statt still `false` zu liefern (ein Lint, der stillschweigend nichts findet, ist schlimmer als keiner). Der `--selftest` deckt genau diese Fälle ab; er ist vor jeder Änderung am Skript zu laufen.
+
 ## Vorgehen
 
+- **Zuerst Prüfung 10 laufen lassen** (mechanisch, Sekunden) — erst danach die Mensch-assistierten Prüfungen 6/8/9.
 - Dateien per `ls specs/v9/` enumerieren; IDs/Links per `grep` extrahieren.
 - Befunde als Tabelle (Prüfung · Status · Fundstelle) berichten.
 - Auf Wunsch direkt fixen (fehlende Index-Zeilen, tote Links) und erneut prüfen.

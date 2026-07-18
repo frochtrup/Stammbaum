@@ -10,7 +10,17 @@
 - Parsing großer Dateien im Hintergrund (Worker), Fortschrittsanzeige.
 - Virtuelles Scrollen für lange Listen (O(log n)-Positionsbestimmung).
 - Sortier-Cache mit gezielter Invalidierung.
-- v8 verifiziert bis 20.000 Personen (Parse < 700 ms, erster Sort ~1 s). Ziel-offen: 50k/100k (Speicher, Storage-Quota) — in v9 von Anfang mitdenken (SCALE-REAL).
+- **v9-Zusicherung: 20.000 Personen** (ADR-v9-89). Budgets bei dieser Größe:
+
+  | Schritt | Budget | Ist (2026-07-18) |
+  |---|---|---|
+  | Parse (GEDCOM → Modell) | < 400 ms | 112 ms |
+  | Orts-/Hof-Auflösung | < 2.000 ms | **89.436 ms** — offener Defekt (ADR-v9-88) |
+  | Erster Sort (Personenliste) | < 400 ms | 81 ms |
+
+  Verifiziert durch die Skalen-Testebene ([32 §2](32-Testframework.md), `npm run test:perf`) gegen eine deterministisch erzeugte Fixture. Die dortigen Test-Budgets liegen bewusst ~3× über diesen Zusicherungen — sie sind Größenordnungs-Wecker auf fremder CI-Hardware, nicht die Zusicherung selbst.
+- **Historische v8-Referenz** (keine v9-Vorgabe): v8 war bis 20.000 Personen verifiziert (Parse < 700 ms, erster Sort ~1 s). v9 liegt bei Parse und Sortierung deutlich darunter; die Orts-/Hof-Auflösung gab es in v8 in dieser Form nicht und wird ausdrücklich **nicht** an v8 gemessen (ADR-v9-89).
+- Ziel-offen und unverbindlich: 50k/100k (Speicher, Storage-Quota) — in v9 von Anfang mitdenken (SCALE-REAL).
 
 **NFR-2 Offline/PWA:**
 - Service Worker mit atomarem Precache kritischer Assets, Cache-first/Network-first-Strategie, Offline-Fallback-Seite, BFCache-Guard.

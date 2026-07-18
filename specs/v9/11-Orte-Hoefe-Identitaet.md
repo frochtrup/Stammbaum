@@ -12,7 +12,8 @@ Das differenzierendste und anspruchsvollste Subsystem (v8-ADR-024, konsolidiert 
 ```
 PlaceObject {
   id: PlaceId
-  title: string                    // aktuelle Bezeichnung
+  title: string                    // aktuelle Bezeichnung — speist auch den EXPORT (resolveAsOf-Fallback)
+  shortName: string                // optional, nur ANZEIGE in Listen; leer ⇒ title. Nie Export, nie Identität
   type: string                     // Country/State/County/Town/Parish/Church/Cemetery …
                                    //   NIE Farm/Building — Höfe sind separate Entität
   pnames: DatedName[]              // datierte Namensvarianten (sprachlich/orthographisch/historisch)
@@ -25,6 +26,10 @@ PlaceObject {
   govTypes: […]
 }
 ```
+
+**`shortName` — die dritte Achse: Anzeige (ADR-v9-90).** `pnames` ist die Zeitachse, `translations` die Sprachachse, `shortName` die **Anzeigeachse**: EIN zeitinvarianter Name für kompakte Listen. Listen zeigen `shortName ?? title` und **nie** eine abgeleitete Kettenform — begründet durch Messung am realen Bestand: Ortsnamen treten dort mit bis zu 16 verschiedenen Verwaltungsketten auf (Ochtrup, 1750–1990), die alle **denselben** Ort meinen; jede abgeleitete Kettenform ließe einen Ort in der Liste wie mehrere aussehen. Die volle periodengerechte Kette bleibt im Tooltip und in der Detailansicht.
+
+`shortName` ist **rein app-privat** (`orte.json`) und erreicht den Export **nie**: `resolveAsOf` liefert „im Jahr gültige `pname`, sonst `title`", und daraus baut `buildFormString` den PLAC — würde man stattdessen `title` zu „Frankfurt (Main)" ändern, stünde diese Anzeigekonvention in der GEDCOM-Datei (LP-1). `shortName` ist außerdem **nie Identitätsmerkmal und nie Match-Kriterium**: Verträglichkeitsprüfung und Namensmengen (§4.2) sehen weiterhin ausschließlich `title` + `pnames`. Default ist leer — für einen Bestand ohne echte Homonyme ist nichts zu pflegen.
 
 **`translations` vs. `pnames` — zwei Achsen, bewusst getrennte Felder:** `pnames` beantwortet „wie hieß der Ort WANN" (Zeitachse, `{value, from, to}`), `translations` beantwortet „wie heißt derselbe Ort JETZT in welcher Sprache" (Sprachachse, `NameTranslation {lang, value}`, [10](10-Domaenenmodell.md) — derselbe Typ, den Person bereits für `nameTrans` nutzt, INV-UI-4 auf Datenebene: EIN Übersetzungs-Struct für beide Entitäten, nicht zwei). Beide sind „alternative Bezeichnung desselben Orts", aber mit orthogonalen Diskriminatoren — ein gemeinsames Feld mit optionalem `lang`-ODER-`from/to`-Diskriminator wurde geprüft und verworfen: die beiden GEDCOM-Wire-Formate (`_HIST`-artige Datumsvarianten vs. `TRAN`/`_TRAN`+`LANG`) sind strukturell verschieden, ein gemeinsames Feld würde den Writer nur verkomplizieren, ohne dass die UI dadurch weniger Code bräuchte (beide nutzen ohnehin dieselbe Zeilen-Komponente, s. u.). Historisches Beispiel, das den Unterschied zeigt: *Breslau* → *Wrocław* ist eine Übersetzung (`translations`, Grenzverschiebung 1945, dieselbe Stadt heißt auf Polnisch anders), *Sassenbergk* → *Sassenberg* ist eine Zeitvariante (`pnames`, historische Schreibweise desselben deutschen Namens).
 

@@ -38,8 +38,11 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 | **Architektur-Gates** | Import-Grenze (INV-ARCH-1), CSP (LP-8), Barrierefreiheit (LP-8, TST-15), Funktionsgröße | CI-Gate | dependency-cruiser / ESLint / CSP-Scanner / a11y-Scanner |
 | **Komponenten** | reaktive UI-Schale: Formulare, Listen, View-State-Kontrakt | wenige | @testing-library/svelte + happy-dom |
 | **E2E** | 2–3 kritische Flows real: Datei öffnen → editieren → exportieren → re-parsen; Offline-Boot | minimal | Playwright (optional) |
+| **Skalen/Performance** | NFR-Budgets ([30 §1](30-NFR-und-Persistenz.md)) gegen eine deterministisch erzeugte Groß-Fixture: Parse, Orts-Auflösung, erster Sort | 1 Gate, eigener Lauf | Vitest, eigene Config (`npm run test:perf`) |
 
 **Imperative Inseln** (Baum/Karte/Zeitleiste, [02 §5](02-Zielarchitektur-v9.md)) werden über ihre **Layout-Berechnung** unit-getestet (reine Funktion Modell→Positionen), nicht über gerenderte Pixel.
+
+**Die Skalen-Ebene läuft bewusst NICHT im Standardlauf** (eigene Vitest-Config, aus der Haupt-Config ausgeschlossen): die Groß-Fixture kostet ein Vielfaches aller übrigen Tests zusammen und würde den Pre-Commit-Subset (§7) unbrauchbar machen. Zwei Konsequenzen aus dem Bau (2026-07-18): (a) ein Aufruf gegen die Haupt-Config fände durch deren `exclude` **null Tests und meldete grün** — deshalb die eigene Config statt eines Pfad-Arguments; (b) Zeitbudgets allein genügen nicht, jeder Skalen-Test braucht **Plausibilitäts-Zusicherungen** über die verarbeitete Menge (Personen-/Familien-/Hof-Anzahl), sonst zertifiziert er einen Pfad als schnell, der gar nicht gelaufen ist — genau so geschehen, als eine fehlerhafte Fixture 0 Höfe erzeugte.
 
 ---
 
