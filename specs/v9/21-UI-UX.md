@@ -233,6 +233,23 @@ Ziel: verschlankte, konsistente Oberfläche (verstärkt INV-UI-5) mit EINEM kano
 
 ---
 
+## 6k. Overlays verlassen ihren Teilbaum (INV-UI-13, ADR-v9-99)
+
+**INV-UI-13:** Ein Overlay, das über den Fluss seines Auslösers hinausragt — Popover, Menü, Bottom-Sheet, Modal-Backdrop — wird an den `<body>` portaliert (`ui/shell/portal.ts`: `use:portal` bzw. `use:anchoredTo`) und positioniert sich in Viewport-Koordinaten. Es bleibt **nicht** im Teilbaum seines Auslösers.
+
+**Warum das keine Stilfrage ist:** ein Overlay im eigenen Teilbaum ist der Sichtbarkeit seiner Vorfahren ausgeliefert, und zwar auf zwei Wegen, die beide **nicht** über `z-index` erreichbar sind:
+
+- **Stapelnder Vorfahre** — ein Vorfahre mit eigenem Stacking-Context (`position: sticky; z-index: 1` einer Toolbar) löst jede Zahl des Kindes INNERHALB seines Kontexts auf; nach außen konkurriert der ganze Kontext mit *seinem* Wert. Am laufenden System bis `z-index: 9999` gemessen, wirkungslos.
+- **Klippender Vorfahre** — ein Scroll-Container (`overflow: auto`) schneidet das Overlay an seiner Kante ab. Gemessen an `.person-detail`: Unterkante 523 px, Menü bis 630 px, die unteren Einträge nicht anklickbar.
+
+**Platzierung** (`ui/shell/anchor-position.ts`, rein und ohne DOM): unten bevorzugt · nach oben klappen nur, wenn unten zu wenig und oben mehr Platz ist · an den Viewport-Rändern begrenzen · bei einem Overlay höher als der Viewport gewinnt der obere Rand, der Inhalt scrollt selbst. Der Breakpoint bleibt im Stylesheet: die Rechnung schreibt Koordinaten als CSS-Variablen, das CSS entscheidet, ob es sie benutzt (`FilterBar` ist auf Mobil ein Bottom-Sheet, auf Desktop ein Popover am Trigger).
+
+**Aufräumen ist Teil des Mechanismus.** Svelte entfernt beim Unmount nur Knoten, die es selbst im Baum hält; ein portalierter Knoten muss von der Action entfernt werden — sonst bleibt bei jedem Öffnen ein unsichtbarer, klickfangender Backdrop über dem Dokument liegen.
+
+**Konsequenz für Tests:** eine auf den Render-Container eingegrenzte Abfrage (`within(container)`) erreicht Overlay-Inhalte nicht mehr — das ist kein Fehler, sondern der Nachweis, dass der Vorfahre verlassen wurde. Overlay-Inhalte über `screen`/`document` abfragen. **Test:** `tests/ui/overlay-portal.test.ts` (Platzierungs-Rechnung, Umhängen, Aufräumen — und dass die Komponenten den Mechanismus auch benutzen).
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
