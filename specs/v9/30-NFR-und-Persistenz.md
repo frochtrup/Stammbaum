@@ -24,8 +24,8 @@
 
 **NFR-2 Offline/PWA:**
 - Service Worker mit atomarem Precache kritischer Assets, Cache-first/Network-first-Strategie, Offline-Fallback-Seite, BFCache-Guard.
-- Bei App-Update: Nutzerhinweis (kein stiller Bruch durch alten Cache).
-- **v9-Falle (aus v8):** Bei Modul-/Asset-Umstellung Cache-Version bumpen — sonst liefert ein alter SW eine veraltete Shell, die neue Module falsch lädt.
+- Bei App-Update: Nutzerhinweis (kein stiller Bruch durch alten Cache). Der neue Worker aktiviert sich **nicht** von selbst — er wartet auf eine Nutzerentscheidung, sonst mischt eine offene Seite alte und neue Chunks.
+- **Precache-Liste und Cache-Version werden beim Build erzeugt, nicht gepflegt** (ADR-v9-93). Die Version ist ein Inhalts-Hash über alle Precache-Dateien; sie ändert sich damit auch bei Dateien ohne Hash im Namen (`offline.html`, `icon.svg`). Die aus v8 geerbte Regel „bei Modul-/Asset-Umstellung Cache-Version von Hand bumpen" gilt deshalb **nicht mehr** — sie war die Ursache dafür, dass ein alter SW eine veraltete Shell auslieferte, und ist durch den Automatismus ersetzt.
 
 **NFR-3 Sicherheit (LP-8):**
 - CSP `script-src 'self'` ohne `unsafe-inline`/`eval` (keine Inline-Styles/-Handler; Event-Delegation + CSSOM bzw. Framework-Bindings).

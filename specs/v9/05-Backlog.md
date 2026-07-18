@@ -78,7 +78,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-02 | K | feature | basis | Service Worker + Manifest (Offline-Betrieb) | [20 §1.2](20-Funktionen.md), [30](30-NFR-und-Persistenz.md) | `datei:app/public/sw.js` | offen |
 | BL-03 | K | feature | basis | Offline-Indikator in der Schale | [20 §1.2](20-Funktionen.md) | `datei:ui/shell/OfflineIndicator.svelte` | offen |
 | BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:validateDatabase` | offen |
 | BL-05 | K | feature | basis | Qualitäts-Dashboard (hängt an BL-04) | [20 §1.11g](20-Funktionen.md) | `sym:buildQualityDashboard` | offen |
@@ -164,6 +163,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-48 | — | hygiene | basis | Perf-Gate in CI verdrahten | [31 §4](31-Dev-Umgebung.md), [32 §7](32-Testframework.md) | `txt:test:perf@.github/workflows/ci.yml` | gebaut |
 | BL-01 | K | feature | blockiert | Undo/Redo (Snapshot-Stack ≥30, „Revert to Saved“) | [20 §1.2](20-Funktionen.md), [ADR-v9-92](04-Entscheidungslog.md) | `test:tests/ui/app-state-undo.test.ts` | gebaut |
 | BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | gebaut |
+| BL-02 | K | feature | basis | Service Worker + Manifest (Offline-Betrieb) | [20 §1.2](20-Funktionen.md), [30](30-NFR-und-Persistenz.md), [ADR-v9-93](04-Entscheidungslog.md) | `datei:app/public/sw.js` | gebaut |
 
 ## Typen
 
