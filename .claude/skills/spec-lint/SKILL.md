@@ -26,13 +26,17 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 10. **Backlog-Status ↔ Code (mechanisch, ZUERST ausführen):**
 
     ```
-    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L4
+    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L5
     node .claude/skills/spec-lint/check-backlog.mjs --selftest  # prüft den Prüfer
     ```
 
-    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (aktuell 33, sinkt mit BL-50 auf 0); **L4** warnt bei unauflösbaren Spec-Links. Exit 0 = konsistent.
+    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (seit BL-50 auf **0** — nie wieder anheben); **L4** warnt bei unauflösbaren Spec-Links; **L5** prüft, ob die Zeile im Abschnitt steht, der zu ihrem Status passt (`offen` → „Offene Punkte", `gebaut` → „Erledigte Punkte"). Exit 0 = konsistent.
+
+    **Warum L5 nachgerüstet wurde (Nutzer-Fund 2026-07-18):** BL-01 war fertig und trug korrekt den Status `gebaut` — blieb aber unter „Offene Punkte" stehen, weil beim Erledigen nur das Status-Wort geändert und die Zeile nicht verschoben wurde. L1/L2 vergleichen Status gegen Beleg, beides passte, der Prüfer meldete vier Läufe lang „konsistent". Aufgefallen ist es erst beim Lesen auf GitHub: dort ist die Statusspalte die achte und liegt außerhalb des Sichtfelds — sichtbar ist die Überschrift. Eine Zeile, die man nur durch Scrollen als erledigt erkennt, ist praktisch nicht erledigt.
 
     Zwei Eigenheiten, die beim Bau erzwungen wurden und nicht „vereinfacht" werden dürfen: das Skript liest alle Dateien **selbst statt per `grep`** (das lokale ugrep liefert auf manchen Dateien still ein leeres Ergebnis — belegt an `core/places/curation.ts`), und eine **unbekannte Beleg-Art wirft**, statt still `false` zu liefern (ein Lint, der stillschweigend nichts findet, ist schlimmer als keiner). Der `--selftest` deckt genau diese Fälle ab; er ist vor jeder Änderung am Skript zu laufen.
+
+    **Der Selbsttest selbst kann verrotten** — 2026-07-18 belegt: sein Fall „geskippter Test trifft nicht" hing an `tests/perf/scale.perf.test.ts`, solange das `it.skip` trug. BL-47 entskippte es, der Fall schlug seither still fehl, und niemand bemerkte es, weil `--selftest` weder im Normallauf noch in CI ausgeführt wird. Er hängt jetzt an einer eigenen Vorlage (`fixtures/skipped-example.ts`), die sich nicht unter den Füßen verändert. Wer den Prüfer anfasst, ruft ihn auf — sonst tut es keiner.
 
 ## Vorgehen
 

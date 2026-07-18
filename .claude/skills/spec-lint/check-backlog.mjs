@@ -121,16 +121,28 @@ export function evalBeleg(beleg) {
   return negiert ? !treffer : treffer;
 }
 
-/** Zerlegt die Backlog-Tabellen in Zeilen. */
+/** Zerlegt die Backlog-Tabellen in Zeilen — inklusive des Abschnitts (`## …`), unter dem
+ *  die Zeile steht. Der Abschnitt ist das, was ein Mensch beim Überfliegen tatsächlich
+ *  liest; die Status-Spalte ist die achte und liegt beim Lesen oft außerhalb des
+ *  Sichtfelds (s. L5). */
 export function parseBacklog(text) {
-  return text
-    .split('\n')
-    .filter((l) => /^\| BL-\d+ \|/.test(l))
-    .map((l) => {
-      const c = l.split('|').map((s) => s.trim()).filter(Boolean);
-      return { id: c[0], prio: c[1], typ: c[2], klasse: c[3], punkt: c[4], spec: c[5], beleg: c[6].replace(/`/g, ''), status: c[7] };
-    });
+  const zeilen = [];
+  let abschnitt = '';
+  for (const l of text.split('\n')) {
+    const h = /^## (.+)$/.exec(l);
+    if (h) {
+      abschnitt = h[1].trim();
+      continue;
+    }
+    if (!/^\| BL-\d+ \|/.test(l)) continue;
+    const c = l.split('|').map((s) => s.trim()).filter(Boolean);
+    zeilen.push({ id: c[0], prio: c[1], typ: c[2], klasse: c[3], punkt: c[4], spec: c[5], beleg: c[6].replace(/`/g, ''), status: c[7], abschnitt });
+  }
+  return zeilen;
 }
+
+/** L5: Welcher Abschnitt zu welchem Status gehört. */
+const ABSCHNITT_FUER_STATUS = { offen: 'Offene Punkte', gebaut: 'Erledigte Punkte' };
 
 // --- Prüfungen --------------------------------------------------------------
 
@@ -166,6 +178,29 @@ function pruefe() {
       fehler.push(`L2 ${z.id} [${z.typ}] steht auf "gebaut", aber der Beleg trifft nicht → umbenannt/gelöscht? ${z.punkt}`);
   }
 
+  // L5: Steht die Zeile im Abschnitt, der zu ihrem Status passt?
+  //
+  // WARUM DIESE REGEL EXISTIERT (Nutzer-Fund 2026-07-18): BL-01 war fertig, der Status
+  // stand korrekt auf „gebaut" — die Zeile blieb aber unter „Offene Punkte" stehen, weil
+  // beim Erledigen nur das Status-Wort geändert und die Zeile nicht verschoben wurde.
+  // Vier Läufe lang meldete dieser Prüfer „konsistent": L1/L2 vergleichen Status gegen
+  // Beleg, und beides passte. Aufgefallen ist es erst beim Lesen auf GitHub — dort ist
+  // die Statusspalte die achte und liegt außerhalb des Sichtfelds, sichtbar ist die
+  // ÜBERSCHRIFT. Eine Zeile, die man nur durch Scrollen als erledigt erkennt, ist
+  // praktisch nicht erledigt.
+  //
+  // Die Regel ist bewusst strikt (Fehler, keine Warnung): beide Abschnitte sind
+  // homogen (30x offen / 48x gebaut), es gibt keine legitime Ausnahme, und BL-Zeilen
+  // kommen in keinem anderen Abschnitt vor (geprüft, nicht angenommen).
+  for (const z of zeilen) {
+    const soll = ABSCHNITT_FUER_STATUS[z.status];
+    if (soll && z.abschnitt !== soll)
+      fehler.push(
+        `L5 ${z.id} steht auf "${z.status}", aber im Abschnitt „${z.abschnitt}" — ` +
+          `gehört unter „${soll}" (Status-Wort ändern reicht nicht, die Zeile muss umziehen)`,
+      );
+  }
+
   // L3-Ratsche: Status-Wörter in den Specs 10–32.
   let l3 = 0;
   const l3Dateien = [];
@@ -199,7 +234,11 @@ function selftest() {
     ['datei: fehlende Datei', 'datei:app/public/sw.js', false],
     ['spec: Datei im Spec-Repo', 'spec:specs/v9/05-Backlog.md', true],
     ['test: unskipped Test trifft', 'test:tests/ui/design-system-flex.test.ts', true],
-    ['test: geskippter Test trifft NICHT', 'test:tests/perf/scale.perf.test.ts', false],
+    // Eigene Vorlage statt einer Produktivdatei: dieser Fall hing an
+    // tests/perf/scale.perf.test.ts, solange das `it.skip` trug. BL-47 entskippte es —
+    // seither schlug der Selbsttest still fehl, weil ihn niemand aufruft (`--selftest`
+    // läuft weder im Normallauf noch in CI). Gefunden 2026-07-18 beim Nachrüsten von L5.
+    ['test: geskippter Test trifft NICHT', 'test:.claude/skills/spec-lint/fixtures/skipped-example.ts', false],
     ['txt: Muster im Rohtext', 'txt:max-lines@eslint.config.js', false],
     ['! negiert korrekt', '!sym:diesesSymbolGibtEsNicht', true],
     ['txt: findet Kommentar (nicht gestrippt)', 'txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte', true],
@@ -220,6 +259,25 @@ function selftest() {
   } catch {
     console.log('  ok   unbekannte Beleg-Art wirft (statt still false)');
   }
+
+  // L5 negativ prüfen: der Prüfer muss den Fall SEHEN, der ihn ausgelöst hat (BL-01 stand
+  // mit Status „gebaut" unter „Offene Punkte"). Ohne diese Gegenprobe wäre L5 selbst
+  // wieder ein Wächter, dessen Rot-Fall nie gesehen wurde.
+  const l5Fall = [
+    '## Offene Punkte',
+    '| ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |',
+    '| BL-90 | K | feature | basis | fertig, aber falscher Abschnitt | [20](20-Funktionen.md) | `sym:x` | gebaut |',
+    '## Erledigte Punkte',
+    '| BL-91 | K | feature | basis | korrekt einsortiert | [20](20-Funktionen.md) | `sym:y` | gebaut |',
+  ].join('\n');
+  const geparst = parseBacklog(l5Fall);
+  const falsch = geparst.filter((z) => ABSCHNITT_FUER_STATUS[z.status] !== z.abschnitt);
+  const l5ok = geparst.length === 2 && falsch.length === 1 && falsch[0].id === 'BL-90';
+  console.log(
+    `${l5ok ? '  ok  ' : ' FAIL '} L5 erkennt „gebaut" unter „Offene Punkte"`.padEnd(50) +
+      `  → ${falsch.map((z) => z.id).join(',') || 'nichts erkannt'}`,
+  );
+  if (!l5ok) bad++;
   console.log(bad === 0 ? '\nSelbsttest grün.' : `\nSelbsttest: ${bad} Fehler.`);
   return bad;
 }
