@@ -193,19 +193,19 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 
 **Vor dem Bau eines neuen Toolbar-Elements:** das Budget der Ziel-View am echten Screenshot bei 375px nachzählen (nicht schätzen) — ist es bereits ausgeschöpft, MUSS ein bestehendes Element hinter Disclosure wandern, bevor ein neues hinzukommt.
 
-**Ist-Zustand `TasksView`/`LogView` ([20 §1.11](20-Funktionen.md)):** überschreiten das Budget — Aufgaben-Tab zeigt 3 gestapelte Kopfzeilen (Segmente/Filter/Aktionen) mit 9 dauerhaft sichtbaren Elementen (Alle/Offen/Erledigt, ▦/↓/„+ Aufgabe"), Protokoll-Tab 2 Zeilen mit 6 Elementen, dessen Filterreihe (Alle/Gefunden/Nichts gefunden/Ausstehend) bei 375px bereits ohne Restbreite endet. Der `FilterBar`-Retrofit auf beide Views ist Voraussetzung für jede weitere Ergänzung der Forschungs-Arbeitsfläche ([20 §1.11](20-Funktionen.md)), nicht optionale Nacharbeit danach.
+**Vollzogen (ADR-v9-98):** `TasksView`/`LogView`/`HypothesesView` überschritten das Budget (Aufgaben-Tab: 3 gestapelte Kopfzeilen mit 9 dauerhaft sichtbaren Elementen; Protokoll-Tab: 2 Zeilen, 6 Elemente, dessen Filterreihe bei 375px ohne Restbreite endete). Der `FilterBar`-Retrofit war Voraussetzung für das Dashboard-Segment und ist mit ihm zusammen gebaut — Filter und Export liegen hinter der Disclosure, der Liste⇄Board-Umschalter kommt aus `ViewModeToggle`. Am echten Screenshot bei 375px nachgezählt, nicht geschätzt: je Segment EINE Toolbar-Zeile, höchstens drei Elemente.
 
 **Konsolidierte Ziel-Struktur für die Forschungs-Arbeitsfläche** (`ResearchTab`, [20 §1.11](20-Funktionen.md)):
 ```
 Zeile 1: [Aufgaben] [Protokoll] [Hypothesen] [Dashboard]   ← Segmente, zählen nicht ins Budget
 Zeile 2: [Alle Projekte ▾]  ← EIN Chip-Selektor, cross-cutting, kollabiert wenn "Alle" aktiv
 ─── ab hier segment-spezifisch, Budget = 1 Zeile / max. 3 Elemente ───
-Aufgaben:    [Filter · N] [⊞ Board] [+ Aufgabe]
+Aufgaben:    [Filter · N] [☰ Liste ▦ Board] [+ Aufgabe]
 Protokoll:   [Filter · N] [🕒 Timeline] [+ Eintrag]
 Hypothesen:  [Filter · N] [+ Hypothese]
-Dashboard:   [Projekt-Kontext geerbt] [⚙ Konfigurieren]
+Dashboard:   [Filter · N] [✓ Bericht] [⚙]
 ```
-Vier Segmente in Zeile 1 sind zulässig, weil `EntityTab`s Segment-Reihe bei derselben Breite bereits fünf Segmente (Personen/Familien/Quellen/Orte/Höfe) umbruchfrei zeigt — die Wortlängen sind vergleichbar; bei tatsächlichem Bau am echten Screenshot gegenprüfen, nicht nur annehmen.
+Vier Segmente in Zeile 1 sind zulässig, weil `EntityTab`s Segment-Reihe bei derselben Breite bereits fünf Segmente (Personen/Familien/Quellen/Orte/Höfe) umbruchfrei zeigt — die Wortlängen sind vergleichbar. **Beim Bau am echten Screenshot gegengeprüft (375px): umbruchfrei.** `[✓ Bericht]` im Dashboard statt `[Projekt-Kontext geerbt]`: der vollständige Prüfbericht ([20 §1.11h](20-Funktionen.md)) ist die einzige Fläche, die auch Orts-/Hof-Befunde zeigt, und gehört damit neben das personbezogene Dashboard — nicht in die Aufgaben-Kopfzeile, die sonst vier Elemente trüge (ADR-v9-98).
 
 ---
 
