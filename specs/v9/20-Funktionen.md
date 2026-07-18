@@ -25,7 +25,7 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 - **[S]** Demo-Modus.
 - **[S]** DSGVO-Export (Anonymisierung), GED7-Export, Strict-Export (je opt-in — [13](13-Interop-Roundtrip.md)).
 - **[K]** Keyboard-Shortcuts (Speichern/Verwerfen/Escape/Baum-Zurück).
-- **[K]** Undo/Redo (Snapshot-Stack, ≥30 Einträge); Fallback „Revert to Saved" bei leerem Stack.
+- **[K]** Undo/Redo, **≥30 Einträge**; Fallback „Revert to Saved" bei leerem Stack. Ein Eintrag entsteht je AppState-Kommando ([02 §3](02-Zielarchitektur-v9.md)), nicht je Formularfeld; der volle Lade-Pass ist kein Eintrag und leert den Stack. Umfang schließt `placeObjects`/`hofObjects` ein (ein versehentlicher Dubletten-Merge ist der teuerste umkehrbare Fehler) — mit der Grenze, dass ein Undo den Speicherzustand herstellt und beim Persistieren eine neue `orte.json`-Revision erzeugt, statt eine bereits verteilte zurückzuziehen ([11 §2](11-Orte-Hoefe-Identitaet.md), LP-9). **Ein Snapshot ist eine Referenz-Kopie mit Copy-on-Write, keine Tiefkopie** (ADR-v9-92: gemessen 43,8 MiB vs. 0,43 MiB je Snapshot bei 20.000 Personen) — Voraussetzung dafür ist, dass die Kern-Kommandos neue `Map`s zurückgeben statt in place zu mutieren.
 
 ### 1.3 Baum-Visualisierungen *(imperative Inseln — [02 §5](02-Zielarchitektur-v9.md))*
 - **[K]** Sanduhr-Baum: bis 4 Vorfahren-Ebenen (Desktop) / 2 (Portrait) + Proband + Ehepartner + Kinder. Kekule-Nummern. Mehrfach-Ehen (`⚭N`), Halbgeschwister (`½`).
