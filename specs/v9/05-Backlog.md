@@ -236,6 +236,8 @@ Den Prüfer selbst prüfen: `… --selftest`.
 | L2 | Status `gebaut`, Beleg **trifft nicht** | **Fehler** | Umbenennung/Löschung eines fertigen Features. |
 | L3 | **Jedes** Status-Wort in den Specs 10–32 (Ratsche seit BL-50 auf **0**) | **Fehler** | Rückfall in die Vermischung von Soll und Ist. Die Ratsche stand bis 2026-07-18 auf 33 (Altlast); seit deren Beseitigung ist jede neue Fundstelle ein harter Fehler und darf nie wieder geduldet werden. |
 | L4 | Backlog-Zeile ohne auflösbaren Spec-Link | Warnung | Verwaiste Zeilen. |
+| L5 | Zeile steht im Abschnitt, der **nicht** zu ihrem Status passt | **Fehler** | Erledigtes, das unter „Offene Punkte“ stehen bleibt, weil beim Bau nur das Status-Wort geändert und die Zeile nicht verschoben wurde. Beim Lesen sieht man die Überschrift, nicht die achte Spalte — eine Zeile, die man nur durch Scrollen als erledigt erkennt, ist praktisch nicht erledigt (Fund 2026-07-18 an BL-01). |
+| L6 | Diese Tabelle ↔ tatsächlich implementierte Regeln | **Fehler** | Drift der Regel-Doku selbst. Die Regeln stehen an drei Stellen (Implementierung, `SKILL.md`, diese Tabelle); beim Nachrüsten von L5 wurden zwei davon sofort vergessen. Das Skript leitet seine Regeln aus dem eigenen Quelltext ab und vergleicht sie hiermit — in beide Richtungen. |
 | — | Status weder `offen` noch `gebaut` | **Fehler** | Rückkehr von „teilweise" (Regel 2). |
 
 **Die Asymmetrie ist Absicht.** Status `offen` + kein Treffer ist immer in Ordnung, auch

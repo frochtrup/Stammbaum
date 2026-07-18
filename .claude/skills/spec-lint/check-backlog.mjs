@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // .claude/skills/spec-lint/check-backlog.mjs — mechanischer Teil von spec-lint:
-// prüft specs/v9/05-Backlog.md gegen die Realität (Regeln L1–L4, dort dokumentiert).
+// prüft specs/v9/05-Backlog.md gegen die Realität (Regeln L1–L6, in der Tabelle
+// „Lint-Regeln" ebendort dokumentiert — L6 hält Tabelle und Implementierung deckungsgleich,
+// diese Zeile hier also auch: sie war nach dem Nachrüsten von L5 als Erstes veraltet).
 //
 // WARUM ALS SKRIPT: Bau-Status per Hand zu pflegen hat nachweislich versagt — Spec 20
 // und die ADR-v9-78-Überschrift behaupteten beide „nicht gebaut" für Funktionen, die
@@ -144,6 +146,21 @@ export function parseBacklog(text) {
 /** L5: Welcher Abschnitt zu welchem Status gehört. */
 const ABSCHNITT_FUER_STATUS = { offen: 'Offene Punkte', gebaut: 'Erledigte Punkte' };
 
+/** Die tatsächlich implementierten Regeln — abgeleitet aus dem EIGENEN Quelltext, nicht
+ *  aus einer gepflegten Liste. Eine Liste wäre wieder eine Fassung, die beim Hinzufügen
+ *  einer Regel vergessen werden kann; genau das ist bei der Backlog-Tabelle passiert
+ *  (s. L6). Erkannt wird jedes `fehler.push(\`L<n> …\`)` bzw. `warnungen.push(\`L<n> …\`)`. */
+export function implementierteRegeln(quelltext) {
+  return new Set(
+    [...quelltext.matchAll(/(?:fehler|warnungen)\.push\(\s*`L(\d+)\b/g)].map((m) => `L${m[1]}`),
+  );
+}
+
+/** Die im Backlog dokumentierten Regeln — die Zeilen der Tabelle „Lint-Regeln". */
+export function dokumentierteRegeln(backlogText) {
+  return new Set([...backlogText.matchAll(/^\| (L\d+) \|/gm)].map((m) => m[1]));
+}
+
 // --- Prüfungen --------------------------------------------------------------
 
 function pruefe() {
@@ -219,6 +236,27 @@ function pruefe() {
       if (!fs.existsSync(path.join(SPEC, 'specs/v9', m[1])))
         warnungen.push(`L4 ${z.id}: Spec-Link "${m[1]}" nicht auflösbar`);
 
+  // L6: Deckt sich die Regel-Aufzählung im Backlog mit den implementierten Regeln?
+  //
+  // WARUM DIESE REGEL EXISTIERT (Nutzer-Frage 2026-07-18, direkt nach dem Nachrüsten
+  // von L5): die Regeln standen an DREI Stellen — Implementierung, `SKILL.md` und der
+  // Tabelle „Lint-Regeln" in 05-Backlog.md — ohne jeden Abgleich. Beim Nachrüsten von L5
+  // wurden zwei davon sofort vergessen. Damit verletzte ausgerechnet die Regel-Doku die
+  // Regel 1 dieses Dokuments („Zeiger, kein Inhalt — sonst driften zwei Fassungen
+  // auseinander"), und zwar innerhalb weniger Stunden.
+  //
+  // Die Tabelle wird NICHT gelöscht: ihre Spalten „Härte"/„Fängt" und der Absatz zur
+  // Asymmetrie begründen das Design des Backlogs selbst und stehen nirgends sonst. Statt
+  // sie zur Drift-Quelle zu machen, wird sie hier zum geprüften Kontrakt.
+  const implementiert = implementierteRegeln(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8'));
+  const dokumentiert = dokumentierteRegeln(text);
+  for (const r of [...implementiert].sort())
+    if (!dokumentiert.has(r))
+      fehler.push(`L6 Regel ${r} ist implementiert, fehlt aber in der Tabelle „Lint-Regeln" in 05-Backlog.md`);
+  for (const r of [...dokumentiert].sort())
+    if (!implementiert.has(r))
+      fehler.push(`L6 Regel ${r} steht in der Tabelle „Lint-Regeln", ist aber nicht implementiert`);
+
   return { fehler, warnungen, zeilen };
 }
 
@@ -278,6 +316,37 @@ function selftest() {
       `  → ${falsch.map((z) => z.id).join(',') || 'nichts erkannt'}`,
   );
   if (!l5ok) bad++;
+
+  // L6 negativ prüfen: die Ableitung aus dem Quelltext muss eine Regel finden, die NUR
+  // implementiert ist, und eine, die NUR dokumentiert ist. Ohne diese Gegenprobe wäre
+  // nicht belegt, dass L6 in beide Richtungen schaut — und die eine Richtung, die fehlt,
+  // ist erfahrungsgemäß die, in der die Drift dann auftritt.
+  // Die Vorlage wird ZUSAMMENGESETZT, nicht literal hingeschrieben: stünde
+  // `push(\`L9 …\`)` wörtlich hier, läse die Ableitung es beim Scan des ECHTEN Quelltexts
+  // als implementierte Regel L9 mit — der Prüfer vergiftete sich an seinem eigenen
+  // Selbsttest. Genau so passiert, beim ersten Lauf, sofort sichtbar am Normallauf.
+  const q = '`';
+  const impl = implementierteRegeln(`fehler.push(${q}L1 x${q}); warnungen.push(${q}L9 y${q});`);
+  const doku = dokumentierteRegeln('| L1 | … |\n| L8 | … |\n');
+  const nurImpl = [...impl].filter((r) => !doku.has(r));
+  const nurDoku = [...doku].filter((r) => !impl.has(r));
+  const l6ok = nurImpl.join() === 'L9' && nurDoku.join() === 'L8';
+  console.log(
+    `${l6ok ? '  ok  ' : ' FAIL '} L6 erkennt Drift in beide Richtungen`.padEnd(50) +
+      `  → nur implementiert: ${nurImpl.join() || '–'} · nur dokumentiert: ${nurDoku.join() || '–'}`,
+  );
+  if (!l6ok) bad++;
+
+  // Und der Fall, der L6 überhaupt ausgelöst hat: findet die Ableitung im ECHTEN
+  // Quelltext alle Regeln? Eine Ableitung, die still zu wenig findet, meldete Deckung,
+  // wo keine ist — dieselbe Klasse wie ein Lint, der still nichts findet.
+  const echt = implementierteRegeln(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8'));
+  const echtOk = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'].every((r) => echt.has(r));
+  console.log(
+    `${echtOk ? '  ok  ' : ' FAIL '} L6 leitet alle Regeln aus dem Quelltext ab`.padEnd(50) +
+      `  → ${[...echt].sort().join(',')}`,
+  );
+  if (!echtOk) bad++;
   console.log(bad === 0 ? '\nSelbsttest grün.' : `\nSelbsttest: ${bad} Fehler.`);
   return bad;
 }

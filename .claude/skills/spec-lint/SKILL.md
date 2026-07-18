@@ -26,11 +26,13 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 10. **Backlog-Status ↔ Code (mechanisch, ZUERST ausführen):**
 
     ```
-    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L5
+    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L6
     node .claude/skills/spec-lint/check-backlog.mjs --selftest  # prüft den Prüfer
     ```
 
-    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (seit BL-50 auf **0** — nie wieder anheben); **L4** warnt bei unauflösbaren Spec-Links; **L5** prüft, ob die Zeile im Abschnitt steht, der zu ihrem Status passt (`offen` → „Offene Punkte", `gebaut` → „Erledigte Punkte"). Exit 0 = konsistent.
+    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (seit BL-50 auf **0** — nie wieder anheben); **L4** warnt bei unauflösbaren Spec-Links; **L5** prüft, ob die Zeile im Abschnitt steht, der zu ihrem Status passt (`offen` → „Offene Punkte", `gebaut` → „Erledigte Punkte"); **L6** hält die Regel-Tabelle in `05-Backlog.md` und die Implementierung deckungsgleich. Exit 0 = konsistent.
+
+    **L6 ist die Regel gegen diese Datei hier.** Die Regeln stehen an drei Stellen — Implementierung, dieser Abschnitt und die Tabelle „Lint-Regeln" in `05-Backlog.md`. Beim Nachrüsten von L5 wurden zwei davon sofort vergessen; damit verletzte ausgerechnet die Regel-Doku die Regel 1 des Backlogs („Zeiger, kein Inhalt — sonst driften zwei Fassungen auseinander"). L6 leitet die implementierten Regeln aus dem EIGENEN Quelltext ab (keine gepflegte Liste, die man vergessen kann) und vergleicht sie in beide Richtungen mit der Tabelle. Diesen Abschnitt hier deckt L6 NICHT ab — er bleibt Prosa und damit in deiner Verantwortung.
 
     **Warum L5 nachgerüstet wurde (Nutzer-Fund 2026-07-18):** BL-01 war fertig und trug korrekt den Status `gebaut` — blieb aber unter „Offene Punkte" stehen, weil beim Erledigen nur das Status-Wort geändert und die Zeile nicht verschoben wurde. L1/L2 vergleichen Status gegen Beleg, beides passte, der Prüfer meldete vier Läufe lang „konsistent". Aufgefallen ist es erst beim Lesen auf GitHub: dort ist die Statusspalte die achte und liegt außerhalb des Sichtfelds — sichtbar ist die Überschrift. Eine Zeile, die man nur durch Scrollen als erledigt erkennt, ist praktisch nicht erledigt.
 
