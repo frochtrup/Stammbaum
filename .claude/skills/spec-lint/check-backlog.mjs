@@ -225,11 +225,18 @@ function selftest() {
 }
 
 // --- Hauptlauf --------------------------------------------------------------
+// Nur wenn direkt aufgerufen: sonst wuerde ein `import` dieses Moduls (z. B. um
+// evalBeleg einzeln zu testen) den vollen Lauf ausloesen UND process.exit() rufen.
 
-if (process.argv.includes('--selftest')) {
+const direktAufgerufen = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (direktAufgerufen && process.argv.includes('--selftest')) {
   process.exit(selftest() === 0 ? 0 : 1);
 }
 
+if (!direktAufgerufen) {
+  // Als Bibliothek importiert — nichts ausfuehren.
+} else {
 const { fehler, warnungen, zeilen } = pruefe();
 for (const w of warnungen) console.log(`WARNUNG  ${w}`);
 for (const f of fehler) console.log(`FEHLER   ${f}`);
@@ -239,3 +246,4 @@ console.log(
     `${fehler.length ? `${fehler.length} Fehler` : 'konsistent'}${warnungen.length ? `, ${warnungen.length} Warnung(en)` : ''}.`,
 );
 process.exit(fehler.length ? 1 : 0);
+}

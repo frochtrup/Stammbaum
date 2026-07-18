@@ -35,6 +35,27 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
    Umbenennung, schlägt der Lint an.
 5. **Priorität** `[K]`/`[S]`/`[E]` wird aus dem Spec übernommen, nicht hier neu erfunden.
    Die Reihenfolge-Aussage steht in `Klasse`, nicht in einer Zahl.
+6. **Jeder Beleg soll ein Wächter sein, kein Meilenstein.** Ein *Wächter* sagt aus, was
+   dauerhaft gelten muss, und behält nach der Erledigung Wert (L2 schlägt an, wenn es
+   kippt). Ein *Meilenstein* bestätigt nur, dass einmal etwas passiert ist, und ist
+   danach tot. Wo ein Beleg als Meilenstein formuliert ist, lässt er sich fast immer als
+   Wächter umschreiben — dann ist die Zeile auch nach `gebaut` nicht bloß Archiv.
+
+   Wächter sind: negierte Belege (`!txt:` — „muss abwesend bleiben"), `test:` („muss
+   unskipped bleiben"), `txt:` auf Konfiguration („Regel muss verdrahtet bleiben"),
+   `sym:`/`datei:` auf Produktcode („darf nicht verschwinden").
+
+   **Gegenbeispiel und Anlass der Regel:** BL-49 trug zuerst `spec:…/check-backlog.mjs` —
+   der Prüfer prüfte seine eigene Existenz. Wird das Skript gelöscht, läuft überhaupt
+   nichts mehr; L2 hätte dort nie etwas gefangen. Ersetzt durch
+   `txt:check-backlog@…/SKILL.md`: das bewacht den realistischen Verfallsweg — ein Skript,
+   das zwar existiert, aber im Skill nicht mehr referenziert ist, ruft niemand mehr auf.
+
+   Die Regel gilt **unabhängig vom `Typ`**. Naheliegend wäre, erledigte `hygiene`- und
+   `defekt`-Zeilen als nicht lint-relevant auszusortieren — das wäre falsch: gerade
+   BL-50 (Status-Wörter bleiben draußen) wird nach seiner Erledigung der wichtigste
+   Wächter des ganzen Dokuments, und BL-47 verhindert, dass ein rot gewordener
+   Skalen-Test einfach wieder geskippt wird.
 
 ## Klassen (statt Prioritätszahlen)
 
@@ -70,7 +91,8 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 ## Erledigte Punkte
 
-Bleiben stehen — sie sind der Drift-Schutz (Lint-Regel L2).
+Bleiben stehen — jede Zeile hier ist ein aktiver Wächter (Regel 6, Lint-Regel L2), kein
+Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder verschwunden.
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
@@ -110,7 +132,7 @@ Bleiben stehen — sie sind der Drift-Schutz (Lint-Regel L2).
 | BL-44 | K | feature | usp | Hof-Review Klassen A/C/D | [20 §1.8](20-Funktionen.md), [11 §6](11-Orte-Hoefe-Identitaet.md) | `datei:ui/views/hof/HofReview.svelte` | gebaut |
 | BL-45 | K | feature | usp | Massen-Dedup Höfe | [20 §1.8](20-Funktionen.md) | `sym:buildHofDedupGroups` | gebaut |
 | BL-46 | K | feature | basis | Aufgaben-Kanban (Liste⇄Board) | [20 §1.11a](20-Funktionen.md) | `datei:ui/views/tasks/TasksView.svelte` | gebaut |
-| BL-49 | — | hygiene | basis | Backlog-Lint L1–L4 in `spec-lint` überführen | [05](05-Backlog.md) | `spec:.claude/skills/spec-lint/check-backlog.mjs` | gebaut |
+| BL-49 | — | hygiene | basis | Backlog-Lint L1–L4 in `spec-lint` überführen | [05](05-Backlog.md) | `txt:check-backlog@.claude/skills/spec-lint/SKILL.md` | gebaut |
 
 ## Typen
 
