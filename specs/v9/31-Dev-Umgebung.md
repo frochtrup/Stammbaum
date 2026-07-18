@@ -93,6 +93,7 @@ jobs:
       - run: npm run check:csp     # CSP-Test-Gate (NFR-3, ADR-v9-39)
       - run: npm run lint          # ESLint + Typen (tsc --noEmit) + Svelte-Templates (check:svelte)
       - run: npm test              # Roundtrip + Unit + Component + Snapshot (LP-1)
+      - run: npm run test:perf     # Skalen-Gate auf der 20k-Fixture (NFR, Spec 30 §1)
 
   deploy:
     needs: test                    # nur bei grünen Gates
@@ -110,7 +111,9 @@ jobs:
       - uses: actions/deploy-pages@v4
 ```
 
-**Wirkung:** Architektur-Grenze (INV-ARCH-1), Roundtrip-Treue (LP-1) und Typen werden zur automatischen Vorbedingung jedes Releases — die drei Gates laufen als getrennte Schritte, damit ein Fehlschlag sofort dem richtigen Bereich zuzuordnen ist.
+**Wirkung:** Architektur-Grenze (INV-ARCH-1), Roundtrip-Treue (LP-1), Typen und die NFR-Budgets ([30 §1](30-NFR-und-Persistenz.md)) werden zur automatischen Vorbedingung jedes Releases — die Gates laufen als getrennte Schritte, damit ein Fehlschlag sofort dem richtigen Bereich zuzuordnen ist.
+
+Das Skalen-Gate braucht dabei zwingend den **eigenen Aufruf** `npm run test:perf`: die Haupt-Vitest-Config schließt `tests/perf/` aus ([32 §2](32-Testframework.md)), ein Pfad-Argument gegen sie fände null Tests und meldete grün — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon einmal hatte.
 
 ---
 

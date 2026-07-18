@@ -81,7 +81,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-08 | K | feature | basis | Keyboard-Shortcuts (Speichern/Verwerfen/Escape) | [20 §1.2](20-Funktionen.md) | `datei:ui/shell/shortcuts.ts` | offen |
 | BL-09 | K | feature | kür | Mini-Karte im Ort-Steckbrief | [20 §1.7](20-Funktionen.md) | `datei:ui/views/place/PlaceMiniMap.svelte` | offen |
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
-| BL-48 | — | hygiene | basis | Perf-Gate in CI verdrahten | [31](31-Dev-Umgebung.md), [32](32-Testframework.md) | `txt:test:perf@.github/workflows/ci.yml` | offen |
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
@@ -157,6 +156,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-78 | S | feature | kür | 21 §10j Hof/Ort-Ereignisgruppierung vereinheitlicht | [21 §10j](21-UI-UX.md) | `datei:ui/shell/event-grouping.ts` | gebaut |
 | BL-50 | — | hygiene | basis | L3 durchsetzen: Status-Wörter aus Specs 10–32 entfernen | [05](05-Backlog.md) | `!txt:nicht gebaut,✅ gebaut,noch offen@specs/v9/1*.md,specs/v9/2*.md,specs/v9/3*.md` | gebaut |
 | BL-47 | — | defekt | blockiert | Orts-Resolver: Registry-Neubau pro Event (89 s bei 20k) | [ADR-v9-88](04-Entscheidungslog.md), [11 §4.2](11-Orte-Hoefe-Identitaet.md) | `test:tests/perf/scale.perf.test.ts` | gebaut |
+| BL-48 | — | hygiene | basis | Perf-Gate in CI verdrahten | [31 §4](31-Dev-Umgebung.md), [32 §7](32-Testframework.md) | `txt:test:perf@.github/workflows/ci.yml` | gebaut |
 
 ## Typen
 
