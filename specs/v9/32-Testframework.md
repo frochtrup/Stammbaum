@@ -137,6 +137,7 @@ Jede Zeile = Pflicht-Testabdeckung. Vollständigkeit ist Teil der Definition of 
 - **`untrack()` bei `$state`-Initialisierung aus Props**, nicht direkte Prop-Referenz (TST-10).
 - **Layout-Verifikation auf 375px** bei jedem `flex-wrap`-Layout, das dort kompakt bleiben soll — nicht nur am Desktop-Viewport (TST-11).
 - **Kein `<select bind:value>`** — `npm run lint` erzwingt das automatisch (TST-12), nur relevant falls die Regel je bewusst umgangen werden müsste (dann Begründung + Alternative dokumentieren).
+- **Komponententests bauen die Verdrahtung in der ECHTEN Mount-Reihenfolge auf** — bei Zustand aus einem Singleton außerhalb des Komponentenbaums also erst rendern, dann verdrahten (Kind-`onMount` läuft vor Wurzel-`onMount`). Ein Test, der die Verdrahtung vorher aufbaut, prüft eine Reihenfolge, die es real nicht gibt: der Offline-Indikator (BL-03, ADR-v9-94) war mit sechs grünen Tests im Browser vollständig tot, weil das `$derived` beim ersten Auswerten den nicht-reaktiven Zweig las und einfror.
 - **`.svelte`-Dateien bleiben unter 600 Zeilen** — `max-lines` in `eslint.config.js` erzwingt das automatisch ([05](05-Backlog.md) BL-54). Die dort einzeln eingetragenen Altfälle sind auf ihren Ist-Wert geratscht (schrumpfen erlaubt, wachsen nicht); wer eine davon inhaltlich anfasst, zerlegt sie und streicht ihre Zeile — die Liste ist der Fortschrittsanzeiger, kein Freibrief.
 
 ---
