@@ -85,6 +85,10 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-08 | K | feature | basis | Keyboard-Shortcuts Speichern/Verwerfen/Escape (⌘Z/⇧⌘Z sind mit BL-01 gebaut) | [20 §1.2](20-Funktionen.md) | `txt:'save'@ui/shell/shortcuts.ts` | offen |
 | BL-09 | K | feature | kür | Mini-Karte im Ort-Steckbrief | [20 §1.7](20-Funktionen.md) | `datei:ui/views/place/PlaceMiniMap.svelte` | offen |
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
+| BL-80 | — | defekt | usp | GRAMPS-Export schreibt editierten `db`-Zustand nicht zurück (nur Passthrough aus `roots`) | [13 §3](13-Interop-Roundtrip.md), [14 §3.2](14-Dateihandling.md) | `test:tests/roundtrip/gramps-write-back.test.ts` | offen |
+| BL-81 | — | defekt | usp | `xml-tree`-Serializer verliert Mixed Content **still** (`hasText && hasChildren`) — fail-loud statt Verlust | [13](13-Interop-Roundtrip.md) | `test:tests/core/xml-tree-mixed-content.test.ts` | offen |
+| BL-82 | — | defekt | basis | Union-Merge-Tie-Break vergleicht Speicherzeit (`clock.now()`) statt Autorenzeit → lokal gewinnt praktisch immer | [11 §2](11-Orte-Hoefe-Identitaet.md) | `test:tests/services/places-sync-tiebreak.test.ts` | offen |
+| BL-83 | S | feature | kür | `_EVAL`-Wire-Format (Parser + Writer) — heute nur im Strict-Adapter gestrippt, nirgends erzeugt | [12 §3](12-Forschungsdaten.md) | `test:tests/roundtrip/eval-roundtrip.test.ts` | offen |
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
@@ -118,7 +122,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-13 | K | feature | basis | ViewState (Auswahl je Ziel, INV-VS) | [21 §5](21-UI-UX.md) | `sym:createViewState` | gebaut |
 | BL-14 | K | feature | basis | Globale Suche über alle fünf Entitäten | [20 §1.1](20-Funktionen.md) | `datei:ui/views/search/GlobalSearchView.svelte` | gebaut |
 | BL-15 | K | feature | usp | GEDCOM 5.5.1 öffnen (Parser) | [20 §1.2](20-Funktionen.md), [13](13-Interop-Roundtrip.md) | `sym:parseGedcom` | gebaut |
-| BL-16 | K | feature | usp | GRAMPS XML lesen+schreiben | [20 §1.2](20-Funktionen.md) | `sym:parseXMLText` | gebaut |
+| BL-16 | K | feature | usp | GRAMPS XML lesen+schreiben (Passthrough; Write-Back editierter Daten fehlt → BL-80) | [20 §1.2](20-Funktionen.md) | `sym:parseXMLText` | gebaut |
 | BL-17 | K | feature | basis | Ein Export-Rohr, zwei Save-Tiers | [20 §1.2](20-Funktionen.md), [14](14-Dateihandling.md) | `datei:services/file/export-pipe.ts` | gebaut |
 | BL-18 | K | feature | basis | Auto-Load der Arbeitskopie beim Start | [20 §1.2](20-Funktionen.md) | `datei:services/file/idb-working-copy-store.ts` | gebaut |
 | BL-19 | K | feature | basis | Sanduhr-Baum (Kekule, Mehrfach-Ehen) | [20 §1.3](20-Funktionen.md) | `datei:ui/islands/tree/hourglass-tree.ts` | gebaut |
