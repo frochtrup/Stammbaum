@@ -267,6 +267,8 @@ Ziel: verschlankte, konsistente Oberfläche (verstärkt INV-UI-5) mit EINEM kano
 
 Der Hof behält sein Dorf, weil eine Hausnummer allein („Oster 82a") zwischen Dörfern nicht eindeutig ist; die Verwaltungskette hinter dem Dorf ist derselbe Ballast wie im Orts-Fall. Der Rohtext-Fall ist bewusst nicht „ehrlich lang": es sind genau die Zeilen, die sonst am schlechtesten aussehen, und die Verkürzung ist rein anzeigeseitig — Auflösung und Review-Klassifikation ([11 §6](11-Orte-Hoefe-Identitaet.md)) sehen den Rohwert unverändert.
 
+**Offen: die Karten-Insel** (BL-87). `ui/islands/map/map-model.ts` liest `pl.title` an drei Stellen direkt weiter. Ob ein Kartenmarker Listen- oder Detail-Kontext ist, entscheidet diese Invariante bewusst noch nicht — ein Marker-Label wird überflogen wie eine Liste, steht aber allein statt in einer Spalte, in der Kettenlängen optisch konkurrieren. Vor dem Nachziehen zuerst diese Frage beantworten, nicht die Regel mechanisch ausrollen.
+
 **Zwei bewusste Ausnahmen, die die Kette behalten**, weil dort Unterscheiden der Zweck ist, nicht Überfliegen: die Kandidatenliste der Review-Klasse P („Oldenburg › Niedersachsen" vs. „Oldenburg › USA", [11 §6](11-Orte-Hoefe-Identitaet.md)) und der Massen-Dedup ([11 §9.2](11-Orte-Hoefe-Identitaet.md), `buildFullPlaceName`).
 
 **Test:** `tests/ui/place-display-depth.test.ts` — die drei Kurzformen, die Detailzeile mit voller Kette, und der Negativ-Beweis, dass ein gesetzter `shortName` den exportierten PLAC nicht verändert.
