@@ -269,7 +269,11 @@ function selftest() {
     ['sym: findet echten Export', 'sym:parseGedcom', true],
     ['sym: findet Nicht-Existentes nicht', 'sym:diesesSymbolGibtEsNicht', false],
     ['datei: existierende Datei', 'datei:ui/shell/BottomNav.svelte', true],
-    ['datei: fehlende Datei', 'datei:app/public/sw.js', false],
+    // Vorlage-Pfad statt einer echten „gibt es noch nicht"-Datei: dieser Fall hing an
+    // app/public/sw.js, bis BL-02 den Service Worker baute — seither existierte die
+    // Datei und der Fall schlug still fehl. Ein Pfad unter fixtures/, der bewusst nie
+    // angelegt wird, kann nicht durch ein künftiges Feature wahr werden.
+    ['datei: fehlende Datei', 'datei:.claude/skills/spec-lint/fixtures/nie-angelegt.ts', false],
     ['spec: Datei im Spec-Repo', 'spec:specs/v9/05-Backlog.md', true],
     ['test: unskipped Test trifft', 'test:tests/ui/design-system-flex.test.ts', true],
     // Eigene Vorlage statt einer Produktivdatei: dieser Fall hing an
@@ -277,7 +281,10 @@ function selftest() {
     // seither schlug der Selbsttest still fehl, weil ihn niemand aufruft (`--selftest`
     // läuft weder im Normallauf noch in CI). Gefunden 2026-07-18 beim Nachrüsten von L5.
     ['test: geskippter Test trifft NICHT', 'test:.claude/skills/spec-lint/fixtures/skipped-example.ts', false],
-    ['txt: Muster im Rohtext', 'txt:max-lines@eslint.config.js', false],
+    // Ebenfalls von einer Produktivdatei gelöst: hing an txt:max-lines@eslint.config.js,
+    // bis BL-54 genau diese Regel dort eintrug (gefunden 2026-07-18 bei BL-04).
+    ['txt: Muster NICHT im Rohtext', 'txt:diesesMusterStehtDortNie@.claude/skills/spec-lint/fixtures/stabiler-text.txt', false],
+    ['txt: Muster IM Rohtext', 'txt:Selbsttest@.claude/skills/spec-lint/fixtures/stabiler-text.txt', true],
     ['! negiert korrekt', '!sym:diesesSymbolGibtEsNicht', true],
     ['txt: findet Kommentar (nicht gestrippt)', 'txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte', true],
   ];
@@ -364,6 +371,30 @@ if (direktAufgerufen && process.argv.includes('--selftest')) {
 if (!direktAufgerufen) {
   // Als Bibliothek importiert — nichts ausfuehren.
 } else {
+// Der Selbsttest laeuft IMMER mit, nicht nur auf --selftest.
+//
+// Warum (Lehre 2026-07-18, BL-04): dieselbe Verrottung ist dreimal passiert — der
+// geskippte-Test-Fall (BL-47 entskippte die Vorlage), der Fall "fehlende Datei"
+// (BL-02 baute app/public/sw.js) und der Fall "Muster nicht im Rohtext" (BL-54 trug
+// max-lines in eslint.config.js ein). Jedes Mal haengte ein Fall an einer Produktivdatei,
+// die ein spaeteres Feature veraenderte; jedes Mal schlug er danach STILL fehl, weil
+// --selftest weder im Normallauf noch in CI lief. Die bisherige Absicherung war ein Satz
+// in SKILL.md ("wer den Pruefer anfasst, ruft ihn auf") — also Erinnerung statt Zwang.
+// Jetzt faellt es beim naechsten gewoehnlichen Lauf auf, ohne dass jemand daran denkt.
+// Kosten: wenige Millisekunden. Ausgabe nur im Fehlerfall, damit der Normallauf knapp bleibt.
+const selbsttestFehler = (() => {
+  const log = console.log;
+  const gepuffert = [];
+  console.log = (...a) => gepuffert.push(a.join(' '));
+  const bad = selftest();
+  console.log = log;
+  if (bad) {
+    console.log('FEHLER   Selbsttest des Pruefers schlaegt fehl — die Belegauswertung ist unzuverlaessig:');
+    for (const z of gepuffert) if (z.startsWith(' FAIL')) console.log(`  ${z.trim()}`);
+  }
+  return bad;
+})();
+
 const { fehler, warnungen, zeilen } = pruefe();
 for (const w of warnungen) console.log(`WARNUNG  ${w}`);
 for (const f of fehler) console.log(`FEHLER   ${f}`);
@@ -372,5 +403,5 @@ console.log(
   `\n${zeilen.length} Backlog-Zeilen (${Object.entries(nachTyp).map(([k, v]) => `${k}:${v}`).join(' · ')}) — ` +
     `${fehler.length ? `${fehler.length} Fehler` : 'konsistent'}${warnungen.length ? `, ${warnungen.length} Warnung(en)` : ''}.`,
 );
-process.exit(fehler.length ? 1 : 0);
+process.exit(fehler.length || selbsttestFehler ? 1 : 0);
 }

@@ -1,0 +1,9 @@
+Vorlage für den Selbsttest — bewusst inhaltsarm und ohne Bezug zum Produktivcode.
+
+Der Fall „txt: Muster NICHT im Rohtext" hing bis 2026-07-18 an
+`txt:max-lines@eslint.config.js`. BL-54 trug die max-lines-Ratsche dort ein, seither
+war das Muster vorhanden und der Selbsttest schlug still fehl — dieselbe Verrottung,
+die zuvor schon den geskippten-Test-Fall erwischt hatte (s. fixtures/skipped-example.ts).
+
+Diese Datei ändert sich nicht unter den Füßen des Prüfers. Der Selbsttest sucht darin
+ein Muster, das hier definitionsgemäß nie steht.

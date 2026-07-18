@@ -190,11 +190,11 @@ Formulare als Bottom-Sheets (Mobile) / Panels (Desktop) mit progressiver Offenle
 
 Validierung erzeugt einen **RAM-Bericht** (keine automatischen Datenänderungen), erreichbar über „✓ Daten prüfen" (§1.11h oben) UND als Grundlage des Qualitäts-Dashboards (§1.11g oben) — eine Engine, zwei Konsumenten. Schweregrade: **✗ Fehler · ⚠ Warnung · ℹ Hinweis**.
 
-**Zähl-Diskrepanz im Handbuch selbst:** Das Handbuch behauptet „31 Regeln in fünf Gruppen", die zugehörige Tabelle (Kap. 13) listet aber nur **25** einzeln auf (Logische Fehler 7 + Plausibilität 7 + Vollständigkeit 6 + Quellen 3 + Vernetzung 2). v9 übernimmt die 25 tatsächlich belegten Regeln — keine erfundenen Rest-6, um auf 31 zu kommen.
+**Zähl-Diskrepanz im Handbuch selbst:** Das Handbuch behauptet „31 Regeln in fünf Gruppen", die zugehörige Tabelle (Kap. 13) listet aber nur **25** einzeln auf (Logische Fehler 7 + Plausibilität 7 + Vollständigkeit 6 + Quellen 3 + Vernetzung 2). v9 übernimmt die 25 tatsächlich belegten Regeln — keine erfundenen Rest-6, um auf 31 zu kommen. **Nachtrag (ADR-v9-96):** die Handbuch-Tabelle ist ihrerseits unvollständig gegenüber dem echten `VAL_RULES`-Katalog in `gedcom-validator.js`. Vier dort belegte Regeln sind nachgetragen (`MANY_CHILDREN`, `MULTI_FAMC`, `OPEN_HYPO`, `NO_SOURCES_AT_ALL` — letztere war hier mit `MISSING_QUAY` in eine Zeile verschmolzen, im Code sind es zwei verschiedene Prüfungen). `PLACE_INCONSISTENCY` (Ortsnamen-Varianten) wird bewusst NICHT übernommen: diese Frage beantwortet in v9 die Orts-Dedup ([11](11-Orte-Hoefe-Identitaet.md), `core/places/curation.ts`) — zwei Mechanismen für dieselbe Frage wären genau die Doppelung, die §3 bei den Geo-Regeln auflöst. Katalogumfang damit: **36 Regeln**.
 
 **Geo-Regeln — EIN Engine, nicht zwei getrennte Mechanismen.** Im Handbuch sind die Geo-Prüfungen (Bounding-Box, Datumsgrenzen, Zirkelreferenz, Hof ohne Koordinaten, Hof zu weit vom Ort) ein separates Werkzeug — „Geo-Plausibilitäts-Validator" mit eigenem ⚠-Badge im Orte-Tab, nicht Teil der 25-Regel-Engine im Aufgaben-Tab. v9 integriert die Geo-Regeln als sechste Klasse in DIESELBE Engine: ein „✓ Daten prüfen", ein Dashboard, eine Konfiguration für den gesamten Datenbestand (Personen/Familien UND Orte/Höfe), keine zweite Badge-Fundstelle. Die Schweregrade der fünf Geo-Regeln (unten) sind eine v9-eigene Einordnung in die bestehende ✗/⚠/ℹ-Skala — im Handbuch selbst tragen sie keine individuelle Schwere, nur ein gemeinsames Warnungs-Badge.
 
-**Regelklassen mit Schwellenwerten** (v8-Defaults, in der Regel-Konfiguration anpassbar):
+**Regelklassen mit Schwellenwerten** (Startwerte, in der Regel-Konfiguration anpassbar). Die Zahlen sind **nicht** die v8-Defaults, auch wenn frühere Fassungen dieses Absatzes das behaupteten: `gedcom-validator.js` führt für vier davon andere Werte (Mutter zu jung 12, Mutter zu alt 60, Vater zu jung 15, Vater zu alt 90). v9 nimmt bewusst die strengeren Grenzen hier (ADR-v9-96):
 
 | Klasse | Regel | Schwere |
 |---|---|---|
@@ -212,29 +212,34 @@ Validierung erzeugt einen **RAM-Bericht** (keine automatischen Datenänderungen)
 | Plausibilität | Heiratsalter zu jung (Standard: <14 J.) | ⚠ Warnung |
 | Plausibilität | Nachname fehlt | ⚠ Warnung |
 | Plausibilität | Geschlecht unbekannt | ⚠ Warnung |
+| Plausibilität | Ungewöhnlich viele Kinder (Standard: >15) | ⚠ Warnung |
+| Plausibilität | Mehr als eine Herkunftsfamilie (FAMC) | ⚠ Warnung |
 | Vollständigkeit | Geburtsdatum/-taufe fehlt | ℹ Hinweis |
 | Vollständigkeit | Geburtsort fehlt (wenn Datum bekannt) | ℹ Hinweis |
 | Vollständigkeit | Sterbeort fehlt (wenn Datum bekannt) | ℹ Hinweis |
 | Vollständigkeit | Vorname fehlt | ℹ Hinweis |
-| Vollständigkeit | Keine Quellenangabe (`MISSING_QUAY`) | ℹ Hinweis |
+| Vollständigkeit | Quellen ohne QUAY-Bewertung (`MISSING_QUAY`) | ℹ Hinweis |
 | Vollständigkeit | Heiratsdatum fehlt | ℹ Hinweis |
+| Quellen | Keine Quellenangabe (Person, `NO_SOURCES_AT_ALL`) | ℹ Hinweis |
 | Quellen | Geburt nach Standesamt-Ära, keine Quelle | ℹ Hinweis |
 | Quellen | Keine Quellenangabe (Familie) | ℹ Hinweis |
 | Quellen | Quellbezug ohne vorhandene Quelle | ⚠ Warnung |
 | Quellen | Fehlende Evidenzbewertung (`MISSING_EVAL`) | ℹ Hinweis, **default-off** |
+| Quellen | Offene Hypothesen (`OPEN_HYPO`) | ℹ Hinweis, **default-off** |
 | **Vernetzung** | Person ist mit keiner Familie verknüpft | ℹ Hinweis |
 | **Vernetzung** | Person ist nicht mit dem Kernbaum (Probanden) verbunden | ⚠ Warnung |
 | Geo (Orte/Höfe) | Bounding-Box: Koordinaten weit außerhalb des erwarteten Landes/der Region | ⚠ Warnung |
-| Geo (Orte/Höfe) | Zeitachsen-Inkonsistenz: `enclosedBy`-Perioden überlappen/widersprechen sich | ⚠ Warnung |
+| Geo (Orte/Höfe) | Namensvariante: Startjahr nach Endjahr (`PNAME_DATE`) | ⚠ Warnung |
+| Geo (Orte/Höfe) | Namensvarianten überlappen zeitlich (`PNAME_OVERLAP`) | ⚠ Warnung |
 | Geo (Orte/Höfe) | `enclosedBy`-Zirkel: Ort ist (direkt/indirekt) sich selbst übergeordnet | ✗ Fehler (logisch unmöglich, keine Ausnahme) |
 | Geo (Orte/Höfe) | `HOF_NO_COORD`: Hof ohne eigene Koordinaten (erscheint nicht auf der Karte) | ℹ Hinweis |
 | Geo (Orte/Höfe) | `HOF_FAR`: Hof-Koordinaten >25 km vom umschließenden Ort entfernt (Haversine) — meist vertauschte Breite/Länge | ⚠ Warnung |
 
-**Vernetzung — eigene Regelklasse, architektonisch anders als die übrigen:** die beiden Regeln sind KEIN Feld-Check (wie alle anderen Zeilen), sondern eine **Graph-Traversierung**: BFS vom Probanden über alle Eltern-/Ehe-Kanten; alles nicht Erreichte gilt als „verwaist". Braucht Zugriff auf die volle Datenbank (nicht nur die einzelne Person wie die übrigen Regeln) — bei der Bau-Reihenfolge/Modul-Schnitt der Engine zu berücksichtigen, kein reiner Predicate-per-Feld wie der Rest.
+**Vernetzung — eine DB-weite VORBERECHNUNG, kein zweiter Prädikat-Typ:** die beiden Regeln sind KEIN Feld-Check (wie alle anderen Zeilen), sondern hängen an einer **Graph-Traversierung**: BFS vom Probanden über alle Eltern-/Ehe-Kanten; alles nicht Erreichte gilt als „verwaist". Frühere Fassungen leiteten daraus einen eigenen `graphPredicate` ab. Gebaut ist es anders (ADR-v9-96): die BFS läuft EINMAL vor allen Regelschleifen und liegt als Erreichbarkeitsmenge im Auswertungs-Kontext — damit sind beide Regeln gewöhnliche Personen-Prädikate. Der Bedarf war die Vorberechnung, nicht ein anderer Aufruf-Rhythmus.
 
-**Geo — eigene Regelklasse, dritter architektonischer Sonderfall:** anders als alle vorherigen Klassen (Predicate über EINE Person) prüfen die Geo-Regeln `PlaceObject`/`HofObject` ([11](11-Orte-Hoefe-Identitaet.md)), nicht Person/Family — die Engine braucht also einen Predicate-Typ pro Entitätsart (`personPredicate`/`graphPredicate`/`placePredicate`), keinen einzigen gemeinsamen Funktionstyp für alle 31. Brennpunkte/Dashboard (§1.11g oben) müssen entsprechend zwei Fundstellen-Arten anzeigen können (befundbehaftete Personen UND befundbehaftete Orte/Höfe) — bei der Dashboard-Umsetzung mitzudenken, nicht nachträglich anzuflicken.
+**Geo — eigene Regelklasse, dritter architektonischer Sonderfall:** anders als alle vorherigen Klassen (Predicate über EINE Person) prüfen die Geo-Regeln `PlaceObject`/`HofObject` ([11](11-Orte-Hoefe-Identitaet.md)), nicht Person/Family — die Engine braucht also einen Prädikat-Typ pro Entitätsart, keinen einzigen gemeinsamen Funktionstyp für alle. Gebaut sind es **vier** (`person`/`family`/`place`/`hof`, ADR-v9-96); eine Regel darf mehrere davon tragen (`ORPHAN_CITATION` prüft Personen UND Familien, `GEO_BBOX` Orte UND Höfe), behält dabei aber EIN Label, EINE Schwere und EINEN Schalter — sonst stünde dieselbe Regel zweimal im Konfigurations-Sheet. Brennpunkte/Dashboard (§1.11g oben) müssen entsprechend zwei Fundstellen-Arten anzeigen können (befundbehaftete Personen UND befundbehaftete Orte/Höfe) — bei der Dashboard-Umsetzung mitzudenken, nicht nachträglich anzuflicken.
 
-**Konfiguration:** Jeder Befund hat einen „→ Als Aufgabe übernehmen"-Button. Der Regelstand (`known`) reist mit der Datei, damit künftige, neu hinzukommende opt-in-Regeln bei Bestandsnutzern korrekt **deaktiviert** erben (keine überraschenden neuen Fehlermeldungen nach einem App-Update). `MISSING_EVAL` und die Hypothesen-Vollständigkeitsregel sind **ab Werk deaktiviert** — sie informieren nur über den Lückenradar (§1.11g oben), ohne den Vollständigkeits-Score zu drücken, solange nicht bewusst eingeschaltet.
+**Konfiguration:** Jeder Befund hat einen „→ Als Aufgabe übernehmen"-Button. Die Regel-Konfiguration lebt **app-lokal** (IndexedDB), nicht in der Genealogie-Datei — der GEDCOM-/GRAMPS-Writer bleibt damit unberührt und LP-1 ununterschritten (ADR-v9-96). Der Preis ist bekannt: zwei Geräte führen je eine eigene Konfiguration. Der Regelstand (`known`) wird beim Speichern mitgeschrieben, damit künftige, neu hinzukommende opt-in-Regeln bei Bestandsnutzern korrekt **deaktiviert** erben (keine überraschenden neuen Fehlermeldungen nach einem App-Update). `MISSING_EVAL` und die Hypothesen-Vollständigkeitsregel sind **ab Werk deaktiviert** — sie informieren nur über den Lückenradar (§1.11g oben), ohne den Vollständigkeits-Score zu drücken, solange nicht bewusst eingeschaltet.
 
 > **Neuaufsatz-Hinweis:** Regel-Registry deklarativ: Regel = `{id, severity, defaultEnabled, predicate, message}` → daten- statt codegetrieben. Die beiden Vernetzungs-Regeln brauchen einen zweiten Predicate-Typ (`{id, severity, defaultEnabled, graphPredicate, message}`, DB-weit statt pro Person) — bei der Registry-Auslegung von Anfang an mitdenken, nicht nachträglich anflicken.
 

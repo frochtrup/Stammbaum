@@ -38,7 +38,15 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 
     Zwei Eigenheiten, die beim Bau erzwungen wurden und nicht „vereinfacht" werden dürfen: das Skript liest alle Dateien **selbst statt per `grep`** (das lokale ugrep liefert auf manchen Dateien still ein leeres Ergebnis — belegt an `core/places/curation.ts`), und eine **unbekannte Beleg-Art wirft**, statt still `false` zu liefern (ein Lint, der stillschweigend nichts findet, ist schlimmer als keiner). Der `--selftest` deckt genau diese Fälle ab; er ist vor jeder Änderung am Skript zu laufen.
 
-    **Der Selbsttest selbst kann verrotten** — 2026-07-18 belegt: sein Fall „geskippter Test trifft nicht" hing an `tests/perf/scale.perf.test.ts`, solange das `it.skip` trug. BL-47 entskippte es, der Fall schlug seither still fehl, und niemand bemerkte es, weil `--selftest` weder im Normallauf noch in CI ausgeführt wird. Er hängt jetzt an einer eigenen Vorlage (`fixtures/skipped-example.ts`), die sich nicht unter den Füßen verändert. Wer den Prüfer anfasst, ruft ihn auf — sonst tut es keiner.
+    **Der Selbsttest läuft seit BL-04 bei JEDEM Lauf mit** — nicht mehr nur auf `--selftest`. Grund: dieselbe Verrottung ist **dreimal** passiert, immer nach demselben Muster (ein Testfall hängt an einer Produktivdatei, ein späteres Feature verändert sie, der Fall schlägt danach still fehl):
+
+    | Fall | hing an | wahr geworden durch | gefunden |
+    |---|---|---|---|
+    | „geskippter Test trifft nicht" | `tests/perf/scale.perf.test.ts` | BL-47 (entskippt) | 2026-07-18, bei L5 |
+    | „datei: fehlende Datei" | `app/public/sw.js` | BL-02 (Service Worker gebaut) | 2026-07-18, bei BL-04 |
+    | „txt: Muster nicht im Rohtext" | `eslint.config.js` | BL-54 (max-lines eingetragen) | 2026-07-18, bei BL-04 |
+
+    Alle drei hängen jetzt an eigenen Vorlagen unter `fixtures/`, die sich nicht unter den Füßen des Prüfers verändern. Die eigentliche Lehre ist aber die zweite: die bisherige Absicherung war **ein Satz in dieser Datei** („wer den Prüfer anfasst, ruft ihn auf") — also Erinnerung statt Zwang, und sie hat zweimal nicht gehalten. Ein fehlschlagender Selbsttest lässt den Normallauf jetzt mit Exit 1 enden; die Ausgabe erscheint nur im Fehlerfall. Wirkung negativ verifiziert (einen Fall absichtlich kaputtgemacht → Exit 1, zurückgesetzt → Exit 0), nicht nur behauptet.
 
 ## Vorgehen
 

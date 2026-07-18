@@ -78,8 +78,7 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:validateDatabase` | offen |
-| BL-05 | K | feature | basis | Qualitäts-Dashboard (hängt an BL-04) | [20 §1.11g](20-Funktionen.md) | `sym:buildQualityDashboard` | offen |
+| BL-05 | K | feature | basis | Qualitäts-Dashboard (BL-04 ist gebaut, Engine steht) | [20 §1.11g](20-Funktionen.md) | `sym:buildQualityDashboard` | offen |
 | BL-06 | K | feature | basis | Desktop-Layout (Sidebar, Multi-Pane, ⌘K) | [21 §1](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
 | BL-07 | K | feature | basis | History-Navigation (Zurück/Vorwärts, Swipe-Right) | [20 §1.1](20-Funktionen.md) | `sym:useHistory` | offen |
 | BL-08 | K | feature | basis | Keyboard-Shortcuts Speichern/Verwerfen/Escape (⌘Z/⇧⌘Z sind mit BL-01 gebaut) | [20 §1.2](20-Funktionen.md) | `txt:'save'@ui/shell/shortcuts.ts` | offen |
@@ -89,6 +88,7 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-81 | — | defekt | usp | `xml-tree`-Serializer verliert Mixed Content **still** (`hasText && hasChildren`) — fail-loud statt Verlust | [13](13-Interop-Roundtrip.md) | `test:tests/core/xml-tree-mixed-content.test.ts` | offen |
 | BL-82 | — | defekt | basis | Union-Merge-Tie-Break vergleicht Speicherzeit (`clock.now()`) statt Autorenzeit → lokal gewinnt praktisch immer | [11 §2](11-Orte-Hoefe-Identitaet.md) | `test:tests/services/places-sync-tiebreak.test.ts` | offen |
 | BL-83 | S | feature | kür | `_EVAL`-Wire-Format (Parser + Writer) — heute nur im Strict-Adapter gestrippt, nirgends erzeugt | [12 §3](12-Forschungsdaten.md) | `test:tests/roundtrip/eval-roundtrip.test.ts` | offen |
+| BL-84 | — | hygiene | kür | 22 tote Anker-Links (18 davon `#adr-v9-NN`-Kurzverweise aus [04a](04a-Chronik.md) — die ADR-Überschriften tragen Titel/✅/Datum, GitHub-Slugs brauchen den vollen Text); auch [CLAUDE.md](../../CLAUDE.md) betroffen | [04](04-Entscheidungslog.md), [04a](04a-Chronik.md) | `txt:check-anchors@.claude/skills/spec-lint/SKILL.md` | offen |
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
@@ -117,6 +117,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:runValidation` | gebaut |
 | BL-11 | K | feature | basis | Rollenbasierte Navigation (Mobile Bottom-Nav) | [20 §1.1](20-Funktionen.md) | `datei:ui/shell/BottomNav.svelte` | gebaut |
 | BL-12 | K | feature | basis | Einheitlicher Lens-Umschalter | [20 §1.1](20-Funktionen.md) | `datei:ui/shell/LensSwitcher.svelte` | gebaut |
 | BL-13 | K | feature | basis | ViewState (Auswahl je Ziel, INV-VS) | [21 §5](21-UI-UX.md) | `sym:createViewState` | gebaut |
@@ -247,6 +248,15 @@ Datei mit 601 Zeilen → Fehler, mit 600 → grün; ein Altfall um eine Zeile ve
 Fehler („Maximum allowed is 608"), zurückgesetzt → grün. Die Zählung umfasst dabei die
 **ganze Datei inkl. Markup**, nicht nur den `<script>`-Block — bei diesen Views der
 überwiegende Teil, ohne den die Regel fast nichts gemessen hätte.
+
+**Erster Vollzug (2026-07-18, BL-04):** `TasksView.svelte` stand exakt auf seinem
+Altfallwert 676 — die Validierungs-UI hätte ihn gerissen, und genau das ist der Zweck.
+Statt die Schwelle anzuheben (eine Ratsche, die man hochdreht, ist keine) wurde die
+Datei zerlegt: das Aufgaben-Formular ist nach `TaskForm.svelte` gewandert, `TasksView`
+liegt bei **598** Zeilen und läuft jetzt gegen die reguläre 600er-Schwelle. **Der
+Altfall-Eintrag ist gestrichen — die Liste ist von fünf auf vier geschrumpft**, zum
+ersten Mal. Damit ist auch belegt, dass die Ratsche nicht nur blockiert, sondern die
+beabsichtigte Handlung tatsächlich auslöst.
 
 ## Lint-Regeln (Erweiterung von `spec-lint`)
 
