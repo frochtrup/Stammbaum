@@ -90,7 +90,7 @@ Vollwertiges Zweitformat (gzip XML). Vollständiger Passthrough aller nicht-mode
 
 ## 7. Anonymisierter Export (DSGVO)
 
-Opt-in. Klassifikation lebender Personen in drei Phasen: (1) datumbasiert (kein Sterbedatum + Geburtsjahr > Jahr−100), (2) BFS-Propagation über Verwandte, (3) konservativ (Personen ohne Datum → lebend). Anonyme Records: nur `NAME Lebende Person` + `SEX` + Familienlinks. Dateiname-Suffix `_anon`, Original unberührt, direktes Speichern deaktiviert.
+Opt-in. Klassifikation lebender Personen in drei Phasen: (1) datumbasiert (kein Sterbedatum + Geburtsjahr **≥** Jahr−100 — die Grenze schließt ein, ADR-v9-95), (2) BFS-Propagation über Verwandte, (3) konservativ (Personen ohne Datum → lebend). Anonyme Records: nur `NAME Lebende Person` + `SEX` + Familienlinks. Dateiname-Suffix `_anon`, Original unberührt, direktes Speichern deaktiviert.
 
 ---
 
