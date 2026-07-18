@@ -23,10 +23,10 @@ const CODE = path.join(process.env.HOME ?? '', 'dev/stammbaum-v9');
 const BACKLOG = path.join(SPEC, 'specs/v9/05-Backlog.md');
 
 /** L3-Ratsche: Ist-Stand der Status-Wörter in den Specs 10–32 am 2026-07-18.
- *  Sinkt beim Abarbeiten von BL-50 auf 0. Ein Anstieg ist ein Fehler — so kann die
- *  alte Vermischung von Soll und Ist nicht zurückkehren, während BL-50 noch offen ist.
- *  NACH BL-50: auf 0 setzen und nie wieder anheben. */
-const L3_RATSCHE = 33;
+ *  Seit BL-50 (2026-07-18) auf 0 — die 33 Altlast-Stellen sind entfernt. NIE WIEDER
+ *  ANHEBEN: ein Status-Wort in den Specs 10–32 ist ab jetzt ein harter Fehler, kein
+ *  geduldeter Rest. Wer Status ausdruecken will, legt eine Backlog-Zeile an. */
+const L3_RATSCHE = 0;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 

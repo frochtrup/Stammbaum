@@ -54,7 +54,7 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 - **Playwright** *(optional, minimal)* — 2–3 E2E-Flows in echtem Browser inkl. Offline/PWA-Boot.
 - **dependency-cruiser** oder **eslint-plugin-boundaries** — Import-Grenzen-Gate (INV-ARCH-1: Kern importiert nichts von oben).
 - **CSP-Scanner** — Portierung von v8 `test-csp.js`: findet inline-Styles/-Handler (LP-8). **Umgesetzt (ADR-v9-39):** `tests/csp/check-csp.mjs`, CI-Gate `npm run check:csp`.
-- **a11y-Scanner** (TST-15, LP-8) — noch nicht umgesetzt. Vorschlag: `axe-core` gegen die bereits vorhandenen Komponententests (`@testing-library/svelte`), analog zum CSP-Scanner ein CI-Gate `npm run check:a11y`. Werkzeug-Wahl ist Implementierungsdetail.
+- **a11y-Scanner** (TST-15, LP-8, BL-66). Vorschlag: `axe-core` gegen die bereits vorhandenen Komponententests (`@testing-library/svelte`), analog zum CSP-Scanner ein CI-Gate `npm run check:a11y`. Werkzeug-Wahl ist Implementierungsdetail.
 - **Synthetik-Generator** — Portierung von v8 `generate-scale-test.js` (deterministisch, N Personen) für Skalierungs-/Perf-Tests.
 
 > **Neuaufsatz-Hinweis:** Der Wechsel von v8-JXA/`osascript` auf Vitest/Node beseitigt die JXA-spezifischen Fallen (Function-Decl-Hoisting, const-Eval-Leak, Microtask-Falle, fehlendes `console.warn`) ersatzlos. Die *methodische* Lehre bleibt: Test-Seams + injizierter Takt.

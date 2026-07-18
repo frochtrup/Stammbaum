@@ -6,8 +6,9 @@ gebaut ist; das [Entscheidungslog](04-Entscheidungslog.md) hält Entscheidungen 
 Fortschritt. Wer wissen will, was offen ist, liest nur hier.
 
 Stand: **[K]-Inventur vollständig** (2026-07-18, jeder Punkt am Code verifiziert),
-plus Defekte und Hygiene-Vorgänge aus derselben Sitzung. [S]/[E] noch nicht
-inventarisiert (BL-51).
+plus Defekte und Hygiene-Vorgänge aus derselben Sitzung. Die Specs 10–32 sind seit
+BL-50 frei von Status-Aussagen — L3 ist hart (Ratsche 0). [S]/[E] noch nicht
+vollständig inventarisiert (BL-51).
 
 **Ein Fund wird zu genau einem von drei Dingen** — sonst ist er nicht handlungsfähig:
 eine **Backlog-Zeile** (entscheidbarer Fertig-Zustand + prüfbarer Beleg), ein
@@ -82,12 +83,27 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
 | BL-47 | — | defekt | blockiert | Orts-Resolver: Registry-Neubau pro Event (89 s bei 20k) | [ADR-v9-88](04-Entscheidungslog.md), [11 §4.2](11-Orte-Hoefe-Identitaet.md) | `test:tests/perf/scale.perf.test.ts` | offen |
 | BL-48 | — | hygiene | basis | Perf-Gate in CI verdrahten | [31](31-Dev-Umgebung.md), [32](32-Testframework.md) | `txt:test:perf@.github/workflows/ci.yml` | offen |
-| BL-50 | — | hygiene | basis | L3 durchsetzen: Status-Wörter aus Specs 10–32 entfernen | [05](05-Backlog.md) | `!txt:nicht gebaut,✅ gebaut,noch offen@specs/v9/1*.md,specs/v9/2*.md,specs/v9/3*.md` | offen |
-| BL-51 | — | hygiene | kür | [S]/[E]-Inventur nachziehen | [05](05-Backlog.md) | `txt:^. BL-\d+ . S .@specs/v9/05-Backlog.md` | offen |
+| BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
 | BL-52 | — | hygiene | kür | Zweites [K]-Format in Spec 20 vereinheitlichen | [20](20-Funktionen.md) | `!txt:^[*][*][a-z][)] .*\[K\]@specs/v9/20-Funktionen.md` | offen |
 | BL-53 | — | hygiene | kür | Übrig gebliebenes `eslint-disable` entfernen | [32](32-Testframework.md) | `!txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` | offen |
 | BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | offen |
 | BL-55 | — | feature | basis | `shortName` + Listen zeigen `shortName ?? title` | [11 §1](11-Orte-Hoefe-Identitaet.md), [ADR-v9-90](04-Entscheidungslog.md) | `txt:shortName@core/places/types.ts` | offen |
+| BL-56 | S | feature | kür | Research-Timeline-Umschalter (Protokoll chronologisch) | [12 §2](12-Forschungsdaten.md) | `sym:buildResearchTimeline` | offen |
+| BL-57 | S | feature | basis | Evidenz-Bewertung: Aufklapper an der Zitat-Zeile | [12 §3](12-Forschungsdaten.md) | `!txt:TODO@ui/shell/SourceCitationRow.svelte` | offen |
+| BL-58 | S | feature | kür | Forschungsprojekte: Scope-Matching + UI | [12 §5](12-Forschungsdaten.md) | `sym:matchesScope` | offen |
+| BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations@core/places/types.ts` | offen |
+| BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
+| BL-61 | S | feature | kür | Beweisführungsnotiz (GPS-Zusammenfassung) | [20 §1.11e](20-Funktionen.md) | `sym:buildEvidenceSummary` | offen |
+| BL-62 | S | feature | basis | Duplikat-Erkennung Personen + Merge-Modal | [20 §1.12](20-Funktionen.md) | `sym:findPersonDuplicates` | offen |
+| BL-63 | S | feature | basis | Import-Vergleich (Datei-Diff, 3 Kategorien) | [20 §1.12](20-Funktionen.md) | `sym:compareImport` | offen |
+| BL-64 | S | feature | kür | Ehepartner/Eltern-Disambiguierung (INV-UI-6 vervollständigen) | [20 §1.4](20-Funktionen.md), ADR-v9-52 | `sym:memberLabel` | offen |
+| BL-65 | S | feature | kür | UI-Kurzweg Aufgabe ⇄ Protokoll (`taskId`) | [20 §1.11b](20-Funktionen.md) | `sym:linkLogToTask` | offen |
+| BL-66 | — | hygiene | kür | a11y-Scanner (TST-15) | [32 §3](32-Testframework.md) | `txt:axe-core@package.json` | offen |
+| BL-67 | S | feature | kür | 21 §10c List-Toolbar-Ownership | [21 §10c](21-UI-UX.md) | `sym:ListToolbar` | offen |
+| BL-68 | S | feature | kür | 21 §10f Leerzustand-Suppression generalisiert | [21 §10f](21-UI-UX.md) | `sym:suppressEmpty` | offen |
+| BL-69 | S | feature | kür | 21 §10g Prosa → Label+Disclosure | [21 §10g](21-UI-UX.md) | `sym:Disclosure` | offen |
+| BL-70 | S | feature | kür | 21 §10h Eigene-Seite-Redundanz unterdrückt | [21 §10h](21-UI-UX.md) | `sym:hideSelfLink` | offen |
+| BL-71 | S | feature | kür | 21 §10k `addr`/`note`-Duplikat (ADR-v9-53) | [21 §10k](21-UI-UX.md) | `sym:dedupeAddrNote` | offen |
 
 ## Erledigte Punkte
 
@@ -133,6 +149,14 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-45 | K | feature | usp | Massen-Dedup Höfe | [20 §1.8](20-Funktionen.md) | `sym:buildHofDedupGroups` | gebaut |
 | BL-46 | K | feature | basis | Aufgaben-Kanban (Liste⇄Board) | [20 §1.11a](20-Funktionen.md) | `datei:ui/views/tasks/TasksView.svelte` | gebaut |
 | BL-49 | — | hygiene | basis | Backlog-Lint L1–L4 in `spec-lint` überführen | [05](05-Backlog.md) | `txt:check-backlog@.claude/skills/spec-lint/SKILL.md` | gebaut |
+| BL-72 | S | feature | usp | Ortszeitgenossen | [20 §1.7](20-Funktionen.md) | `sym:buildPlaceContemporaries` | gebaut |
+| BL-73 | S | feature | basis | 21 §10a FilterBar | [21 §10a](21-UI-UX.md) | `datei:ui/shell/FilterBar.svelte` | gebaut |
+| BL-74 | S | feature | basis | 21 §10b Gruppierung/Paginierung/Einklappen | [21 §10b](21-UI-UX.md) | `datei:ui/shell/pagination.ts` | gebaut |
+| BL-75 | S | feature | basis | 21 §10d SourceCitationRow | [21 §10d](21-UI-UX.md) | `datei:ui/shell/SourceCitationRow.svelte` | gebaut |
+| BL-76 | S | feature | kür | 21 §10e Redundanter Hero-Titel entfernt | [21 §10e](21-UI-UX.md) | `datei:ui/shell/DetailHeader.svelte` | gebaut |
+| BL-77 | S | feature | kür | 21 §10i Quellen-Badge-Konvention durchgängig | [21 §10i](21-UI-UX.md) | `datei:ui/shell/SourceBadge.svelte` | gebaut |
+| BL-78 | S | feature | kür | 21 §10j Hof/Ort-Ereignisgruppierung vereinheitlicht | [21 §10j](21-UI-UX.md) | `datei:ui/shell/event-grouping.ts` | gebaut |
+| BL-50 | — | hygiene | basis | L3 durchsetzen: Status-Wörter aus Specs 10–32 entfernen | [05](05-Backlog.md) | `!txt:nicht gebaut,✅ gebaut,noch offen@specs/v9/1*.md,specs/v9/2*.md,specs/v9/3*.md` | gebaut |
 
 ## Typen
 
@@ -203,7 +227,7 @@ Den Prüfer selbst prüfen: `… --selftest`.
 |---|---|---|---|
 | L1 | Status `offen`, Beleg **trifft** | **Fehler** | Fertig gebaut, Doku sagt offen → Doppelarbeit (der ADR-v9-78-Fall). |
 | L2 | Status `gebaut`, Beleg **trifft nicht** | **Fehler** | Umbenennung/Löschung eines fertigen Features. |
-| L3 | Status-Wörter in Specs 10–32 über der Ratsche (aktuell **33**, mit BL-50 → 0) | **Fehler** bei Anstieg, sonst Warnung | Rückfall in die Vermischung von Soll und Ist. Ratsche statt Hart-Fehler, weil BL-50 noch offen ist — ein dauerhaft roter Lint wird abgeschaltet und schützt dann gar nichts. |
+| L3 | **Jedes** Status-Wort in den Specs 10–32 (Ratsche seit BL-50 auf **0**) | **Fehler** | Rückfall in die Vermischung von Soll und Ist. Die Ratsche stand bis 2026-07-18 auf 33 (Altlast); seit deren Beseitigung ist jede neue Fundstelle ein harter Fehler und darf nie wieder geduldet werden. |
 | L4 | Backlog-Zeile ohne auflösbaren Spec-Link | Warnung | Verwaiste Zeilen. |
 | — | Status weder `offen` noch `gebaut` | **Fehler** | Rückkehr von „teilweise" (Regel 2). |
 
