@@ -78,14 +78,14 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-01 | K | feature | blockiert | Undo/Redo (Snapshot-Stack ≥30, „Revert to Saved") | [20 §1.2](20-Funktionen.md) | `sym:pushUndoSnapshot` | offen |
+| BL-01 | K | feature | blockiert | Undo/Redo (Snapshot-Stack ≥30, „Revert to Saved“) | [20 §1.2](20-Funktionen.md), [ADR-v9-92](04-Entscheidungslog.md) | `test:tests/ui/app-state-undo.test.ts` | gebaut |
 | BL-02 | K | feature | basis | Service Worker + Manifest (Offline-Betrieb) | [20 §1.2](20-Funktionen.md), [30](30-NFR-und-Persistenz.md) | `datei:app/public/sw.js` | offen |
 | BL-03 | K | feature | basis | Offline-Indikator in der Schale | [20 §1.2](20-Funktionen.md) | `datei:ui/shell/OfflineIndicator.svelte` | offen |
 | BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:validateDatabase` | offen |
 | BL-05 | K | feature | basis | Qualitäts-Dashboard (hängt an BL-04) | [20 §1.11g](20-Funktionen.md) | `sym:buildQualityDashboard` | offen |
 | BL-06 | K | feature | basis | Desktop-Layout (Sidebar, Multi-Pane, ⌘K) | [21 §1](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
 | BL-07 | K | feature | basis | History-Navigation (Zurück/Vorwärts, Swipe-Right) | [20 §1.1](20-Funktionen.md) | `sym:useHistory` | offen |
-| BL-08 | K | feature | basis | Keyboard-Shortcuts (Speichern/Verwerfen/Escape) | [20 §1.2](20-Funktionen.md) | `datei:ui/shell/shortcuts.ts` | offen |
+| BL-08 | K | feature | basis | Keyboard-Shortcuts Speichern/Verwerfen/Escape (⌘Z/⇧⌘Z sind mit BL-01 gebaut) | [20 §1.2](20-Funktionen.md) | `txt:'save'@ui/shell/shortcuts.ts` | offen |
 | BL-09 | K | feature | kür | Mini-Karte im Ort-Steckbrief | [20 §1.7](20-Funktionen.md) | `datei:ui/views/place/PlaceMiniMap.svelte` | offen |
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
 | BL-51 | — | hygiene | kür | [S]/[E]-Inventur vervollständigen (Spec 20 hat 29 S/E-Bullets; erfasst sind bisher nur die, deren Status-Wörter BL-50 entfernt hat) | [05](05-Backlog.md) | `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` | offen |
