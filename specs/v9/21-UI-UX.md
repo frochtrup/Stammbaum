@@ -137,6 +137,23 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
+## 6a2. Entitäts-Auswahl: ein Feld, kein zweites (INV-UI-4)
+
+**Jede Referenz auf eine wachsende Entitätenliste** — Person, Familie, Quelle, Archiv, Ort, Hof — läuft über **eine** gemeinsame Picker-Shell, und diese ist eine **Combobox**: das sichtbare Feld IST das Suchfeld. Fokus öffnet die Trefferliste direkt darunter, Tippen filtert sie, ↓/↑/Enter/Escape bedienen sie ohne Maus. Es gibt **kein** vorgeschaltetes Auslöse-Element (Lupe, Knopf) und **kein** zweites Suchfeld hinter einem Panel — beides kostet Interaktionen ohne Gegenwert.
+
+Zwei Aufrufer-Arten, ein Mechanismus:
+
+| | gespeicherter Wert | Feldinhalt | Tippen |
+|---|---|---|---|
+| **Entitäts-Referenz** | nur die id | Label der Auswahl; beim Fokussieren leer, Auswahl bleibt als Platzhalter sichtbar | filtert |
+| **Freitext-Feld** (Ereignis-Ort/-Adresse) | der Text selbst ([ADR-v9-42](04-Entscheidungslog.md): Freitext bleibt Freitext) | der Text | filtert **und** schreibt den Wert |
+
+**Der bereits im Feld stehende Freitext ist ein Wert, keine Suchabsicht** — er darf die Liste nicht vorfiltern. Ein Ereignis-Ort trägt typischerweise die volle Verwaltungskette; als Suchbegriff benutzt, filterte er sich beim bloßen Hineinklicken auf null Treffer und der Nutzer müsste erst löschen, um auswählen zu können. Gefiltert wird nur nach dem, was seit dem Öffnen getippt wurde.
+
+**Kein `<label>` um einen Picker** ([32 TST-18](32-Testframework.md), Lint-Gate): ein `<label>` reicht jeden Klick in seinem Inneren an das zugehörige Feld weiter — mit eingebetteter Trefferliste öffnet ein Treffer-Klick die eben geschlossene Liste sofort wieder. Ersatzmuster `.stb-field` + `.stb-field__caption`; den zugänglichen Namen trägt der Picker selbst.
+
+---
+
 ## 6b. Detail-Kopfzeile: eine gemeinsame Quelle (INV-UI-4, Nachtrag 2026-07-06)
 
 **Befund am echten Code:** `EntityTab.svelte` rendert „← Zur Liste" als eigene, von der jeweiligen Detail-Komponente UNABHÄNGIGE Zeile (`.entity-tab__detail-header`) — direkt darüber sitzt dann `PersonDetail.svelte`/`FamilyDetail.svelte`s eigene `__hero`-Zeile (Titel + „✎ Bearbeiten" + „⧖ Im Baum anzeigen"). Zwei getrennte Komponenten erzeugen zwei optisch getrennte Zeilen für das, was inhaltlich EIN Kopfbereich ist. `PlaceDetail.svelte`/`HofDetail.svelte` haben denselben Bruch (eigener Bearbeiten-Button, aber „Zurück" kommt separat von `EntityTab`).
