@@ -78,7 +78,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-90 | K | feature | blockiert | Navigations-Ziel-Register + EINE Routen-Quelle (INV-UI-15): `nav-model.ts` + `route.svelte.ts` lösen `App.activeTarget` **und** `EntityTab.activeSegment` ab; BottomNav/MoreView projizieren. Sichtbar folgenlos — Voraussetzung für BL-06/BL-07 | [21 §3](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `test:tests/ui/nav-register.test.ts` | offen |
 | BL-91 | K | feature | blockiert | Formfaktor-Modul: EIN `matchMedia`, zwei benannte Breakpoints (640 Overlay-Darstellung / 900 Layout+Navigation) statt verstreuter Media-Queries | [21 §3](21-UI-UX.md) | `sym:isDesktopLayout` | offen |
 | BL-06 | K | feature | basis | Desktop-Sidebar: alle Ziele des Registers, nach Rolle gruppiert, Labels + Icons, ersetzt oberhalb 900px die Bottom-Nav | [21 §3](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
 | BL-92 | K | feature | basis | Multi-Pane Master-Detail (zwei Panes): Liste **und** Detail nebeneinander, Leerzustand im Detail-Pane, `DetailHeader` im Desktop-Modus (kein „← Zur Liste") | [21 §3](21-UI-UX.md) | `test:tests/ui/multi-pane.test.ts` | offen |
@@ -123,6 +122,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-90 | K | feature | blockiert | Navigations-Ziel-Register + EINE Routen-Quelle (INV-UI-15): `nav-model.ts` + `route.svelte.ts` lösen `App.activeTarget`, `EntityTab.activeSegment` **und** `MoreView.openEntry` ab; BottomNav/MoreView/EntityTab projizieren. Voraussetzung für BL-06/BL-07 | [21 §3](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `test:tests/ui/nav-register.test.ts` | gebaut |
 | BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:runValidation` | gebaut |
 | BL-05 | K | feature | basis | Qualitäts-Dashboard (Score/Ampel/Lückenradar/Brennpunkte) | [20 §1.11g](20-Funktionen.md) | `sym:buildQualityDashboard` | gebaut |
 | BL-55 | — | feature | basis | Orts-Anzeigetiefe (INV-UI-14): `shortName` + `buildListPlaceName` (Ort/Hof/Rohtext), Kette in Tooltip + Detailzeile | [11 §1/§5](11-Orte-Hoefe-Identitaet.md), [21 §6l](21-UI-UX.md), [ADR-v9-90](04-Entscheidungslog.md), [ADR-v9-100](04-Entscheidungslog.md) | `test:tests/ui/place-display-depth.test.ts` | gebaut |
