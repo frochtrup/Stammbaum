@@ -100,7 +100,10 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations\s*:@core/places/types.ts` | offen |
 | BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
 | BL-61 | S | feature | kür | Beweisführungsnotiz (GPS-Zusammenfassung) | [20 §1.11e](20-Funktionen.md) | `sym:buildEvidenceSummary` | offen |
-| BL-62 | S | feature | basis | Duplikat-Erkennung Personen + Merge-Modal | [20 §1.12](20-Funktionen.md) | `sym:findPersonDuplicates` | offen |
+| BL-62 | S | feature | basis | Duplikat-Erkennung Personen: Kern-Finder (Scoring aus dem v8-Orakel, Bucketing, Schwellenwert) | [20 §1.12](20-Funktionen.md), [ADR-v9-104](04-Entscheidungslog.md) | `sym:findPersonDuplicates` | offen |
+| BL-103 | S | feature | basis | `mergePersons` als Kern-Kommando — `deletePerson` führt Familien-Referenzen bewusst NICHT nach, ein Merge aus Save+Delete hinterließe hängende `childOf`/`parentIn`/`Family`-Kanten | [20 §1.12](20-Funktionen.md), [10 §6](10-Domaenenmodell.md), [ADR-v9-104](04-Entscheidungslog.md) | `sym:mergePersons` | offen |
+| BL-104 | S | feature | basis | Dedup-Ansicht + Merge-Modal (Overlay im Personen-Segment, Item-Modal nach ADR-v9-63; „⇄ Seiten tauschen", „📝 Forschungseintrag" statt Merge) | [20 §1.12](20-Funktionen.md), [ADR-v9-63](04-Entscheidungslog.md), [ADR-v9-104](04-Entscheidungslog.md) | `datei:ui/views/person/PersonDedupView.svelte` | offen |
+| BL-105 | S | feature | kür | „Ignorieren" merkt ein Paar dauerhaft als kein Duplikat — app-privat im gemeinsamen IDB-Schema, reist nicht mit der Datei (LP-1) | [30 §2](30-NFR-und-Persistenz.md), [ADR-v9-104](04-Entscheidungslog.md) | `txt:STORE_DEDUP_IGNORED@services/idb-schema.ts` | offen |
 | BL-63 | S | feature | basis | Import-Vergleich (Datei-Diff, 3 Kategorien) | [20 §1.12](20-Funktionen.md) | `sym:compareImport` | offen |
 | BL-64 | S | feature | kür | Ehepartner/Eltern-Disambiguierung (INV-UI-6 vervollständigen) | [20 §1.4](20-Funktionen.md), ADR-v9-52 | `sym:memberLabel` | offen |
 | BL-65 | S | feature | kür | UI-Kurzweg Aufgabe ⇄ Protokoll (`taskId`) | [20 §1.11b](20-Funktionen.md) | `sym:linkLogToTask` | offen |
