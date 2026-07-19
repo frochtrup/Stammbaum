@@ -71,7 +71,7 @@ Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 
 Ein Tablet im Hochformat bekommt damit Popover ohne Sidebar — gewollt, nicht Nebenwirkung. Beide Grenzen laufen über **ein** `matchMedia`-Modul (dieselbe Bauform wie der zentrale `prefers-reduced-motion`-Check, [§6i](#6i-barrierefreiheit--operationalisierter-kontrakt-lp-8-adr-v9-67)), nicht als verstreute Zahlen in n Stylesheets.
 
-**INV-UI-11 (Befehlsflächen-Budget, [§6h](#6h-befehlsflächen-budget-inv-ui-11-adr-v9-66)) ist mobil skopiert** (375 px) und gilt oberhalb der 900-px-Grenze nicht: dort trägt die Sidebar die Beschriftungen, die Knappheit, gegen die das Budget schützt, existiert nicht.
+**Das Befehlsflächen-Budget ([§6h](#6h-befehlsflächen-budget-inv-ui-11-adr-v9-66)) hängt an der Spaltenbreite, nicht am Formfaktor** — der Desktop-Modus befreit keine Fläche davon. Was die Sidebar löst, ist die *Navigation*; die Toolbar einer Liste bleibt so knapp, wie ihre Spalte breit ist.
 
 ---
 
@@ -197,7 +197,9 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 
 ## 6h. Befehlsflächen-Budget (INV-UI-11, ADR-v9-66)
 
-**INV-UI-11:** Der permanente Kopfbereich einer Arbeitsfläche (Segment-Reihe + Toolbar, VOR jedem Inhalt) darf auf der primären mobilen Zielbreite (375px) höchstens **zwei** Zeilen und **fünf** dauerhaft sichtbare Bedienelemente belegen. Segment-/Tab-Buttons selbst zählen NICHT mit (sie sind Navigation, [§1](#1-view-rollen-modell-kern), kein Befehl) — aber jedes weitere Bedienelement geht zu Lasten dieses Budgets, nicht obendrauf. v9 wiederholt sonst v8s Altlast §10 (Diagramm-Toggles/Toolbars als unkoordiniert wachsende, verstreute Glyphenreihen) auf einer neuen Fläche, nur additiv statt evolutionär entstanden.
+**INV-UI-11:** Der permanente Kopfbereich einer Arbeitsfläche (Segment-Reihe + Toolbar, VOR jedem Inhalt) darf in **jeder Spalte ≤ 400px** höchstens **zwei** Zeilen und **fünf** dauerhaft sichtbare Bedienelemente belegen.
+
+**Das Maß ist die Spaltenbreite, nicht der Formfaktor.** Die primäre mobile Zielbreite (375px) ist der bekannteste Fall, aber nicht der einzige: die Desktop-Listenspalte des Multi-Pane ([§3](#3-desktop-modell-eigenständig-designt)) misst **352px** und ist damit sogar schmaler. „Desktop" befreit eine Fläche also nicht — die Sidebar löst die *Navigation*, nicht die Enge einer Listen-Toolbar. Wer das Budget am Formfaktor festmacht, prüft die falsche Zahl. Segment-/Tab-Buttons selbst zählen NICHT mit (sie sind Navigation, [§1](#1-view-rollen-modell-kern), kein Befehl) — aber jedes weitere Bedienelement geht zu Lasten dieses Budgets, nicht obendrauf. v9 wiederholt sonst v8s Altlast §10 (Diagramm-Toggles/Toolbars als unkoordiniert wachsende, verstreute Glyphenreihen) auf einer neuen Fläche, nur additiv statt evolutionär entstanden.
 
 **Zuordnungsregeln (kein View erfindet sein eigenes Muster, INV-UI-4):**
 - **Filter** → immer hinter `FilterBar` (§10a unten), nie als Dauer-Pillenreihe mit mehr als einem sichtbaren Element.
