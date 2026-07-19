@@ -78,7 +78,6 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-06 | K | feature | basis | Desktop-Sidebar: alle Ziele des Registers, nach Rolle gruppiert, Labels + Icons, ersetzt oberhalb 900px die Bottom-Nav | [21 §3](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
 | BL-92 | K | feature | basis | Multi-Pane Master-Detail (zwei Panes): Liste **und** Detail nebeneinander, Leerzustand im Detail-Pane, `DetailHeader` im Desktop-Modus (kein „← Zur Liste") | [21 §3](21-UI-UX.md) | `test:tests/ui/multi-pane.test.ts` | offen |
 | BL-93 | K | feature | basis | Command-Palette (⌘K) über `globalSearch` + Registerziele als „Gehe zu"; Overlay portaliert (INV-UI-13). Baut BL-08 mit (`shortcuts.ts` einmal ganz, ADR-v9-101) | [21 §3](21-UI-UX.md), [20 §1.1](20-Funktionen.md) | `datei:ui/shell/CommandPalette.svelte` | offen |
 | BL-94 | S | feature | kür | Dritter Kontext-Pane auf Desktop — Inhalt zuerst spezifizieren, dann bauen (§3 nennt „Quellen zum Ereignis" als Beispiel, nicht als Anforderung) | [21 §3](21-UI-UX.md) | `sym:ContextPane` | offen |
@@ -121,6 +120,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-06 | K | feature | basis | Desktop-Sidebar: alle Ziele des Registers, nach Rolle gruppiert, Labels + Icons, ersetzt oberhalb 900px die Bottom-Nav; Entitäts-Segmentreihe und Lens-Umschalter entfallen dort (INV-UI-2/3) | [21 §3/§4](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `datei:ui/shell/Sidebar.svelte` | gebaut |
 | BL-91 | K | feature | blockiert | Formfaktor-Modul: EIN `matchMedia` in der Schale, zwei benannte Breakpoints (640 Overlay-Darstellung / 900 Layout+Navigation); Wächter verbietet unbenannte px-Breiten-Media-Queries | [21 §3](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `sym:isDesktopLayout` | gebaut |
 | BL-90 | K | feature | blockiert | Navigations-Ziel-Register + EINE Routen-Quelle (INV-UI-15): `nav-model.ts` + `route.svelte.ts` lösen `App.activeTarget`, `EntityTab.activeSegment` **und** `MoreView.openEntry` ab; BottomNav/MoreView/EntityTab projizieren. Voraussetzung für BL-06/BL-07 | [21 §3](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `test:tests/ui/nav-register.test.ts` | gebaut |
 | BL-04 | K | feature | basis | Validierung/Datenprüfung (Regel-Engine, RAM-Bericht) | [20 §1.11h, §3](20-Funktionen.md) | `sym:runValidation` | gebaut |
