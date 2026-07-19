@@ -48,15 +48,28 @@ Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 - **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den drei Rollen —
   - *Entitäten:* Personen · Familien · Quellen · Orte · Höfe
   - *Ansichten:* Baum · Karte · Zeitleiste · Statistik · Story
-  - *Arbeit:* Suche · Aufgaben · Ausgaben · Einstellungen
+  - *Arbeit:* Suche · Aufgaben · **Datei** · Ausgaben · Einstellungen
 
-  Labels + Icons, immer sichtbar → löst „kryptische Icon-Leiste" und „aktiver Zustand" strukturell.
-- **Multi-Pane Master-Detail:** Navigations-/Listen-Pane + Detail-Pane dauerhaft nebeneinander; optionaler dritter Kontext-Pane (z. B. Quellen zum aktuellen Ereignis).
+  Labels + Icons, immer sichtbar → löst „kryptische Icon-Leiste" und „aktiver Zustand" strukturell. **Datei** (Laden/Speichern, [§1](#1-view-rollen-modell-kern)) steht hier ausdrücklich mit: auf Desktop gibt es keinen Mehr-Hub, der es sonst trüge.
+
+  **Die Sidebar-Gruppe „Ansichten" ist nicht deckungsgleich mit dem Lens-Umschalter** ([§4](#4-lens-umschalter)). Der Umschalter deckt die Kontext-Fokus-Lenses ab (dieselbe Person anders betrachtet: Baum ▸ Karte ▸ Zeitleiste ▸ Story); **Statistik** ist ein globales Dashboard ohne Personenfokus und daher kein Lens-Eintrag, in der Sidebar aber sehr wohl ein Ziel dieser Gruppe. Eine Sidebar-Gruppe ist eine Beschriftungs-Ordnung, kein Mechanismus — INV-UI-3 bleibt unberührt.
+- **Multi-Pane Master-Detail:** Navigations-/Listen-Pane + Detail-Pane dauerhaft nebeneinander; optionaler dritter Kontext-Pane (z. B. Quellen zum aktuellen Ereignis). Bei leerer Auswahl trägt der Detail-Pane einen Leerzustand — „← Zur Liste" ([§6b](#6b-detail-kopfzeile-eine-gemeinsame-quelle-inv-ui-4-nachtrag-2026-07-06)) entfällt hier, weil die Liste sichtbar bleibt: dieselbe Kopfzeilen-Komponente in einem Modus, keine zweite Umsetzung.
 - **Tastatur-first überall** (nicht nur im Baum): konsistente Shortcuts über alle Listen/Views. Baum-Navigation (Sanduhr/Nachkommen/Fächer, [20 §1.3](20-Funktionen.md)): ↑ zum Vater, ↓ zum ersten Kind, → zum Ehepartner, Tab zykelt zwischen sichtbaren Kacheln, Enter/Leertaste öffnet die fokussierte Kachel. App-weit: `Cmd/Ctrl+F` öffnet die Suche, `Cmd/Ctrl+S` speichert.
-- **Command-Palette (⌘K)** = Desktop-Pendant zur Suche; nutzt denselben Such-Kern ([20](20-Funktionen.md)).
+- **Command-Palette (⌘K)** = Desktop-Pendant zur Suche; nutzt denselben Such-Kern ([20](20-Funktionen.md)) — dieselbe Funktion, nicht dieselbe Idee. Sie führt zusätzlich die Navigationsziele des Registers (INV-UI-15) als „Gehe zu"-Befehle. Ihr Overlay verlässt seinen Teilbaum wie jedes andere (INV-UI-13, [§6k](#6k-overlays-verlassen-ihren-teilbaum-inv-ui-13-adr-v9-99)).
 - **Vollbild** ist ein sauberer Layout-Modus (eine State-Klasse), keine `!important`-Kaskade wie in v8.
 
-**Responsive-Grenze:** ab ~900px Desktop-Modell; darunter Mobile-Modell. Die Grenze schaltet *Layout und Navigation* um — nicht nur Spaltenbreiten.
+**INV-UI-15 (ein Navigations-Register, mehrere Projektionen):** Jedes Navigationsziel der App ist **einmal** beschrieben — Id, Rolle ([§1](#1-view-rollen-modell-kern)), Symbol, Beschriftung, Implementiert-Status — in einer reinen, DOM-freien Quelle (`ui/shell/nav-model.ts`, Bauform wie `lens-model.ts`, damit build-frei testbar, INV-ARCH-2). Bottom-Nav (5 Slots), Sidebar (alle Ziele), Mehr-Hub (was nicht in die 5 Slots passt) und Command-Palette sind **Projektionen** darauf und halten **keine eigenen Ziel-Listen**. Ebenso gibt es **genau eine** Quelle dafür, welches Ziel gerade aktiv ist (`ui/shell/route.svelte.ts`) — nicht eine Haupt-Route in der App-Wurzel plus einen privaten Segment-Zustand im Entitäten-Umbrella plus einen Hub-Zustand. Ohne diese eine Quelle ist die Sidebar nicht ohne zweite Navigationsquelle baubar und INV-UI-2 („genau ein kanonischer Weg") nicht haltbar. Sie ist zugleich die Voraussetzung für die History-Navigation ([20 §1.1](20-Funktionen.md)): Zurück/Vorwärts brauchen einen Stack, den es ohne eine Routen-Quelle nicht gibt.
+
+**Responsive-Grenzen — zwei, bewusst getrennt, beide benannt in `ui/shell/layout.svelte.ts`:**
+
+| Grenze | Was sie umschaltet |
+|---|---|
+| **640 px** | *Darstellung eines Overlays*: Bottom-Sheet (darunter) ⇄ Popover am Trigger (darüber) — `FilterBar`, Menüs, Palette ([§6k](#6k-overlays-verlassen-ihren-teilbaum-inv-ui-13-adr-v9-99)). |
+| **900 px** | *Layout und Navigation*: Bottom-Nav ⇄ Sidebar, ein Pane ⇄ zwei Panes. Nicht nur Spaltenbreiten. |
+
+Ein Tablet im Hochformat bekommt damit Popover ohne Sidebar — gewollt, nicht Nebenwirkung. Beide Grenzen laufen über **ein** `matchMedia`-Modul (dieselbe Bauform wie der zentrale `prefers-reduced-motion`-Check, [§6i](#6i-barrierefreiheit--operationalisierter-kontrakt-lp-8-adr-v9-67)), nicht als verstreute Zahlen in n Stylesheets.
+
+**INV-UI-11 (Befehlsflächen-Budget, [§6h](#6h-befehlsflächen-budget-inv-ui-11-adr-v9-66)) ist mobil skopiert** (375 px) und gilt oberhalb der 900-px-Grenze nicht: dort trägt die Sidebar die Beschriftungen, die Knappheit, gegen die das Budget schützt, existiert nicht.
 
 ---
 

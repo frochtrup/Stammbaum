@@ -78,9 +78,14 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
-| BL-06 | K | feature | basis | Desktop-Layout (Sidebar, Multi-Pane, ⌘K) | [21 §1](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
+| BL-90 | K | feature | blockiert | Navigations-Ziel-Register + EINE Routen-Quelle (INV-UI-15): `nav-model.ts` + `route.svelte.ts` lösen `App.activeTarget` **und** `EntityTab.activeSegment` ab; BottomNav/MoreView projizieren. Sichtbar folgenlos — Voraussetzung für BL-06/BL-07 | [21 §3](21-UI-UX.md), [ADR-v9-101](04-Entscheidungslog.md) | `test:tests/ui/nav-register.test.ts` | offen |
+| BL-91 | K | feature | blockiert | Formfaktor-Modul: EIN `matchMedia`, zwei benannte Breakpoints (640 Overlay-Darstellung / 900 Layout+Navigation) statt verstreuter Media-Queries | [21 §3](21-UI-UX.md) | `sym:isDesktopLayout` | offen |
+| BL-06 | K | feature | basis | Desktop-Sidebar: alle Ziele des Registers, nach Rolle gruppiert, Labels + Icons, ersetzt oberhalb 900px die Bottom-Nav | [21 §3](21-UI-UX.md) | `datei:ui/shell/Sidebar.svelte` | offen |
+| BL-92 | K | feature | basis | Multi-Pane Master-Detail (zwei Panes): Liste **und** Detail nebeneinander, Leerzustand im Detail-Pane, `DetailHeader` im Desktop-Modus (kein „← Zur Liste") | [21 §3](21-UI-UX.md) | `test:tests/ui/multi-pane.test.ts` | offen |
+| BL-93 | K | feature | basis | Command-Palette (⌘K) über `globalSearch` + Registerziele als „Gehe zu"; Overlay portaliert (INV-UI-13). Baut BL-08 mit (`shortcuts.ts` einmal ganz, ADR-v9-101) | [21 §3](21-UI-UX.md), [20 §1.1](20-Funktionen.md) | `datei:ui/shell/CommandPalette.svelte` | offen |
+| BL-94 | S | feature | kür | Dritter Kontext-Pane auf Desktop — Inhalt zuerst spezifizieren, dann bauen (§3 nennt „Quellen zum Ereignis" als Beispiel, nicht als Anforderung) | [21 §3](21-UI-UX.md) | `sym:ContextPane` | offen |
 | BL-07 | K | feature | basis | History-Navigation (Zurück/Vorwärts, Swipe-Right) | [20 §1.1](20-Funktionen.md) | `sym:useHistory` | offen |
-| BL-08 | K | feature | basis | Keyboard-Shortcuts Speichern/Verwerfen/Escape (⌘Z/⇧⌘Z sind mit BL-01 gebaut) | [20 §1.2](20-Funktionen.md) | `txt:'save'@ui/shell/shortcuts.ts` | offen |
+| BL-08 | K | feature | basis | Keyboard-Shortcuts Speichern/Verwerfen/Escape (⌘Z/⇧⌘Z sind mit BL-01 gebaut) — wird mit BL-93 zusammen gebaut, `shortcuts.ts` einmal ganz (ADR-v9-101) | [20 §1.2](20-Funktionen.md) | `txt:'save'@ui/shell/shortcuts.ts` | offen |
 | BL-09 | K | feature | kür | Mini-Karte im Ort-Steckbrief | [20 §1.7](20-Funktionen.md) | `datei:ui/views/place/PlaceMiniMap.svelte` | offen |
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
 | BL-80 | — | defekt | usp | GRAMPS-Export schreibt editierten `db`-Zustand nicht zurück (nur Passthrough aus `roots`) | [13 §3](13-Interop-Roundtrip.md), [14 §3.2](14-Dateihandling.md) | `test:tests/roundtrip/gramps-write-back.test.ts` | offen |
