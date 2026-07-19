@@ -82,6 +82,8 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 - Aus jedem Personen-/Kontext-Fokus: Ansicht wählen (Baum ▸ Karte ▸ Zeitleiste ▸ Statistik ▸ Story).
 - Segment-Control (Mobile) bzw. Sidebar-Abschnitt „Ansichten" (Desktop).
 - Der Fokus (welche Person/welcher Ort) bleibt beim Lens-Wechsel erhalten.
+- **Jede Lens behält daneben ihre eigene Auswahl und ihren eigenen Anzeige-Modus** über das Verlassen der Fläche hinweg. Der geteilte Fokus ist für sie eine **Vorbelegung**, kein Zwang: er greift nur, solange die betreffende Sicht selbst noch nichts ausgewählt hat. Eine spätere Rezentrierung im Baum überschreibt eine in Karte oder Zeitleiste getroffene Auswahl nicht.
+- **Baum, Karte und Zeitleiste teilen sich einen Navigations-Slot** und verhalten sich darin wie die Entitäten-Gruppe: der Slot führt auf die **zuletzt offene** Lens zurück, nicht stur auf den Baum — sonst ist ein Vor- und Zurückspringen zwischen zwei Ansichten unmöglich.
 
 **INV-UI-3:** Es gibt genau einen Lens-Umschalter-Mechanismus; kein Diagramm bringt eigene Wechsel-Buttons mit.
 
@@ -93,6 +95,7 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 
 - Selektion überlebt App-Resume (Arbeitskopie/Browser-Speicher).
 - Bei fehlender Entität → definierter Fallback (nie stiller Abbruch).
+- **Ansichts-Unterzustand, der eine Navigation überleben muss, gehört in die Routen-Quelle bzw. den View-State — nicht in komponenten-lokalen Zustand.** Die Flächen werden beim Wegnavigieren abgebaut; lokal gehaltener Zustand ist danach weg. Das betrifft neben der Entitäts-Auswahl auch die Frage, **welche Unter-Fläche zuletzt offen war** (Entitäts-Segment, Lens, Segment der Aufgaben-Fläche, Anzeige-Modus eines Diagramms). Ein nur zur Hälfte erhaltener Zustand — Auswahl erhalten, aber im falschen Modus unsichtbar — zählt dabei nicht als erhalten.
 - In v9 Teil der **UI-Schale** ([02](02-Zielarchitektur-v9.md)): hält reaktive Referenzen, dispatcht Änderungen an abgeleitete Ansichten.
 
 **PWA-Lifecycle:** ein zentraler Ort für `visibilitychange` (>60s → dirty), `pageshow` (BFCache-Guard), `pagehide` (Flush). Ein Dirty-Bit steuert Re-Render. Der zentrale Invalidierungspfad ([02 §3.2](02-Zielarchitektur-v9.md)) ersetzt das v8-`markChanged(); renderTab()`-Muster.
