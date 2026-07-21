@@ -11,7 +11,17 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 
 1. **Datei ↔ Index:** jede `specs/v9/*.md` erscheint in `00-Index.md` — in der „Das Set"-Tabelle **und** der Status-Tabelle. Umgekehrt kein Index-Eintrag ohne Datei.
 2. **Master-Verweis:** `specs/SPEC-v9-Gesamtsystem.md` listet alle Dokumente.
-3. **Links auflösen:** alle Markdown-Links (relative Pfade **und** `#anchor`) zeigen auf existierende Dateien/Überschriften. Keine toten `[[…]]`.
+3. **Links auflösen (mechanisch):**
+
+   ```
+   node .claude/skills/spec-lint/check-anchors.mjs
+   ```
+
+   Prüft jede Sprungmarke (`](datei.md#anker)` und `](#anker)`) in `specs/**/*.md` + `CLAUDE.md` gegen die Anker, die die Zieldatei tatsächlich anbietet. Exit 0 = alle auflösbar. Relative Pfade **ohne** Anker und `[[…]]` bleiben Handarbeit.
+
+   **Die Slug-Regel wird nicht nachgebaut, sondern benutzt** (`github-slug-regex.mjs`, wörtlich aus `github-slugger@2.0.0`): eine selbstgeschriebene Näherung hat 2026-07-19 in beide Richtungen falsch gemeldet. Die Äquivalenz zum echten Paket ist über alle 327 Überschriften des Repos geprüft (0 Abweichungen), nicht behauptet.
+
+   **Zwei Anker-Arten**, weil GitHub den Slug aus dem VOLLEN Überschriftentext bildet: Überschriften-Slugs — und explizite `<a id="…"></a>`-Zeilen davor, wo der Slug sonst lang und brüchig wäre. Jede ADR-Überschrift trägt seit BL-84 ihren Kurzanker (`#adr-v9-101`), der vorher 21× ins Leere zeigte; ebenso `#17-orte-tab`/`#18-höfe-tab` in [20](../../../specs/v9/20-Funktionen.md), deren Überschriften einen nachgestellten Link tragen, der sonst mit in den Anker wandert.
 4. **Invarianten-Bilanz:** jede definierte `INV-…`/`LP-…`/`RT-…`/`TST-…` wird ≥1× referenziert; jede *referenzierte* ID ist auch irgendwo definiert. (Per `grep` beide Mengen bilden und abgleichen.)
 5. **Abhängigkeitsgraph:** jedes Dokument taucht im Graphen von `00-Index.md` auf; die dort genannten Abhängigkeiten stimmen mit den Header-Zeilen (`> Abhängig von: …`) überein.
 6. **Doku/Code-Drift — legacy-v8 (Stichprobe):** bei konkreten Behauptungen über den v8-Code (Dateinamen, Tab-IDs, Feldnamen) gegen die echten Dateien in `legacy-v8/` gegenprüfen — nicht gegen Memory.
@@ -26,11 +36,13 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 10. **Backlog-Status ↔ Code (mechanisch, ZUERST ausführen):**
 
     ```
-    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L6
+    node .claude/skills/spec-lint/check-backlog.mjs            # L1–L7
     node .claude/skills/spec-lint/check-backlog.mjs --selftest  # prüft den Prüfer
     ```
 
-    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (seit BL-50 auf **0** — nie wieder anheben); **L4** warnt bei unauflösbaren Spec-Links; **L5** prüft, ob die Zeile im Abschnitt steht, der zu ihrem Status passt (`offen` → „Offene Punkte", `gebaut` → „Erledigte Punkte"); **L6** hält die Regel-Tabelle in `05-Backlog.md` und die Implementierung deckungsgleich. Exit 0 = konsistent.
+    Wertet jede Zeile in `specs/v9/05-Backlog.md` gegen den echten Code aus (Beleg-Syntax dort dokumentiert). **L1** „offen, aber Beleg trifft" und **L2** „gebaut, aber Beleg trifft nicht" sind Fehler (Exit 1); **L3** zählt Status-Wörter in den Specs 10–32 gegen eine Ratsche (seit BL-50 auf **0** — nie wieder anheben); **L4** warnt bei unauflösbaren Spec-Links; **L5** prüft, ob die Zeile im Abschnitt steht, der zu ihrem Status passt (`offen` → „Offene Punkte", `gebaut` → „Erledigte Punkte"); **L6** hält die Regel-Tabelle in `05-Backlog.md` und die Implementierung deckungsgleich; **L7** hält die Zahl der `[S]`/`[E]`-Bullets in Spec 20 gegen die Ratsche `SE_BULLETS` (29 seit BL-51). Exit 0 = konsistent.
+
+    **L7 ist die Lehre aus einem unerfüllbaren Beleg.** BL-51 („Inventur vervollständigen") trug `!txt:noch nicht.{0,20}inventarisiert@specs/v9/05-Backlog.md` — ein negierter Text-Beleg auf die Datei, in der er selbst steht. Das Muster stand damit in seiner eigenen Beleg-Zelle und konnte nie abwesend sein; die Zeile war strukturell nicht abschließbar, ohne dass irgendetwas anschlug. **Kein `!txt:`-Beleg darf auf `05-Backlog.md` selbst zeigen.** Der Ersatz macht aus der Doku-Aussage einen Wächter: die Bullet-Zahl ändert sich genau dann, wenn jemand ein Feature ins Spec schreibt — und stellt in diesem Moment die Frage nach der Backlog-Zeile.
 
     **L6 ist die Regel gegen diese Datei hier.** Die Regeln stehen an drei Stellen — Implementierung, dieser Abschnitt und die Tabelle „Lint-Regeln" in `05-Backlog.md`. Beim Nachrüsten von L5 wurden zwei davon sofort vergessen; damit verletzte ausgerechnet die Regel-Doku die Regel 1 des Backlogs („Zeiger, kein Inhalt — sonst driften zwei Fassungen auseinander"). L6 leitet die implementierten Regeln aus dem EIGENEN Quelltext ab (keine gepflegte Liste, die man vergessen kann) und vergleicht sie in beide Richtungen mit der Tabelle. Diesen Abschnitt hier deckt L6 NICHT ab — er bleibt Prosa und damit in deiner Verantwortung.
 
@@ -45,8 +57,9 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
     | „geskippter Test trifft nicht" | `tests/perf/scale.perf.test.ts` | BL-47 (entskippt) | 2026-07-18, bei L5 |
     | „datei: fehlende Datei" | `app/public/sw.js` | BL-02 (Service Worker gebaut) | 2026-07-18, bei BL-04 |
     | „txt: Muster nicht im Rohtext" | `eslint.config.js` | BL-54 (max-lines eingetragen) | 2026-07-18, bei BL-04 |
+    | „txt: findet Kommentar" | `ui/views/timeline/TimelineLensView.svelte` | BL-53 (Kommentar-Rest entfernt) | 2026-07-21, **sofort im Normallauf** |
 
-    Alle drei hängen jetzt an eigenen Vorlagen unter `fixtures/`, die sich nicht unter den Füßen des Prüfers verändern. Die eigentliche Lehre ist aber die zweite: die bisherige Absicherung war **ein Satz in dieser Datei** („wer den Prüfer anfasst, ruft ihn auf") — also Erinnerung statt Zwang, und sie hat zweimal nicht gehalten. Ein fehlschlagender Selbsttest lässt den Normallauf jetzt mit Exit 1 enden; die Ausgabe erscheint nur im Fehlerfall. Wirkung negativ verifiziert (einen Fall absichtlich kaputtgemacht → Exit 1, zurückgesetzt → Exit 0), nicht nur behauptet.
+    Alle vier hängen jetzt an eigenen Vorlagen unter `fixtures/`, die sich nicht unter den Füßen des Prüfers verändern. Die eigentliche Lehre ist aber die zweite: die bisherige Absicherung war **ein Satz in dieser Datei** („wer den Prüfer anfasst, ruft ihn auf") — also Erinnerung statt Zwang, und sie hat zweimal nicht gehalten. Ein fehlschlagender Selbsttest lässt den Normallauf jetzt mit Exit 1 enden; die Ausgabe erscheint nur im Fehlerfall. Wirkung negativ verifiziert (einen Fall absichtlich kaputtgemacht → Exit 1, zurückgesetzt → Exit 0), nicht nur behauptet.
 
 ## Vorgehen
 

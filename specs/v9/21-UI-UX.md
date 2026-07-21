@@ -89,6 +89,7 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 
 ---
 
+<a id="5-view-state--lifecycle-kontrakt-aus-v8-adr-025-dauerhaft"></a>
 ## 5. View-State- & Lifecycle-Kontrakt (aus v8-ADR-025, dauerhaft)
 
 > **INV-VS:** Genau *eine* zentrale Instanz verwaltet die aktuelle Auswahl je Ziel (`setCurrent(target, id)` / `getCurrent(target)`), inklusive Persistenz und Change-Event. Keine parallelen Auswahl-Quellen.

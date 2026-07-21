@@ -29,6 +29,11 @@ const BACKLOG = path.join(SPEC, 'specs/v9/05-Backlog.md');
  *  ANHEBEN: ein Status-Wort in den Specs 10–32 ist ab jetzt ein harter Fehler, kein
  *  geduldeter Rest. Wer Status ausdruecken will, legt eine Backlog-Zeile an. */
 const L3_RATSCHE = 0;
+
+/** L7-Ratsche: [S]/[E]-Bullets in Spec 20, Stand der abgeschlossenen Inventur (BL-51,
+ *  2026-07-21). Wer ein Bullet ergänzt, legt zuerst die Backlog-Zeile an und zieht dann
+ *  diese Zahl nach — nicht umgekehrt. */
+const SE_BULLETS = 29;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
@@ -236,6 +241,29 @@ function pruefe() {
       if (!fs.existsSync(path.join(SPEC, 'specs/v9', m[1])))
         warnungen.push(`L4 ${z.id}: Spec-Link "${m[1]}" nicht auflösbar`);
 
+  // L7-Ratsche: Zahl der [S]/[E]-Bullets in Spec 20.
+  //
+  // BL-51 hat die S/E-Inventur abgeschlossen — jeder der 29 Bullets trägt eine Zeile
+  // (zwei begründete Ausnahmen, s. Kopf von 05-Backlog.md). Diese Aussage verrottet
+  // still, sobald jemand ein neues [S]-Bullet ins Spec schreibt, ohne eine Zeile
+  // anzulegen: nichts im Projekt bemerkt das.
+  //
+  // Warum eine ZAHL und keine inhaltliche Zuordnung: welcher Bullet zu welcher
+  // Backlog-Zeile gehört, steht nirgends maschinenlesbar (die Zeilen verweisen auf
+  // §-Abschnitte, nicht auf Bullets) — eine echte Deckungsprüfung wäre erfunden. Der
+  // Zähler dagegen fängt exakt den realistischen Verfallsweg ab und zwingt die Frage
+  // („gibt es dazu eine Zeile?") in dem Moment, in dem sie beantwortbar ist.
+  //
+  // Ändert sich die Zahl bewusst, wird SE_BULLETS mit derselben Handbewegung nachgezogen,
+  // mit der die Backlog-Zeile entsteht. Das ist der Zwang, den BL-51 als reine
+  // Dokumentations-Aussage nicht hatte.
+  const spec20 = fs.readFileSync(path.join(SPEC, 'specs/v9/20-Funktionen.md'), 'utf8');
+  const seIst = (spec20.match(/^- \*\*\[[SE]\]\*\*/gm) || []).length;
+  if (seIst !== SE_BULLETS)
+    fehler.push(
+      `L7 Spec 20 hat ${seIst} [S]/[E]-Bullets, erwartet ${SE_BULLETS} — neue Bullets brauchen eine Backlog-Zeile (BL-51), danach SE_BULLETS nachziehen`,
+    );
+
   // L6: Deckt sich die Regel-Aufzählung im Backlog mit den implementierten Regeln?
   //
   // WARUM DIESE REGEL EXISTIERT (Nutzer-Frage 2026-07-18, direkt nach dem Nachrüsten
@@ -286,7 +314,14 @@ function selftest() {
     ['txt: Muster NICHT im Rohtext', 'txt:diesesMusterStehtDortNie@.claude/skills/spec-lint/fixtures/stabiler-text.txt', false],
     ['txt: Muster IM Rohtext', 'txt:Selbsttest@.claude/skills/spec-lint/fixtures/stabiler-text.txt', true],
     ['! negiert korrekt', '!sym:diesesSymbolGibtEsNicht', true],
-    ['txt: findet Kommentar (nicht gestrippt)', 'txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte', true],
+    // Vierte Ablösung von einer Produktivdatei (2026-07-21): hing an
+    // `txt:no-useless-assignment@ui/views/timeline/TimelineLensView.svelte` — BL-53
+    // entfernte genau diesen Kommentar-Rest, und der Fall wurde falsch. Anders als die
+    // drei vorherigen Male fiel es sofort auf, weil der Selbsttest seit BL-04 bei jedem
+    // Lauf mitläuft: die Erledigung EINER Backlog-Zeile machte den Prüfer rot, statt ihn
+    // still zu beschädigen. Der Fall bewacht, dass `txt:` im ROHTEXT sucht (Kommentare
+    // eingeschlossen) — im Unterschied zu `sym:`, das vorher strippt.
+    ['txt: findet Kommentar (nicht gestrippt)', 'txt:diesesTokenStehtNurImKommentar@.claude/skills/spec-lint/fixtures/kommentar-beispiel.ts', true],
   ];
   let bad = 0;
   for (const [name, beleg, erwartet] of faelle) {
