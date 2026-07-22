@@ -285,3 +285,18 @@ Ausgelagert aus [04-Entscheidungslog.md](04-Entscheidungslog.md) am 2026-07-16. 
 **Lehre 4 — messen macht aus einer Abwägung eine Entscheidung.** Ob der Mixed-Content-Abbruch vertretbar ist, hing an einer Zahl, die in zwei Minuten zu holen war: 0 Vorkommen in 5,7 MB echtem GRAMPS. Ohne sie wäre es eine Geschmacksfrage geblieben („fail-loud ist doch riskant"); mit ihr ist der Preis bekannt und die Zahl steht als Test da, der anschlägt, falls sie kippt.
 
 **Lehre 5 — der Nebenbefund war größer als der Auftrag, und er kam vom Zählen.** Beim Bau des Write-Backs stellte sich heraus, dass die GRAMPS-Projektion zwei Schlüsselarten mischt: `db.individuals` liegt unter der `id`, Familien-Referenzen tragen Handles. **0 von 3804** Referenzen sind auflösbar — ein GRAMPS-Import hätte keine einzige Verwandtschaft gezeigt. Beim Lesen des Codes fällt das nicht auf (beide Seiten sehen plausibel aus); erst die Auszählung der auflösbaren Referenzen macht es sichtbar. Als eigener Defekt festgehalten (BL-136) statt im Write-Back mit erledigt zu werden.
+
+<a id="adr-v9-111"></a>
+## ADR-v9-111
+
+*Entscheidung: → [ADR-v9-111 in 04-Entscheidungslog.md](04-Entscheidungslog.md)*
+
+**Bau 2026-07-21, ein Defekt mit zwei Gesichtern** (Code-Repo `~/dev/stammbaum-v9`): BL-95 (`ce1f1f1`). 2209 Tests grün, Lint sauber, am laufenden System bei 375×812 und 1280×800 verifiziert.
+
+**Lehre 1 — der Nutzer-Vorschlag traf die Ursache, der Backlog-Eintrag nur das Symptom.** Die Zeile beschrieb einen Überlauf: „Story liegt außerhalb". Der Vorschlag „lass den Vollbild-Schalter ins Diagramm wandern, dann kann der Vollbildmodus auch wieder ausgeschaltet werden" benannte einen ZWEITEN Defekt, der im Backlog gar nicht stand — und beide hatten dieselbe Ursache. Nachgemessen: im Vollbild lag die Insel (`position: fixed; inset: 0`) über Knopf UND Bottom-Nav, `elementFromPoint` traf beide Male die Insel. Die App war bis zum Neuladen gefangen. **Ein Bedienfehler dieser Schwere stand in keiner Zeile, weil ihn nur bemerkt, wer den Modus wirklich benutzt.**
+
+**Lehre 2 — „dann passt es doch" war um 8 px falsch.** Die Erwartung, dass die Reihe nach dem Entfernen des Knopfes eine Zeile wird, lag nahe und war falsch: 385 px Bedarf gegen 351 px Platz. Erst die Messung zeigte die zweite Ursache (doppelte Einrückung: Kopfzeile 0,75 rem PLUS Segmentreihe 0,75 rem — die Lens-Pillen begannen bei x=24, die Entitäts-Pillen derselben App bei x=12) und die dritte (Pillen-Polsterung). **Bei einem Platzproblem zählt man die Beiträge, statt den größten zu entfernen und zu hoffen.** Der Weg blieb trotzdem der richtige — er löste den schwereren Defekt mit.
+
+**Lehre 3 — Reihenfolge als Entscheidung: erst Struktur, dann Kosmetik.** Von drei möglichen Griffen (Label kürzen · Polsterung schrumpfen · Struktur räumen) sind zuerst die strukturellen gefallen (Knopf raus, doppelte Einrückung weg, Aktions-Bereich ersatzlos gestrichen) und erst zuletzt 2,4 px Polsterung. Hätte ich mit „(folgt)" aus dem Story-Label angefangen, wäre die Zeile auch einzeilig geworden — mit intakter Doppel-Einrückung, intaktem Aktions-Bereich und einer gebrochenen Platzhalter-Konvention. **Die billigste Zahl ist selten die richtige Stelle.**
+
+**Lehre 4 — ein Test, der den Auslöser festschreibt statt das Schutzziel.** `design-system-flex.test.ts` verlangte wörtlich `overflow-x: auto` auf der Segmentreihe. Gemeint war nie das Scrollen, sondern der Schutz gegen Schrumpfen unter die Inhaltshöhe — die Falle existierte überhaupt nur WEGEN `overflow-x`. Mit dem Umbruch ist die Ursache weg, und die Zusicherung steht jetzt genau umgekehrt da. **Wer einen Test schreibt, prüft, ob er das Ziel festhält oder den Weg dorthin** — der Weg ändert sich, das Ziel nicht.
