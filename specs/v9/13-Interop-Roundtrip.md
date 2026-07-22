@@ -90,7 +90,16 @@ Vollwertiges Zweitformat (gzip XML). Vollständiger Passthrough aller nicht-mode
 
 ## 7. Anonymisierter Export (DSGVO)
 
-Opt-in. Klassifikation lebender Personen in drei Phasen: (1) datumbasiert (kein Sterbedatum + Geburtsjahr **≥** Jahr−100 — die Grenze schließt ein, ADR-v9-95), (2) BFS-Propagation über Verwandte, (3) konservativ (Personen ohne Datum → lebend). Anonyme Records: nur `NAME Lebende Person` + `SEX` + Familienlinks. Dateiname-Suffix `_anon`, Original unberührt, direktes Speichern deaktiviert.
+Opt-in **je Export** (kein persistenter Modus, der die Bedeutung des Speichern-Knopfes ändert) und **orthogonal zum Format**: kein eigener `ExportFormat`-Wert, sondern ein Schalter am selben Rohr ([14 §3.2](14-Dateihandling.md)), kombinierbar mit 5.5.1/Strict/GED7. Das Bezugsjahr wird injiziert (kein Wall-Clock im Kern).
+
+**Klassifikation lebender Personen in drei Phasen:**
+1. **datumbasiert** — kein Sterbedatum + Geburts-/Taufjahr **≥** Bezugsjahr−100 → lebend; ein Sterbedatum ODER ein Geburtsjahr davor → **verstorben**. Die Grenze schließt ein (ADR-v9-95).
+2. **BFS-Propagation über Verwandte** (Ehepartner, Eltern↔Kinder) — sie läuft **ausschließlich über undatierte Verwandte**: wer in Phase 1 als verstorben eingestuft ist, wird nie durch Propagation lebend und leitet sie nicht weiter. Ohne diese Bremse erreicht die Kante jede zusammenhängende Linie bis ins 17. Jahrhundert und schwärzt praktisch den ganzen Bestand (gemessen: 2767 statt 689 von 2795 Personen).
+3. **konservativ** — Personen ganz ohne Datum → lebend.
+
+**Was geschwärzt wird:** INDI-Records lebender Personen behalten nur `NAME Lebende Person` + `SEX` + Familienlinks (`FAMC`/`FAMS`). FAM-Records mit mindestens einem lebenden Partner behalten `HUSB`/`WIFE`/`CHIL`, verlieren aber Datum/Ort/Quellen ihrer Familien-Ereignisse (`MARR`/`DIV`/…) — ein Hochzeitsdatum ist ein personenbezogenes Datum der Lebenden.
+
+**Was der Export nicht anfasst:** Dateiname-Suffix `_anon`, nie in-place (auch nicht bei 5.5.1 mit vorhandenem Handle, [14 §4](14-Dateihandling.md)), Original und Arbeitskopie unberührt — die Schwärzung ist eine reine Funktion auf einer Kopie, ihr Ergebnis fließt nie in den App-Zustand zurück.
 
 ---
 

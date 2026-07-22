@@ -49,6 +49,7 @@ Modell → serialize(format) → Bytes → save()
 ```
 
 - **Querexport** und **Strict** sind **kein Sonderpfad** — nur ein anderes Format im selben Export-Dialog.
+- **Anonymisierung ist kein fünftes Format, sondern ein orthogonaler Schalter** am selben Rohr ([13 §7](13-Interop-Roundtrip.md)): pro Export gewählt, mit jedem GEDCOM-Format kombinierbar, erzwingt Suffix `_anon` zusätzlich zum Format-Suffix und schaltet den In-place-Pfad ab.
 - GRAMPS (gzip) läuft durch dasselbe Rohr, weil es **Bytes** behandelt, nicht Text.
 - **INV-FILE-2:** Jeder Format-Export geht durch dasselbe Save-Rohr. Keine format-spezifische Save-Maschinerie.
 
