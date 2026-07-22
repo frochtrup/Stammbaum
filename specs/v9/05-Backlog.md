@@ -226,6 +226,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-54 | — | hygiene | basis | `max-lines`-Regel für `.svelte` (Ratsche, s. u.) | [02 §2](02-Zielarchitektur-v9.md), [32](32-Testframework.md) | `txt:max-lines@eslint.config.js` | gebaut |
 | BL-02 | K | feature | basis | Service Worker + Manifest (Offline-Betrieb) | [20 §1.2](20-Funktionen.md), [30](30-NFR-und-Persistenz.md), [ADR-v9-93](04-Entscheidungslog.md) | `datei:app/public/sw.js` | gebaut |
 | BL-03 | K | feature | basis | Offline-Indikator in der Schale | [20 §1.2](20-Funktionen.md), [ADR-v9-94](04-Entscheidungslog.md) | `datei:ui/shell/OfflineIndicator.svelte` | gebaut |
+| BL-137 | — | defekt | basis | `given`/`surname` blieben beim Einlesen leer, wenn die GEDCOM-Quelle keine `GIVN`/`SURN`-Untertags trug (verbreitete Form `1 NAME Anna /Decker/`) — sichtbar als Nachname mitsamt Schrägstrichen in der Sanduhr-Insel, dazu neun weitere Stellen (Karte, Zeitleiste, Vornamen-Statistik, zwei Validierungsregeln, Formular-Kopfzeile, Suche). Parser zerlegt den Namen jetzt beim Einlesen; `PersonForm`/Merge ziehen `name` mit. Dritter Anlauf nach ADR-v9-18 und BL-108 — jetzt per Lint-Gate statt Merksatz | [10 §2](10-Domaenenmodell.md), [32 TST-19/TST-20](32-Testframework.md) | `test:tests/roundtrip/gedcom-untagged.roundtrip.test.ts` | gebaut |
 
 ## Typen
 

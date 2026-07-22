@@ -96,6 +96,13 @@ ChildLink {
 
 **PersonName (extraNames):** `{ nameRaw, given, surname, prefix, suffix, type, citations: Citation[] }`
 
+**Namenszerlegung (`name` ↔ `given`/`surname`/`suffix`).** `name` ist der **rohe** GEDCOM-NAME-Wert mit dem Nachnamen zwischen Schrägstrichen (`Anna /Decker/`); `given`/`surname`/`suffix` sind die zerlegte Form. Beide sind Hälften derselben Sache und werden nie einzeln geschrieben.
+
+- **Beim Einlesen** füllt der Parser `given`/`surname`/`suffix` **feldweise** aus `name`, soweit die Untertags `GIVN`/`SURN`/`NSFX` fehlen. Ein vorhandenes Untertag wird nie überschrieben (eine Quelle darf `GIVN Anna` bewusst enger setzen als `Anna Maria /Decker/`).
+- Zerlegt wird **nur bei genau einem wohlgeformten Schrägstrichpaar**. `Anna Maria` ohne Schrägstriche bleibt unzerlegt: „alles ist Vorname" wäre eine Aussage, die die Quelle nicht macht — und die der Writer bei der nächsten Bearbeitung als `GIVN`-Zeile in die Datei schriebe.
+- **Beim Schreiben in Modell oder Datei** wird `name` aus den Teilen neu gebildet, damit die Schrägstrich-Form erhalten bleibt. Die eine Stelle für beide Richtungen: `core/model/name-parts.ts` (`splitGedcomName` / `composeGedcomName`).
+- `GIVN`/`SURN` erscheinen in der Ausgabe nur bei **editierten** Records — unberührte Records passieren den Writer unverändert ([13 §2.1](13-Interop-Roundtrip.md)), die Zerlegung bleibt dort modell-intern.
+
 **NameTranslation (nameTrans, GED7 `NAME`/`TRAN`):** `{ lang: string, value: string }` — mehrsprachige Namensform, GED7-Feature. Kein eigenes UI-Bullet in [20](20-Funktionen.md): derselbe Mechanismus wie die Orts-Übersetzung ([11 §1](11-Orte-Hoefe-Identitaet.md), Sprachkürzel+Text, INV-UI-4) — Personen-UI dafür ist noch nicht spezifiziert, verwendet bei Bedarf dieselbe Komponente wie Orts-Übersetzungen.
 
 **Association (ASSO ↔ GRAMPS personref):**
