@@ -78,9 +78,14 @@ Maximale Fremdkompatibilität — **ohne** proprietäre `_`-Tags. Mapping: `_UID
 
 ## 6. GRAMPS XML (read+write)
 
-Vollwertiges Zweitformat (gzip XML). Vollständiger Passthrough aller nicht-modellierten Felder via GRAMPS-Handles.
-- `placeObjects` ↔ `<placeobj>`, `hofObjects` ↔ `<placeobj type="Building">`.
-- Forschungsartefakte ↔ `<attribute>` (JSON-serialisiert → „neue Felder gratis").
+Vollwertiges, **bearbeitbares** Zweitformat (gzip XML). Kern-Genealogie wird ins gemeinsame Modell projiziert (nicht nur durchgereicht), damit ein GRAMPS-Dokument im Editor dieselben Felder trägt wie ein GEDCOM-Dokument; genuin nicht-modellierte Felder bleiben verlustfreier Passthrough via Handles (ADR-v9-114 legt die Projektion fest).
+
+- **Referenzen zeigen auf Modell-`id`, nicht auf Datei-Handles.** GRAMPS verweist per `handle`; die Projektion übersetzt Handles beim Lesen in die Modell-`id`, das Write-Back schreibt sie zurück (Handles bleiben Fidelity-Felder, keine Primär-IDs — ADR-v9-11/BL-136).
+- **Ereignisse** (Top-Level `<events>`, referenziert per `<eventref role>`) werden **by-reference** projiziert: `role="Primary"` → Ereignis des Personen-Owners (Main-Slots Birth/Christening/Death/Burial + `events[]`), `role="Family"` → Familien-Ereignis; andere Rollen (Witness/Godparent/…) → `Association` (ASSO). Ein geteiltes Ereignis bleibt EIN Record in `<events>` — nie in mehrere Owner dupliziert.
+- **Datum:** GRAMPS-`<dateval>`/`<daterange>`/`<datespan>`/`<datestr>` ↔ `Event.date` (roher GEDCOM-Datumsstring) + `datePhrase`; Qualifier/Qualität nach dem GRAMPS-Writer (`from/to/before/after/about`, `estimated/calculated`).
+- **Zitate:** zweistufig `citationref → <citation> → sourceref` → `Citation{sourceId, page, quay}`, `<confidence>` 0–4 → `quay` = `min(confidence,3)`.
+- **Orte:** die Event-Projektion liefert den Orts-**String**; `placeId`/`hofId` leitet `services/places.applyPlaceResolution` ab (derselbe Weg wie GEDCOM-PLAC). `<placeobj>`-Koordinaten/Hierarchie/`type` bleiben vorerst Passthrough (volle `placeobj`↔`PlaceObject`-Abbildung: eigener Bauabschnitt).
+- **Forschungsartefakte** ↔ `<attribute>` (JSON-serialisiert → „neue Felder gratis").
 - Roundtrip `xml1===xml2`. Notizen/Zitate werden dedupliziert (gemeinsame Handles) — stabil, kein Datenverlust.
 - **Test-Seam:** synchrone `buildXMLText(db)` / `parseXMLText(xml)` ohne gzip/Blob, damit der GRAMPS-Roundtrip headless ohne Web-Plattform-APIs testbar ist.
 
