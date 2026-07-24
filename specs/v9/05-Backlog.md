@@ -79,6 +79,28 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | `basis` | Nötig für ein benutzbares Produkt, ohne Sogwirkung auf anderes. |
 | `kür` | Verbessert, blockiert nichts. |
 
+## Bündel & Reihenfolge (Lese-Reihenfolge, Stand 2026-07-25)
+
+Eine **Leseordnung** über die offenen Punkte — keine zweite Status-Wahrheit. Der Status je
+Zeile bleibt die achte Spalte unten; erledigte Items fallen hier einfach weg. Bündel = Items,
+die dieselben Dateien/dasselbe Subsystem berühren (ein fokussierter Bau) bzw. voneinander
+abhängen (Primitive vor Konsument). Sortierlogik: **basis** (`ᴮ`) vor kür · bereitliegende
+Items (Kern/Felder gebaut, nur UI/Verdrahtung fehlt, `⚡`) zuerst · gemeinsame Dateien = ein
+Durchlauf.
+
+| # | Bündel | Items (interne Reihenfolge) | Fläche |
+|---|---|---|---|
+| ① | UI-Politur (Spec 21 §10) | BL-67, 68, 69, 70, 71 | Listen-/Detail-Views |
+| ② | Forschung abschließen | BL-135⚡, BL-57ᴮ, 109, 65, 56, 58, 61 | `core/research`, `ui/views/research` |
+| ③ | Diagramm-Inseln | BL-122 → 123 → 121 → 124 (Export zuletzt) | `ui/islands` |
+| ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 87 · 88, 89 | `core/places`, Karten-Insel |
+| ⑤ | Personen, Navigation & Beziehungen | BL-120⚡, BL-07ᴮ, 134, 10, 94 (Spec-first) | Shell/Navigation |
+| ⑥ | Medien, Quellen & Export | BL-127⚡, 128, 126, 125, 133 | `ui/views`, Export/Medien |
+| — | Standalone (kein Bündel) | BL-83 (_EVAL, Interop) · BL-66 (a11y-Scanner) | — |
+
+**Empfohlene Reihenfolge:** ① → ② → ③, dann ④/⑤/⑥ nach Appetit. Alternativ ein „Aufräum-
+Sprint" der bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127, 131, 132.
+
 ## Offene Punkte
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
