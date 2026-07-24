@@ -300,3 +300,30 @@ Ausgelagert aus [04-Entscheidungslog.md](04-Entscheidungslog.md) am 2026-07-16. 
 **Lehre 3 — Reihenfolge als Entscheidung: erst Struktur, dann Kosmetik.** Von drei möglichen Griffen (Label kürzen · Polsterung schrumpfen · Struktur räumen) sind zuerst die strukturellen gefallen (Knopf raus, doppelte Einrückung weg, Aktions-Bereich ersatzlos gestrichen) und erst zuletzt 2,4 px Polsterung. Hätte ich mit „(folgt)" aus dem Story-Label angefangen, wäre die Zeile auch einzeilig geworden — mit intakter Doppel-Einrückung, intaktem Aktions-Bereich und einer gebrochenen Platzhalter-Konvention. **Die billigste Zahl ist selten die richtige Stelle.**
 
 **Lehre 4 — ein Test, der den Auslöser festschreibt statt das Schutzziel.** `design-system-flex.test.ts` verlangte wörtlich `overflow-x: auto` auf der Segmentreihe. Gemeint war nie das Scrollen, sondern der Schutz gegen Schrumpfen unter die Inhaltshöhe — die Falle existierte überhaupt nur WEGEN `overflow-x`. Mit dem Umbruch ist die Ursache weg, und die Zusicherung steht jetzt genau umgekehrt da. **Wer einen Test schreibt, prüft, ob er das Ziel festhält oder den Weg dorthin** — der Weg ändert sich, das Ziel nicht.
+
+
+<a id="adr-v9-114"></a>
+## ADR-v9-114
+
+*Entscheidung: → [ADR-v9-114 in 04-Entscheidungslog.md](04-Entscheidungslog.md#adr-v9-114)*
+
+**Bau-Stand (Code-Repo `~/dev/stammbaum-v9`, Branch `v9-dev`):** Die GRAMPS→Modell-**Lese**-Projektion ist gebaut und an `Unsere Familie.gramps` validiert:
+- **BL-140 Stufe 1a** — `core/interop/gramps-date.ts` `grampsDateToGedcom`/`isoToGedcom` (Datum GRAMPS→GEDCOM-String), Commit `f483379`. Orakel: GRAMPS' eigener GEDCOM-Export (`make_gedcom_date`/`__build_date_string`/`_date`), nicht die Beispieldatei — die verschwieg `type="to"` und ließ `type="from"` DTD-widrig wirken (die DTD-`dateval`-ATTLIST zählt nur `before|after|about`, der Writer emittiert zusätzlich `from`/`to`; **der Writer ist maßgeblich**).
+- **Stufe 1b** — `gramps-events.ts` (Typ-Tabelle GRAMPS↔GEDCOM-Tag aus `eventtype.py::_DATAMAP`, `projectGrampsEvent`, `distributePersonEvents`/`distributeFamilyEvents`), Commit `6f6949d`. 6657 Events → 6536 direkte Tags, 121 `EVEN` mit erhaltenem Custom-Typ.
+- **Stufe 1c** — `gramps-citations.ts` (zweistufig `citationref→citation→sourceref`, `confidence`→`quay=min(·,3)`), Commit `f384278`. 8369 Zitate, ALLE lösen die Quelle auf (0 hängend).
+- **Stufe 1d** — `gramps-enrich.ts` reichert Person/Familie NACH der Basis-Projektion an (rein additiv, `projectPerson`/`projectFamily` und damit das Write-Back UNBERÜHRT), in `parseXMLText` verdrahtet. Commit `8ad8795`. Ergebnis: 2337 Geburten (2255 Datum, 2175 Ort), 5742 Events, 3752 Event-Zitate, 903/910 Heiraten. **BL-140 gebaut** (`2f70fec`).
+- **BL-142 Teil 1** — `gramps-date.ts` `gedcomToGramps` (Rück-Konverter GEDCOM-String → GRAMPS-Datumselement), Commit `92cd87e`. An allen 3953 Datums-Elementen `gedcom→gramps→gedcom` stabil.
+
+**Design-Fund für den Rest von BL-142 (Write-Back Events/Zitate) — der Bauplan für die nächste Session:**
+
+Das bestehende Write-Back (`gramps-write-back.ts`) arbeitet **pro Sektion inline**: iteriert die Records, re-projiziert jeden (`projectPerson` & Co., dieselbe Vorschrift wie beim Parsen, ADR-v9-14), vergleicht per `*Gleich`, hält unveränderte als IDENTISCHEN Knoten (INV-PT/D5). Für Events/Zitate greift das nicht direkt, weil sie **geteilte Top-Level-Records** sind (`<events>`/`<citations>`, per Handle referenziert), das Modell sie aber unter `person.birth`/`events[]`/`family.marriage` hält.
+
+**Die Hürde:** das Modell-`Event`/`Citation` trägt **nicht**, aus welchem Record es projiziert wurde — `enrichPerson` legt Modell-Events an, ohne den GRAMPS-Handle mitzuführen. Ohne den lässt sich ein geändertes Modell-Event seinem `<events>`-Record nicht zuordnen (Positions-/Inhalts-Matching wäre fragil).
+
+**Die Lösung (von ADR-v9-11 vorgezeichnet: „Nicht-GEDCOM-Handles bleiben Roundtrip-Fidelity-Feldern vorbehalten, z. B. `grampsHandle`"):**
+1. Fidelity-Feld `grampsHandle` an `Event` (und `Citation`), beim Lesen in `gramps-enrich.ts` gesetzt (Handle des `<event>`/`<citation>`-Records). Optionales Feld, GEDCOM-Seite ignoriert es (analog `Association.grampsHandle`, das bereits existiert).
+2. Write-Back invertiert für die `<events>`/`<citations>`-Sektionen: Handle→Modell-Event-Index aus der `db` bauen (alle Personen/Familien durchlaufen), dann je Record über den Handle das Modell-Event finden, re-projizieren, vergleichen; unverändert → identischer Knoten, geändert → erkannte Kinder (`<type>`/Datum via `gedcomToGramps`/`<place>`/`<citationref>`) an ihrer DTD-Position aktualisieren, gelöschte weg, neue (ohne `grampsHandle`) synthetisieren + `eventref` beim Owner ergänzen.
+3. Die Person-/Familien-Record-Projektion (`projectPerson`/`personGleich`/`personKinder`) bleibt bei Name/Geschlecht/Links — ein Event-Datum-Edit ändert NICHT den Person-Record, sondern den Event-Record in `<events>`. Nur Hinzufügen/Entfernen eines Events am Owner berührt dessen `eventref`-Liste.
+4. Reflex nach jeder Änderung: `roundtrip-verify` (`xml1===xml2`) — LP-1 ist hier das Kernrisiko.
+
+Offene Detailfrage für die Umsetzung: ob `grampsHandle` auch an weitere geteilte Records (Notizen/Medien) nötig wird, sobald deren Edits round-trippen sollen — beim Event/Zitat-Bau mitentscheiden, nicht vorab.
