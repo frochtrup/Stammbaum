@@ -349,3 +349,12 @@ Das bestehende Write-Back (`gramps-write-back.ts`) arbeitet **pro Sektion inline
 4. Reflex nach jeder Änderung: `roundtrip-verify` (`xml1===xml2`) — LP-1 ist hier das Kernrisiko.
 
 Offene Detailfrage für die Umsetzung: ob `grampsHandle` auch an weitere geteilte Records (Notizen/Medien) nötig wird, sobald deren Edits round-trippen sollen — beim Event/Zitat-Bau mitentscheiden, nicht vorab.
+
+<a id="adr-v9-115"></a>
+## ADR-v9-115 — Entitäten löschbar (Bau 2026-07-25)
+
+Gebaut in EINER Session, selbst (Dateien in der Session gelesen, überschaubar — keine Agenten-Delegation). Reihenfolge test-first: Kaskaden-Tests → `delete-cascade.ts` → AppState → 4 Views → Spec/ADR/Backlog. `npm test` 2406/2406 grün, `npm run lint` grün, eigene Browser-Verifikation an Demo-Realdaten (Person-Aushängen sichtbar am Ehemann-Slot; Empty-Family-Kaskade end-to-end: Averbeck-Familie verschwand erst nach Löschen aller drei Mitglieder, Focke-Familie mit verbleibendem Partner blieb; Quelle/Archiv je mit korrekter Confirm-Meldung + Rück-Navigation, keine Konsolenfehler).
+
+**Zwei Bau-Funde:**
+1. **`DeleteEntityButton.svelte` war nicht geplant, sondern erzwungen.** `PersonDetail.svelte` lag exakt am `max-lines`-Altfall-Pin (621); die anfänglich pro View kopierte Danger-Zone (handleDelete + Danger-CSS) sprengte ihn (632). Die Extraktion einer geteilten Komponente (INV-UI-4) löste beides zugleich — Duplikation UND das Limit. Der Pin wurde trotzdem auf 632 gehoben (die Funktion fügt real ein paar Zeilen zu; sanktionierter Weg über die `SVELTE_ALTFAELLE`-Tabelle, nicht Regel abschalten). Lehre bestätigt: eine reflexartig pro-View gebaute Affordanz ist fast immer ein Kandidat für die geteilte Primitive — hier deckte es der Linter auf, nicht die Vorplanung.
+2. **`hit`/`strip`-Callbacks über `peek*`-Zitate brauchen readonly-taugliche Parametertypen.** Erste Fassung typte sie auf `Citation`; `peekPerson`/`peekFamily` liefern aber `DeepReadonly<Citation>` (readonly `media`), `tsc` brach. `hit` liest nur `sourceId` → Param `{ sourceId: SourceId }` (nimmt beide Fassungen); `strip` läuft nur auf aufgetauten (mutablen) Arrays → `Citation[]`. Kleiner, aber der Draft-Copy-on-Write erzwingt diese Trennung sauber.
