@@ -17,7 +17,9 @@ Jedes Navigations-Element hat **genau eine** von vier Rollen. Das ist die zentra
 | **Forschung** | Arbeitsflächen der Quellenforschung, je eigenes Nav-Ziel | Dashboard · Aufgaben · Protokoll · Hypothesen |
 | **Arbeitsflächen** | querschnittlich | **Suche** · Ausgaben · Einstellungen · Datei (Laden/Speichern) |
 
-Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**, keine Segmente innerhalb eines Sammel-Ziels: mobil erreichbar über einen Segment-Umschalter unter dem **☑ Aufgaben**-Slot, auf Desktop als beschriftete Sidebar-Einträge der Gruppe „Forschung" (INV-UI-2 bleibt gewahrt — genau derselbe Mechanismus wie bei den Entitäten).
+Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**, keine Segmente innerhalb eines Sammel-Ziels: mobil erreichbar über einen Segment-Umschalter unter dem **Forschung**-Slot, auf Desktop als beschriftete Sidebar-Einträge der Gruppe „Forschung" (INV-UI-2 bleibt gewahrt — genau derselbe Mechanismus wie bei den Entitäten).
+
+**Anzeigenamen der Gruppen — EINE Quelle** (`NAV_ROLE_LABELS` in `nav-model.ts`, ADR-v9-122). Jede Rolle erscheint dem Nutzer als Gruppen-Beschriftung, und zwar **gleich auf beiden Formfaktoren**: mobil als Name des Gruppen-Bottom-Slots, auf Desktop als Sidebar-Gruppen-Header. Entitäten = **„Daten"** (nicht das Fachwort „Entitäten"; und ausdrücklich nicht „Personen", das nur EINE der fünf Kategorien ist), Ansichten = „Ansichten", Forschung = „Forschung", Arbeitsflächen = „Arbeit". Vorher hatte dieselbe Gruppe je Gerät zwei Namen — mobil trug der Slot das Label seines Default-Ziels („Personen"/„Baum"/„Aufgaben"), und „Personen" kollidierte mit dem gleichnamigen Segment darunter. Sidebar-Header und Gruppen-Bottom-Slots ziehen ihre Beschriftung jetzt aus derselben Konstante, driften also nicht mehr auseinander.
 
 **INV-UI-1:** Ansichten sind **Lenses, keine Nav-Ziele.** Der Wechsel zwischen ihnen läuft über *einen* einheitlichen Lens-Umschalter ([§4](#4-lens-umschalter)), nicht über verstreute Topbar-Glyphen.
 
@@ -27,11 +29,11 @@ Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**
 
 ## 2. Mobile-Modell (primär)
 
-**Bottom-Nav = 5 feste Ziele:** **⧖ Baum · 👤 Personen · 🔍 Suche · ☑ Aufgaben · ⋯ Mehr**
+**Bottom-Nav = 5 feste Slots:** **⧖ Ansichten · 👤 Daten · 🔍 Suche · ☑ Forschung · ⋯ Mehr** — die drei Gruppen-Slots tragen den Rollen-Namen ([§1](#1-view-rollen-modell-kern)/ADR-v9-122), nicht ihr Default-Ziel; die Symbole bleiben die des Default-Ziels (Landung). Suche ist ein Einzel-Ziel-Slot (Datei/Ausgaben/Einstellungen liegen im Mehr-Hub).
 
 - **Suche** ist erstklassig (in v8 versteckt) — das universelle „finde irgendwas".
-- **Personen** ist der Einstieg in die Entitäten; **Familien / Quellen / Orte / Höfe** über einen **Segment-Umschalter oben** auf der Listen-Fläche — eine *konsistente* Sub-Navigation statt versteckter Modi.
-- **Aufgaben** ist genauso der Einstieg in die Forschung; **Protokoll / Hypothesen / Dashboard** über denselben Segment-Umschalter — dieselbe Sub-Navigation wie bei den Entitäten. In der Segment-Reihe steht **Dashboard links** (an erster Stelle); die Default-Auswahl beim Öffnen bleibt aber **Aufgaben** (das Dashboard mountet nur bei Auswahl, seine DB-weite Validierung soll nicht bei jedem Öffnen anlaufen).
+- Der **Daten**-Slot ist der Einstieg in die Entitäten; **Personen / Familien / Quellen / Orte / Höfe** über einen **Segment-Umschalter oben** auf der Listen-Fläche — eine *konsistente* Sub-Navigation statt versteckter Modi. („Personen" ist damit nur noch Segment/Ziel, nicht mehr auch der Slot-Name — die frühere Dopplung entfällt, ADR-v9-122.)
+- Der **Forschung**-Slot ist genauso der Einstieg in die Forschungsflächen; **Aufgaben / Protokoll / Hypothesen / Dashboard** über denselben Segment-Umschalter — dieselbe Sub-Navigation wie bei den Entitäten. In der Segment-Reihe steht **Dashboard links** (an erster Stelle); die Default-Auswahl beim Öffnen bleibt aber **Aufgaben** (das Dashboard mountet nur bei Auswahl, seine DB-weite Validierung soll nicht bei jedem Öffnen anlaufen).
 - **Mehr** = Hub für die Lenses (Karte / Zeitleiste / Statistik / Story) + Ausgaben + Einstellungen + **Datei** (Laden/Speichern, [20 §1.2](20-Funktionen.md)). **Nachtrag 2026-07-07:** Datei öffnen/Demo laden/Speichern standen ursprünglich als permanent sichtbare Aktionsleiste über JEDER Ansicht — Nutzer-Fund per Screenshot: das sind Session-Rand-Aktionen (Anfang/Ende), keine Aktionen, die während der Arbeit an Personen/Familien laufend sichtbar sein müssen; v8-Oracle bestätigt das Muster (`legacy-v8/UI-DESIGN.md` Zeile 61: „`☰ Menü` (Speichern, Backup, neue Datei, OneDrive-Aktionen)" lag im Menü, nicht permanent in der Topbar). Gehört daher in den Mehr-Hub statt in eine eigene Kopfzeile.
 - **Baum** bleibt als Signatur-Ansicht eigener Slot (häufigster Einstieg).
 
@@ -50,7 +52,7 @@ Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**
 Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 
 - **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den vier Rollen —
-  - *Entitäten:* Personen · Familien · Quellen · Orte · Höfe
+  - *Daten:* Personen · Familien · Quellen · Orte · Höfe
   - *Ansichten:* Baum · Karte · Zeitleiste · Statistik · Story
   - *Forschung:* Dashboard · Aufgaben · Protokoll · Hypothesen
   - *Arbeit:* Suche · **Datei** · Ausgaben · Einstellungen
