@@ -8,13 +8,16 @@ Das UI/UX von v8 ist evolutionär gewachsen und in der Navigation nicht mehr kon
 
 ## 1. View-Rollen-Modell (Kern)
 
-Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentrale Ordnung, die v8 fehlte.
+Jedes Navigations-Element hat **genau eine** von vier Rollen. Das ist die zentrale Ordnung, die v8 fehlte.
 
 | Rolle | Was | Elemente |
 |---|---|---|
 | **Entitäten** | Datenkategorien zum Browsen/Bearbeiten | Personen · Familien · Quellen · Orte · **Höfe** |
 | **Ansichten (Lenses)** | *dieselben* Daten anders betrachtet | **Baum** (Sanduhr/Nachkommen/Fächer) · Karte · Zeitleiste · Statistik · Story |
-| **Arbeitsflächen** | querschnittlich | **Suche** · Aufgaben/Forschung · Ausgaben · Einstellungen · Datei (Laden/Speichern) |
+| **Forschung** | Arbeitsflächen der Quellenforschung, je eigenes Nav-Ziel | Dashboard · Aufgaben · Protokoll · Hypothesen |
+| **Arbeitsflächen** | querschnittlich | **Suche** · Ausgaben · Einstellungen · Datei (Laden/Speichern) |
+
+Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**, keine Segmente innerhalb eines Sammel-Ziels: mobil erreichbar über einen Segment-Umschalter unter dem **☑ Aufgaben**-Slot, auf Desktop als beschriftete Sidebar-Einträge der Gruppe „Forschung" (INV-UI-2 bleibt gewahrt — genau derselbe Mechanismus wie bei den Entitäten).
 
 **INV-UI-1:** Ansichten sind **Lenses, keine Nav-Ziele.** Der Wechsel zwischen ihnen läuft über *einen* einheitlichen Lens-Umschalter ([§4](#4-lens-umschalter)), nicht über verstreute Topbar-Glyphen.
 
@@ -28,6 +31,7 @@ Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentra
 
 - **Suche** ist erstklassig (in v8 versteckt) — das universelle „finde irgendwas".
 - **Personen** ist der Einstieg in die Entitäten; **Familien / Quellen / Orte / Höfe** über einen **Segment-Umschalter oben** auf der Listen-Fläche — eine *konsistente* Sub-Navigation statt versteckter Modi.
+- **Aufgaben** ist genauso der Einstieg in die Forschung; **Protokoll / Hypothesen / Dashboard** über denselben Segment-Umschalter — dieselbe Sub-Navigation wie bei den Entitäten. In der Segment-Reihe steht **Dashboard links** (an erster Stelle); die Default-Auswahl beim Öffnen bleibt aber **Aufgaben** (das Dashboard mountet nur bei Auswahl, seine DB-weite Validierung soll nicht bei jedem Öffnen anlaufen).
 - **Mehr** = Hub für die Lenses (Karte / Zeitleiste / Statistik / Story) + Ausgaben + Einstellungen + **Datei** (Laden/Speichern, [20 §1.2](20-Funktionen.md)). **Nachtrag 2026-07-07:** Datei öffnen/Demo laden/Speichern standen ursprünglich als permanent sichtbare Aktionsleiste über JEDER Ansicht — Nutzer-Fund per Screenshot: das sind Session-Rand-Aktionen (Anfang/Ende), keine Aktionen, die während der Arbeit an Personen/Familien laufend sichtbar sein müssen; v8-Oracle bestätigt das Muster (`legacy-v8/UI-DESIGN.md` Zeile 61: „`☰ Menü` (Speichern, Backup, neue Datei, OneDrive-Aktionen)" lag im Menü, nicht permanent in der Topbar). Gehört daher in den Mehr-Hub statt in eine eigene Kopfzeile.
 - **Baum** bleibt als Signatur-Ansicht eigener Slot (häufigster Einstieg).
 
@@ -45,10 +49,11 @@ Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentra
 
 Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 
-- **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den drei Rollen —
+- **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den vier Rollen —
   - *Entitäten:* Personen · Familien · Quellen · Orte · Höfe
   - *Ansichten:* Baum · Karte · Zeitleiste · Statistik · Story
-  - *Arbeit:* Suche · Aufgaben · **Datei** · Ausgaben · Einstellungen
+  - *Forschung:* Dashboard · Aufgaben · Protokoll · Hypothesen
+  - *Arbeit:* Suche · **Datei** · Ausgaben · Einstellungen
 
   Labels + Icons, immer sichtbar → löst „kryptische Icon-Leiste" und „aktiver Zustand" strukturell. **Datei** (Laden/Speichern, [§1](#1-view-rollen-modell-kern)) steht hier ausdrücklich mit: auf Desktop gibt es keinen Mehr-Hub, der es sonst trüge.
 
@@ -58,7 +63,7 @@ Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 - **Command-Palette (⌘K)** = Desktop-Pendant zur Suche; nutzt denselben Such-Kern ([20](20-Funktionen.md)) — dieselbe Funktion, nicht dieselbe Idee. Sie führt zusätzlich die Navigationsziele des Registers (INV-UI-15) als „Gehe zu"-Befehle. Ihr Overlay verlässt seinen Teilbaum wie jedes andere (INV-UI-13, [§6k](#6k-overlays-verlassen-ihren-teilbaum-inv-ui-13-adr-v9-99)).
 - **Vollbild** ist ein sauberer Layout-Modus (eine State-Klasse), keine `!important`-Kaskade wie in v8.
 
-**Was die Sidebar trägt, trägt der Inhaltsbereich nicht mehr.** Oberhalb der Layout-Grenze entfallen die mobilen Sub-Navigationen, deren Ziele die Sidebar bereits beschriftet und dauerhaft führt — die **Entitäts-Segmentreihe** ([§2](#2-mobile-modell-primär)) und der **Lens-Umschalter** ([§4](#4-lens-umschalter)). Beides gleichzeitig wären zwei Wege zum selben Ziel (INV-UI-2) bzw. zwei Umschalt-Mechanismen für denselben Wechsel (INV-UI-3). Was **kein** Navigationsziel ist, bleibt: die Quellen/Archive-Unterreihe (Archive sind eine Unteransicht des Quellen-Ziels, [20 §1.6](20-Funktionen.md)) und die Aktionen der Lens-Kopfzeile (Vollbild). Umgekehrt entfällt auf Desktop der **Mehr-Hub** ersatzlos; ein dort gestrandeter Zustand fällt auf die Entitäten-Fläche zurück ([§5](#5-view-state--lifecycle-kontrakt-aus-v8-adr-025-dauerhaft): nie ein stiller Abbruch).
+**Was die Sidebar trägt, trägt der Inhaltsbereich nicht mehr.** Oberhalb der Layout-Grenze entfallen die mobilen Sub-Navigationen, deren Ziele die Sidebar bereits beschriftet und dauerhaft führt — die **Entitäts-Segmentreihe** ([§2](#2-mobile-modell-primär)), die **Forschungs-Segmentreihe** (Aufgaben/Protokoll/Hypothesen/Dashboard, dieselbe Begründung wie bei den Entitäten) und der **Lens-Umschalter** ([§4](#4-lens-umschalter)). Beides gleichzeitig wären zwei Wege zum selben Ziel (INV-UI-2) bzw. zwei Umschalt-Mechanismen für denselben Wechsel (INV-UI-3). Was **kein** Navigationsziel ist, bleibt: die Quellen/Archive-Unterreihe (Archive sind eine Unteransicht des Quellen-Ziels, [20 §1.6](20-Funktionen.md)) und die Aktionen der Lens-Kopfzeile (Vollbild). Umgekehrt entfällt auf Desktop der **Mehr-Hub** ersatzlos; ein dort gestrandeter Zustand fällt auf die Entitäten-Fläche zurück ([§5](#5-view-state--lifecycle-kontrakt-aus-v8-adr-025-dauerhaft): nie ein stiller Abbruch).
 
 **INV-UI-15 (ein Navigations-Register, mehrere Projektionen):** Jedes Navigationsziel der App ist **einmal** beschrieben — Id, Rolle ([§1](#1-view-rollen-modell-kern)), Symbol, Beschriftung, Implementiert-Status — in einer reinen, DOM-freien Quelle (`ui/shell/nav-model.ts`, Bauform wie `lens-model.ts`, damit build-frei testbar, INV-ARCH-2). Bottom-Nav (5 Slots), Sidebar (alle Ziele), Mehr-Hub (was nicht in die 5 Slots passt) und Command-Palette sind **Projektionen** darauf und halten **keine eigenen Ziel-Listen**. Ebenso gibt es **genau eine** Quelle dafür, welches Ziel gerade aktiv ist (`ui/shell/route.svelte.ts`) — nicht eine Haupt-Route in der App-Wurzel plus einen privaten Segment-Zustand im Entitäten-Umbrella plus einen Hub-Zustand. Ohne diese eine Quelle ist die Sidebar nicht ohne zweite Navigationsquelle baubar und INV-UI-2 („genau ein kanonischer Weg") nicht haltbar. Sie ist zugleich die Voraussetzung für die History-Navigation ([20 §1.1](20-Funktionen.md)): Zurück/Vorwärts brauchen einen Stack, den es ohne eine Routen-Quelle nicht gibt.
 
