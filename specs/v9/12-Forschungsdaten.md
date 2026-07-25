@@ -31,11 +31,11 @@ GEDCOM: `_TASK`/`_CAT`/`_TSTAT`/`_DONE`/`_ID` + optional `SOUR @Sxx@` (Standard-
 ```
 LogEntry {
   date, repoRef: RepoId, sourceRef: SourceId, query,
-  result: 'found' | 'notfound' | 'pending', note
+  result: 'found' | 'partial' | 'notfound' | 'pending', note
   taskId: string | ''                   // optionaler Bezug: welche Aufgabe hat diesen Sucheintrag ausgelöst
 }
 ```
-GEDCOM `_RLOG` (Wire-Struktur analog `_TASK`, [13 §2.3](13-Interop-Roundtrip.md)). **Status (korrigiert ADR-v9-66 — vorherige Fassung war stale):** Parser + Write-Back gebaut (ADR-v9-37), globaler Protokoll-Tab (`LogView.svelte`) inkl. Markdown-Export gebaut. **Ebenfalls vorgesehen** (BL-56): Research-Timeline-Umschalter (chronologische Alternativansicht, [20 §1.11(b)](20-Funktionen.md)), Ergebniswert „teilweise" (Handbuch-Vorbild, aktuell nur gefunden/nicht gefunden/ausstehend), UI-Kurzweg „aus Aufgabe direkt Protokolleintrag anlegen" trotz vorhandener `taskId`-Kernverknüpfung.
+GEDCOM `_RLOG` (Wire-Struktur analog `_TASK`, [13 §2.3](13-Interop-Roundtrip.md)). `result='partial'` („teilweise") trennt „nichts gefunden" von „Fund, aber unvollständig" und trägt damit die Wiedervorlage. Globaler Protokoll-Tab (personenweise gruppiert ⇄ chronologische Research-Timeline) mit Markdown-Export. UI: [20 §1.11b](20-Funktionen.md).
 
 **`taskId`-Verknüpfung (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** verbindet einen Sucheintrag mit der Aufgabe, die ihn veranlasst hat — schließt die bislang fehlende Verbindung zwischen „was ist zu tun" (Task) und „was habe ich gesucht" (Log), die weder im v8-Oracle noch in der ursprünglichen v9-Spec bestand. Bewusst NUR ein optionaler Vorwärts-Verweis (Log → Task), keine erzwungene 1:1-Kopplung oder automatisches Schließen der Aufgabe — eine Aufgabe kann mehrere Sucheinträge brauchen, bevor sie erledigt ist; das Schließen bleibt eine bewusste Nutzerhandlung (`status`), kein abgeleiteter Seiteneffekt.
 
@@ -56,9 +56,7 @@ Pro Zitat (`citation.eval`, siehe [10 §5.3](10-Domaenenmodell.md)), unabhängig
 EvidenceEval { sourceType, infoQuality, evidence, informant }
 ```
 
-`evalToQuay()` leitet einen QUAY-*Vorschlag* ab (`original+primary`→3, `negative`→0, `authored/undetermined/indirect`→1, sonst 2). Serialisiert als **modellierter** `_EVAL`-Subtree unter SOUR (nicht verbatim — [13 §2.3](13-Interop-Roundtrip.md)). Validator-Regel `MISSING_EVAL` bewusst **default-off** (opt-in-Disziplin, [20 §3](20-Funktionen.md)).
-
-**Status (korrigiert ADR-v9-66):** `evalToQuay()`/`makeEvidenceEval()` gebaut und getestet (`core/research/eval.ts`). UI-Verdrahtung (Bewertungs-Aufklapper an der Zitat-Zeile, [20 §1.11(c)](20-Funktionen.md)) (BL-57) — im Code als TODO markiert (`ui/shell/SourceCitationRow.svelte`).
+`evalToQuay()` leitet einen QUAY-*Vorschlag* ab (`original+primary`→3, `negative`→0, `authored/undetermined/indirect`→1, sonst 2). Serialisiert als **modellierter** `_EVAL`-Subtree unter SOUR (nicht verbatim — [13 §2.3](13-Interop-Roundtrip.md)). Validator-Regel `MISSING_EVAL` bewusst **default-off** (opt-in-Disziplin, [20 §3](20-Funktionen.md)). UI-Verdrahtung (Bewertungs-Aufklapper an der Zitat-Zeile): [20 §1.11c](20-Funktionen.md).
 
 ---
 
@@ -91,6 +89,4 @@ GEDCOM `_HYPO`-Subtree auf INDI/FAM.
 ```
 Project { id, name, color, scope: {surnames[], places[], yearFrom, yearTo, personIds[]}, note, created }
 ```
-Reist **nicht** mit der Datei (app-privat, geräteweit — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)). Scope-Filter über die Personenliste; aktives Projekt als Chip-Selektor. UI: [20 §1.11(f)](20-Funktionen.md), Budget-Platzierung [21 §6h](21-UI-UX.md).
-
-**Status (korrigiert ADR-v9-66):** Typ + Konstruktor (`makeProject`) gebaut (`core/research/project.ts`), keine Persistenz, keine UI. **Ebenfalls vorgesehen** (BL-58): die Scope-Matching-Funktion selbst (welche Personen erfüllen `ProjectScope` — UND-Verknüpfung der drei Achsen, leere Achse schränkt nicht ein) existiert noch nicht, nur der Typ.
+Reist **nicht** mit der Datei (app-privat, geräteweit — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)). Kernstück ist die Scope-Matching-Funktion `matchesScope`: welche Personen erfüllen einen `ProjectScope` — die drei Achsen Nachname/Ort/Zeitraum **UND-verknüpft**, eine leere Achse schränkt nicht ein, eine ausdrücklich in `personIds` gelistete Person ist immer enthalten. Das aktive Projekt scoped Aufgaben/Protokoll/Hypothesen/Dashboard über einen Chip-Selektor. UI: [20 §1.11f](20-Funktionen.md), Budget-Platzierung [21 §6h](21-UI-UX.md).
