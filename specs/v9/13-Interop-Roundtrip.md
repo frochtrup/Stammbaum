@@ -11,6 +11,7 @@ Vier Ausgabemodi über **ein** gemeinsames internes Modell. Tag-Semantik + Wire-
 - **RT-1:** `out1 === out2` (Idempotenz) auf allen Testdateien, in allen vier Ausgabemodi.
 - **RT-2:** `net_delta = 0` gegenüber der Ur-Quelle bei nicht-mutierenden Speichervorgängen. Bewusste Ausnahmen: HEAD-Rewrite, dokumentierte CONC/CONT-Neuformatierung, Anonymisierung, Konvention-2→1-Übergang ([11 §4.3](11-Orte-Hoefe-Identitaet.md)).
 - **RT-3:** Automatisierte, **headless** ausführbare Roundtrip-Tests für GEDCOM und GRAMPS (ohne UI, ohne Nutzer) — laufen build-frei ([02 INV-ARCH-2](02-Zielarchitektur-v9.md)).
+- **RT-4 (Cross-Family, ADR-v9-126/-127):** `Format A → Modell → Format B → Modell'` ⇒ `Modell ≈ Modell'`. Byte-Gleichheit ist über Familiengrenzen (GEDCOM↔GRAMPS) unmöglich; die Metrik ist **Modell-Äquivalenz** (Kern-Genealogie erhalten). RT-1/2/3 sichern weiterhin die **native** Treue und bleiben unangetastet — RT-4 ist ein SEPARATER Pfad (Emission aus dem Modell), er darf keinen RT-1/2/3-Test aufweichen. Die Äquivalenz-Relation (welche Felder erhalten bleiben MÜSSEN, was dokumentiert verloren gehen DARF) definiert [ADR-v9-127](04-Entscheidungslog.md#adr-v9-127).
 
 Test-Gates (Vorlage-Belege): `MeineDaten_ancestris.ged` (2811 Pers., 83k Z., Ancestris) → `net_delta=0` + `out1===out2`; `Unsere Familie.gramps` (2894 Pers.) → `xml1===xml2`.
 
