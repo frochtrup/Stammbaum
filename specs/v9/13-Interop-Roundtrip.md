@@ -15,6 +15,21 @@ Vier Ausgabemodi über **ein** gemeinsames internes Modell. Tag-Semantik + Wire-
 
 Test-Gates (Vorlage-Belege): `MeineDaten_ancestris.ged` (2811 Pers., 83k Z., Ancestris) → `net_delta=0` + `out1===out2`; `Unsere Familie.gramps` (2894 Pers.) → `xml1===xml2`.
 
+### 1.1 RT-4-Äquivalenz `modelEquiv` + Coverage (BL-155)
+
+Die RT-4-Metrik ist die reine Funktion **`modelEquiv(a, b): Diff[]`** (`core/interop/model-equiv.ts`) — `[]` = äquivalent. Da IDs cross-family remapped werden (ADR-v9-127 Entscheidung 2), vergleicht sie **nie über `id`-Gleichheit**, sondern über id-freie strukturelle Signaturen; Referenzen (Familie→Person, Zitat→Quelle, Ereignis→Medium) über die Signatur der aufgelösten Zielentität. Identitätsgate: `modelEquiv(db, db) === []` auf allen Fixtures inkl. beider Realdaten-Sätze.
+
+**Was RT-4 erhalten MUSS** (Diff bei Abweichung): Personen (Namensteile, Geschlecht, Kern-Ereignisse BIRT/CHR/DEAT/BURI + `events[]` mit date/place/value, Zitat-Quellen, Medien-Datei-Referenzen, Familienlinks, Notiz), Familien (husband/wife/children als Personen-Signaturen, Ereignisse), Quellen, Repositories, Notizen, Orte/Höfe. **Was dokumentiert abweichen DARF** (kein Diff): `id` (remapped), GRAMPS-`grampsId`/`handle`, `wireOrigin`, `lastChanged`/`createdDate`, Passthrough-Rohbäume (`GedNode`, `MediaCitation.extra`), `shortName`, format-native Wert-Repräsentation (Datum/`form` — volle Normalisierung in BL-156/159).
+
+**Coverage-Audit (an den Realdaten-Fixtures gemessen, 2026-07-26; Zensus reproduzierbar über `tests/core/_coverage-audit.census.test.ts`).** Passthrough-only = im Datei-Backbone erhalten (LP-1), aber NICHT im Modell strukturiert — geht bei Cross-Family-Emission (BL-157/158) verloren, weil der Zielbaum aus dem Modell gebaut wird und den Quell-Backbone verlässt:
+
+| Format | Passthrough-only (Auswahl, Vorkommen) | im Modell (kein Verlust) |
+|---|---|---|
+| GEDCOM | `INDI/FAM>_STAT` (44/2), `ADDR>CITY/POST/ADR1/_MAP/_LATI/_LONG` (`event.addr` ist Flach-String), `SOUR>_REFN/DATA/AGNC`, `NOTE>_VALID`, `OBJE>_SCBK` (via `MediaCitation.extra`, edit-sicher) | `REFN`→`exids`, `_UID`→`uid`, Namensteile, Ereignisse, Zitate, Medien |
+| GRAMPS | `<attribute>` **komplett** (person 2838: `_UID` 2793, `_STAT` 46, `Cause` 16, `Telefon` 9, `E-MAIL` 2, `RESN` 1), `<srcattribute>`, `<note><style/range>` (Formatierung), `placeobj>coord/type/placeref/pname` (nur `title` projiziert) | `<url href>`→`repository.www`, `<objref>`→`MediaCitation` |
+
+**Kern-Asymmetrie für BL-156/157/158:** Felder, die GEDCOM ins Modell projiziert (`uid`, `email`, `cause`, `restriction`, Telefon), hält GRAMPS nur als generisches `<attribute>` im Passthrough — nicht im Modell. GRAMPS→GEDCOM verliert sie daher (Kandidat: diese `<attribute>`-Typen beim GRAMPS-Parse ins Modell projizieren, da `uid`/`email`/`cause`/`restriction` bereits Modellfelder sind); GEDCOM→GRAMPS muss sie umgekehrt als `<attribute>` emittieren. Die restliche Coverage-Schließung ist Backlog-Futter über M1/M2 (ADR-v9-127). *Orakel-Lücke: LDS-Ordinanzen, `ASSO`-Nicht-Owner, GRAMPS `tagref`/`lds_ord`/Witness-`eventref` kommen in beiden Fixtures nicht vor — für diese Pfade fehlt der gemessene Beleg.*
+
 ---
 
 ## 2. Passthrough-Prinzip
