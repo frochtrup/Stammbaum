@@ -2,7 +2,7 @@
 
 > Schicht: Kern (Serializer) + Betrieb (FileService) · Abhängig von: [13 Interop/Roundtrip](13-Interop-Roundtrip.md), [30 NFR & Persistenz](30-NFR-und-Persistenz.md) · Ersetzt die v8-Dateimodule (`storage.js`, `storage-file.js`, `onedrive*.js`)
 
-Radikale Vereinfachung gegenüber v8. GEDCOM 5.5.1 ist Master; GRAMPS, Strict-GEDCOM und GED7 sind alternative Serialisierungen desselben Modells.
+Radikale Vereinfachung gegenüber v8. **Das interne Modell ist die eine Quelle; GEDCOM 5.5.1/7.0/Strict und GRAMPS sind Serialisierungen *desselben* Modells** — Import in einem Format und Export in einem anderen (**Cross-Family**, GEDCOM↔GRAMPS) ist eine Kernfähigkeit (v8-Stärke, [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126)). „5.5.1 = Master" meint: das **verbreitetste** Format, hier ist die Qualität kompromisslos — **nicht** die einzige Quelle. Zwei Treue-Ebenen: der **native** Roundtrip (gleiches Format rein/raus) ist byte-treu über den Passthrough-Baum (LP-1, `net_delta=0`); die **Cross-Family**-Serialisierung emittiert aus dem Modell (formatnativ, best-effort — Modell-Äquivalenz statt Byte-Gleichheit). Realisierungsstand je Ebene: [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126) + [Backlog](05-Backlog.md).
 
 ---
 
