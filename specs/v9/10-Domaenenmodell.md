@@ -167,14 +167,14 @@ Repository {
 Note { id, type: 'NOTE' | 'SNOTE', text }
 ```
 
-**Medien — Vorschlag, noch nicht entschieden.** Der aktuelle `MediaRef { file, title }` wird je Kontext dupliziert eingebettet (`Citation.media`, `Event.media`, `Person.media`, `Family.media`, `Source.media`) — mehrere unabhängige Kopien desselben Datensatzes, wenn ein Foto mehrfach verknüpft ist, nur über den `file`-Pfad identifiziert. Vorgeschlagene Auflösung, analog zu Orten (`PlaceObject`+`event.placeId`) und Quellen (`Source`+`Citation`):
+**Medien.** Globale Medien-Identität (`Media`) + referenz-spezifische Verknüpfung (`MediaCitation`), analog zu Orten (`PlaceObject`+`event.placeId`) und Quellen (`Source`+`Citation`):
 
 ```
-Media {
-  id: MediaId
+Media {                             // globaler Datensatz EINES Mediums, in db.media
+  id: MediaId                       // = file (content-adressiert, app-intern, NICHT serialisiert)
   file: string                      // FILE — relativer Pfad (Datei-/Sync-Ordner, [14 §7](14-Dateihandling.md)), einzige Wahrheitsquelle
   form: string                      // FORM — Dateiformat (jpg, pdf, …)
-  type: string                      // MEDI — Medientyp (Foto/Dokument/Ton/Video …)
+  type: string                      // MEDI — Medientyp (Foto/Dokument/… ); in den Import-Daten meist leer
   lastChanged: string
 }
 
@@ -184,11 +184,12 @@ MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Med
   date: string                      // _DATE — Aufnahmedatum in diesem Kontext
   note: string                      // NOTE
   primary: bool                     // _PRIM — Hauptfoto/-dokument für DIESEN Datensatz
+  extra: GedNode[]                  // unbekannte OBJE-Kinder (z. B. _SCBK) verbatim erhalten (INV-PT, edit-sicher)
 }
 ```
-`Person.media`/`Family.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (statt `MediaRef[]`) — EIN Medium, viele typisierte Referenzen mit eigenen Feldern, gleiche Rollenverteilung wie `Source`/`Citation`. Voraussetzung für die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)) — mit dupliziert-flachen Kopien nicht baubar (keine Medien-Identität über Referenzen hinweg, nur Pfad-String-Zufallstreffer).
+`Person.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (Familien-Medien hängen an den Familien-Ereignissen, `Event.media`). EIN Medium, viele typisierte Referenzen mit eigenen Feldern, gleiche Rollenverteilung wie `Source`/`Citation`. Trägt die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)).
 
-**Vor Umsetzung Pflicht:** betrifft Parser/Writer an fünf Call-Sites (`gedcom-parse.ts`/`write-back-emit.ts`) — `roundtrip-verify` auf allen Fixtures nach der Migration (LP-1).
+**Identität & Wire-Format:** `MediaId === file` (die Datei IST die Identität) — dieselbe Datei über mehrere Referenzen hinweg ergibt EIN `Media` mit N `MediaCitation`. `db.media` wird beim Parsen in einem Post-Pass über den Passthrough-Baum assembliert. Das Wire-Format bleibt **inline OBJE je Referenz** (kein Umschreiben auf Top-Level-`@M@`-Records); `MediaId` ist app-intern und wird nie serialisiert. Globale Felder (`file`/`form`/`type`) leben allein in `db.media`; der Writer resolvt sie beim Emittieren. GRAMPS-Medien bleiben Passthrough (nicht ins Modell projiziert).
 
 ---
 
