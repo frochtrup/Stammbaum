@@ -167,33 +167,35 @@ Repository {
 Note { id, type: 'NOTE' | 'SNOTE', text }
 ```
 
-**Medien.** Globale Medien-Identität (`Media`) + referenz-spezifische Verknüpfung (`MediaCitation`), analog zu Orten (`PlaceObject`+`event.placeId`) und Quellen (`Source`+`Citation`):
+**Medien.** `Media` ist eine **Top-Level-Entität** (in `db.media`, gleichrangig zu `Source`/`Repository`/`Note`) — GEDCOM 7.0 und GRAMPS führen Medien nativ als eigene Records, referenziert per Zeiger; GEDCOM 5.5.1 erlaubt das ebenso (plus eine Inline-Altform). Owner halten nur einen **Verweis** (`MediaCitation`), exakt wie `Citation`→`Source` oder `event.placeId`→`PlaceObject`:
 
 ```
-Media {                             // globaler Datensatz EINES Mediums, in db.media
-  id: MediaId                       // = file (content-adressiert, app-intern, NICHT serialisiert)
-  file: string                      // FILE — relativer Pfad (Datei-/Sync-Ordner, [14 §7](14-Dateihandling.md)), einzige Wahrheitsquelle
-  form: string                      // FORM — Dateiformat (jpg, pdf, …)
-  type: string                      // MEDI — Medientyp (Foto/Dokument/… ); in den Import-Daten meist leer
+Media {                             // Top-Level-Datensatz EINES Mediums, in db.media
+  id: MediaId                       // GEDCOM: @M@-Xref (Record) bzw. FILE-Pfad (Inline-Altform); GRAMPS: id (O0000). App-intern, NICHT serialisiert
+  file: string                      // FILE / <file src> — relativer Pfad, einzige Wahrheitsquelle ([14 §7](14-Dateihandling.md))
+  form: string                      // FORM / <file mime> — Dateiformat/MIME
+  type: string                      // MEDI — Medientyp (Standard-Enum unter FORM); GRAMPS/Import oft leer
+  title: string                     // GLOBALE Beschriftung: GED7-Record-TITL / GRAMPS <file description>; leer bei 5.5.1-Inline
+  wireOrigin: 'record' | 'inline'   // Wire-Herkunft — der Writer erhält sie unverändert (LP-1): Record→Record+Zeiger, Inline→inline
   lastChanged: string
 }
 
 MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Medium ↔ EINE Entität/Ereignis/Zitat
   mediaId: MediaId
-  title: string                     // TITL — Beschriftung NUR für diesen Kontext
+  title: string                     // Per-Ref-OVERRIDE der globalen Media.title (leer = globalen Titel verwenden)
   date: string                      // _DATE — Aufnahmedatum in diesem Kontext
   note: string                      // NOTE
   primary: bool                     // _PRIM — Hauptfoto/-dokument für DIESEN Datensatz
-  extra: GedNode[]                  // unbekannte OBJE-Kinder (z. B. _SCBK) verbatim erhalten (INV-PT, edit-sicher)
+  extra: GedNode[]                  // unbekannte Referenz-Kinder (5.5.1-`_SCBK`, GED7-`CROP`, GRAMPS-`region`/`attribute`) verbatim (INV-PT)
 }
 ```
-`Person.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (Familien-Medien hängen an den Familien-Ereignissen, `Event.media`). EIN Medium, viele typisierte Referenzen mit eigenen Feldern, gleiche Rollenverteilung wie `Source`/`Citation`. Trägt die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)).
+`Person.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (Familien-Medien hängen an den Familien-Ereignissen). Trägt die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)).
 
-**Identität & Wire-Format.** Der GEDCOM-Standard kennt zwei OBJE-Formen, beide werden auf dieselbe Struktur projiziert:
-- **Pointer** `n OBJE @M1@` → Top-Level-Record `0 @M1@ OBJE` (trägt FILE/FORM/MEDI). In 5.5.1 optional, in **7.0 die einzige zulässige Form**. `MediaId` = der Xref (`@M1@`).
-- **Inline** `n OBJE`→`FILE`→`FORM`→`MEDI` (nur 5.5.1). `MediaId` = der FILE-Pfad (content-adressiert).
+**Titel: global + Override.** Der Titel liegt global auf `Media` (so führen ihn GED7 und GRAMPS). `MediaCitation.title` ist ein optionaler Per-Ref-Override (nur die 5.5.1-Inline-Form trägt den Titel von Haus aus je Referenz); leer ⇒ der globale `Media.title` gilt. Die UI zeigt/ediert beide Ebenen getrennt ([20 §1.4](20-Funktionen.md) „globale vs. referenz-spezifische Felder").
 
-Dieselbe Identität über mehrere Referenzen ergibt EIN `Media` mit N `MediaCitation`. `db.media` wird beim Parsen in einem Post-Pass über den Passthrough-Baum assembliert; `MediaId` ist app-intern und wird nie serialisiert (das Wire-Format je Referenz bleibt erhalten — Pointer bleibt Pointer, inline bleibt inline). Globale Felder (`file`/`form`/`type`) leben allein in `db.media`; der Writer resolvt sie beim Emittieren. Der Medientyp ist der **`MEDI`**-Standard-Tag (Enum unter `FORM`), nicht das v8-interne `_TYPE`. GRAMPS-Medien bleiben Passthrough (nicht ins Modell projiziert).
+**Änderungserkennung an der natürlichen Stelle.** Weil `Media` Top-Level ist, wird eine Änderung an den globalen Feldern (Datei/Format/Typ/Titel) **am `Media`-Record** erkannt und zurückgeschrieben (record-basierte Medien: eigener Dirty-Check + Emit wie `Source`), NICHT durch Abscannen jeder referenzierenden Entität. Am Owner wird nur noch die **Verweis-Menge** (welches Medium, Per-Ref-Felder) verglichen. Die 5.5.1-Inline-Altform (`wireOrigin='inline'`, kein Record) trägt ihre Daten weiterhin am Verweis; dort greift die Owner-seitige Erkennung.
+
+**Wire-Formen (öffentliche Spec).** GEDCOM: **Pointer** `n OBJE @M1@`→`0 @M1@ OBJE` (5.5.1 optional, **7.0 einzige Form**) und **Inline** `n OBJE`→`FILE`→`FORM`→`MEDI` (nur 5.5.1). GRAMPS: `<object handle id><file src mime description/></object>` + `<objref hlink>`. Alle drei projizieren auf dieselbe `Media`/`MediaCitation`-Struktur; der Writer erhält die Wire-Herkunft je Medium (`wireOrigin`) — **kein** Umschreiben Inline↔Record (bräche LP-1). Medientyp = Standard-`MEDI`, nicht das v8-interne `_TYPE`.
 
 ---
 
