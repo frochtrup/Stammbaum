@@ -61,9 +61,18 @@ Konsistenzprüfung über `specs/v9/`. Abgeleitet aus real gefundener Drift (Doku
 
     Alle vier hängen jetzt an eigenen Vorlagen unter `fixtures/`, die sich nicht unter den Füßen des Prüfers verändern. Die eigentliche Lehre ist aber die zweite: die bisherige Absicherung war **ein Satz in dieser Datei** („wer den Prüfer anfasst, ruft ihn auf") — also Erinnerung statt Zwang, und sie hat zweimal nicht gehalten. Ein fehlschlagender Selbsttest lässt den Normallauf jetzt mit Exit 1 enden; die Ausgabe erscheint nur im Fehlerfall. Wirkung negativ verifiziert (einen Fall absichtlich kaputtgemacht → Exit 1, zurückgesetzt → Exit 0), nicht nur behauptet.
 
+11. **04↔04a-Split (mechanisch, BL-161):**
+
+    ```
+    node .claude/skills/spec-lint/check-adr-split.mjs
+    node .claude/skills/spec-lint/check-adr-split.mjs --selftest   # prüft den Prüfer
+    ```
+
+    Schlägt an, sobald `04-Entscheidungslog.md` einen **Nachtrag-Anführer** inline trägt (Überschrift/Listenpunkt/Blockzitat, dessen fettes Leit-Label Nachtrag/Bau-Stand/Korrektur/… ist) — die Regel aus `decision-log` Schritt 3a, jetzt als Zwang statt Erinnerung (per Hand-Edit an `04` wurde sie umgangen, real bei ADR-124/125). Der Selbsttest läuft bei jedem Lauf mit (wie L1–L7 in check-backlog). **Bewusst NICHT mechanisch** ist die Merkregel „Datum/Testzahl/Commit inline": diese Signale stehen pervasiv in legitimer `Konsequenz:`-/`Kontext:`-/`Befund:`-Substanz — ein Blanko-Gate darauf wäre binnen einer Sitzung abgeschaltet; sie bleiben der Mensch-assistierten Ebene (Prüfung 8/9). Der Kopfkommentar des Skripts begründet den Schnitt am konkreten Falsch-Positiv-Fall (`**Selbstkorrektur vor der Arbeit:**`).
+
 ## Vorgehen
 
-- **Zuerst Prüfung 10 laufen lassen** (mechanisch, Sekunden) — erst danach die Mensch-assistierten Prüfungen 6/8/9.
+- **Zuerst die mechanischen Prüfungen 3/10/11 laufen lassen** (Sekunden) — erst danach die Mensch-assistierten Prüfungen 6/8/9.
 - Dateien per `ls specs/v9/` enumerieren; IDs/Links per `grep` extrahieren.
 - Befunde als Tabelle (Prüfung · Status · Fundstelle) berichten.
 - Auf Wunsch direkt fixen (fehlende Index-Zeilen, tote Links) und erneut prüfen.
