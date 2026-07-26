@@ -91,24 +91,23 @@ Durchlauf.
 | # | Bündel | Items (interne Reihenfolge) | Fläche |
 |---|---|---|---|
 | ② | Forschung abschließen | BL-57ᴮ (Rest gebaut) | `core/research`, `ui/views/research` |
-| ③ | Diagramm-Inseln | 124 (Export) — Viewport/Nachkommen/Fächer/Heatmap gebaut, s. [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `ui/islands/tree` |
-| ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 87 · 88, 89 | `core/places`, Karten-Insel |
+| ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 89 (87 · 88 gebaut) | `core/places`, Karten-Insel |
 | ⑤ | Personen, Navigation & Beziehungen | BL-120⚡, BL-07ᴮ, 134, 10, 94 (Spec-first) | Shell/Navigation |
 | ⑥ | Medien, Quellen & Export | BL-127⚡, 128, 126, 125, 133 | `ui/views`, Export/Medien |
 | — | Standalone (kein Bündel) | BL-83 (_EVAL, Interop) · BL-66 (a11y-Scanner) | — |
 
-Bündel ① (UI-Politur, Spec 21 §10 — BL-67…71) ist abgeschlossen (2026-07-25) und daher
-hier entfallen; die Zeilen stehen unter „Erledigte Punkte".
+Bündel ① (UI-Politur, Spec 21 §10 — BL-67…71) und Bündel ③ (Diagramm-Inseln, ADR-v9-123 —
+BL-151/122/123/152/121/124) sind abgeschlossen und daher hier entfallen; die Zeilen stehen
+unter „Erledigte Punkte".
 
-**Empfohlene Reihenfolge:** ② → ③, dann ④/⑤/⑥ nach Appetit. Alternativ ein „Aufräum-
-Sprint" der bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127, 131, 132.
+**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit. Alternativ ein „Aufräum-Sprint" der
+bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127, 131, 132.
 
 ## Offene Punkte
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
 | BL-120 | S | feature | kür | Proband konfigurierbar + „Zum Probanden"-Navigation. Heute existiert `probandId` NUR als Feld der Validierungs-Konfiguration (BFS-Wurzel in `core/validate/context.ts`) — keine Einstellfläche, kein Navigationsbefehl | [20 §1.1](20-Funktionen.md) | `sym:goToProband` | offen |
-| BL-124 | E | feature | kür | Diagramm-Export PNG + A1-Vektorposter: reiner Renderer `diagram-export.ts` aus dem Layout-Modell → eigenständiger SVG-String (Karten `<rect>`+`<text>`, DOM-frei, kein Live-SVG-Scraping); A1 via viewBox-Skalierung, PNG via `canvas.toBlob`; Sink über vorhandene `Share`/`DownloadAdapter`; Bottom-Sheet hinter EINEM `TreeView`-Toolbar-Button | [20 §1.3](20-Funktionen.md), [21 §8](21-UI-UX.md), [14 §3](14-Dateihandling.md), [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `datei:ui/islands/tree/diagram-export.ts` | offen |
 | BL-125 | S | feature | kür | CSV-Export der gefilterten Personen- UND Familienliste (zwei Spec-Bullets, ein Mechanismus — INV-UI-4). Projektweit existiert bislang kein CSV-Pfad | [20 §1.4/§1.5](20-Funktionen.md) | `sym:toCsv` | offen |
 | BL-126 | S | feature | kür | Medien-Verwaltung: Kachelgalerie · Medium-Detail (globale vs. referenz-spezifische Felder) · Referenzliste mit `Picker`-Verknüpfen. Kern-Modell `Media`/`MediaCitation` steht, UI fehlt vollständig | [20 §1.4/§1.5](20-Funktionen.md), [10 §4](10-Domaenenmodell.md) | `datei:ui/views/media/MediaGallery.svelte` | offen |
 | BL-127 | S | feature | kür | Assoziationen-UI (Zeugen/Paten/Informanten): Kern samt Parser/Writer ist vollständig gebaut, `associations` kommt in `ui/` kein einziges Mal vor — reine UI-Lücke, kein neues Kern-Konzept | [20 §1.4](20-Funktionen.md), [10 §2](10-Domaenenmodell.md) | `txt:associations@ui/views/person/person-detail-model.ts` | offen |
@@ -124,8 +123,6 @@ Sprint" der bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127,
 | BL-10 | K | feature | kür | Soundex-Modus in der Personensuche (im Spec „optional") | [20 §1.4](20-Funktionen.md) | `sym:soundex` | offen |
 | BL-83 | S | feature | kür | `_EVAL`-Wire-Format (Parser + Writer) — heute nur im Strict-Adapter gestrippt, nirgends erzeugt | [12 §3](12-Forschungsdaten.md) | `test:tests/roundtrip/eval-roundtrip.test.ts` | offen |
 | BL-89 | — | hygiene | kür | Skalen-Gate deckt die Orts-Kandidatenbreite nicht ab: 20k Personen erzeugen nur **23** PlaceObjects (6 Dörfer) zu 2.196 Höfen — real ist es 416 zu 210. Disambiguierungs-Pfade (§4.2 3c/3c′, Review-Klasse P) laufen dort praktisch leer; der Generator-Kopfkommentar behauptet dennoch „realistisch schwer" | [32 §2](32-Testframework.md), [30 §1](30-NFR-und-Persistenz.md), [11 §4.2](11-Orte-Hoefe-Identitaet.md) | `txt:MIN_DISTINCT_PLACES@tests/perf/scale.perf.test.ts` | offen |
-| BL-87 | — | feature | kür | INV-UI-14-Reichweite auf die Karten-Insel klären und nachziehen — `map-model.ts` liest `pl.title` an drei Stellen direkt (Marker-Titel, Hof-Titel, Event-Fallback) | [21 §6l](21-UI-UX.md), [11 §5](11-Orte-Hoefe-Identitaet.md) | `txt:placeDisplayName@ui/islands/map/map-model.ts` | offen |
-| BL-88 | — | hygiene | kür | „Kein View liest `po.title` direkt" als Lint-Regel erzwingen statt als Konvention (analog der `<select bind:value>`-Regel, [32 TST-12](32-Testframework.md)) | [11 §5](11-Orte-Hoefe-Identitaet.md), [21 §6l](21-UI-UX.md) | `txt:placeDisplayName@eslint.config.js` | offen |
 | BL-57 | S | feature | basis | Evidenz-Bewertung: Aufklapper an der Zitat-Zeile | [12 §3](12-Forschungsdaten.md) | `!txt:TODO@ui/shell/SourceCitationRow.svelte` | offen |
 | BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations\s*:@core/places/types.ts` | offen |
 | BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
@@ -266,6 +263,9 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-123 | S | feature | kür | Fan-Chart (konzentrische Halbkreis-Segmente, 3–6 Generationen, ADR-v9-123): reine polar `fan-layout.ts` (BFS-Ahnen, `RADII`-Ringe, Arc-Pfade π→0, rotierter Text mit Initialen-Kürzung, Orakel `ui-fanchart.js`) + `fan-chart.ts` mountet in den geteilten Viewport (BL-151). Geschlechtsfarben über die geteilten `--stb-sex-*`-Tokens, Generations-Abstufung. Modus `fan` an `TreeModeId`/`ViewModeToggle`. Browser-verifiziert an Realdaten (5 Gen, 62 Segmente, Segment-Rezentrierung, Tastatur-↑, saubere Modus-Wechsel) | [20 §1.3](20-Funktionen.md), [21 §8](21-UI-UX.md), [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `datei:ui/islands/tree/fan-chart.ts` | gebaut |
 | BL-152 | S | feature | kür | Per-Person-Severity als geteilte Kern-Projektion (ADR-v9-123): `computePersonSeverity(findings, inScope?)` bündelt Befunde je Person nach Schwere und bestimmt die schwerste (error>warn>info); `buildQualityDashboard` darauf umgestellt (ein Bewertungsmechanismus, Dashboard-Ampel UND Baum-Ring). DOM-frei, Dashboard-Parität als Test | [20 §1.3/§1.11](20-Funktionen.md), [21 §8](21-UI-UX.md), [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `sym:computePersonSeverity` | gebaut |
 | BL-121 | S | feature | kür | Vollständigkeits-Heatmap: box-shadow-Ring am Rechteck-Kartenrand aus `computePersonSeverity` (BL-152, kein zweiter Validator); Mapping clean/info/warn/error → kein Ring/gold/orange/rot, Tooltip nennt die fehlenden Felder. Im geteilten `tree-cards`-Renderer → Sanduhr UND Nachkommen; Fächer ohne Ring. Browser-verifiziert an Realdaten | [20 §1.3](20-Funktionen.md), [21 §8](21-UI-UX.md), [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `sym:buildTreeRings` | gebaut |
+| BL-124 | E | feature | kür | Diagramm-Export PNG + A1-Vektorposter (ADR-v9-123): reiner Renderer `diagram-export.ts` (DOM-frei) aus dem Layout-Modell → eigenständiges SVG (Sanduhr/Nachkommen <rect>+<text> mit Ring-Rahmen, Fächer <path>+<circle>), A1 via mm+preserveAspectRatio, PNG via canvas.toBlob; Sink über FileService, EIN Toolbar-Einstiegspunkt (§6h). Browser-verifiziert | [20 §1.3](20-Funktionen.md), [21 §8](21-UI-UX.md), [14 §3](14-Dateihandling.md), [ADR-v9-123](04-Entscheidungslog.md#adr-v9-123) | `datei:ui/islands/tree/diagram-export.ts` | gebaut |
+| BL-87 | — | feature | kür | Karten-Insel INV-UI-14 nachgezogen: Marker = Übersichts-/Listen-Kontext, `map-model.ts` bildet Marker-/Biografie-Namen über `placeDisplayName` statt `pl.title` direkt (§6l-Entscheidung). Volle Kette bleibt im Tooltip | [21 §6l](21-UI-UX.md), [11 §5](11-Orte-Hoefe-Identitaet.md) | `txt:placeDisplayName@ui/islands/map/map-model.ts` | gebaut |
+| BL-88 | — | hygiene | kür | „Kein View liest `po.title` direkt" als ESLint-Regel (`no-restricted-syntax`, `places.byId(...).title` in ui/**, eng auf den Resolver-Pfad, false-positive-frei; §6l-Ausnahme trägt eslint-disable). Negativ getestet | [11 §5](11-Orte-Hoefe-Identitaet.md), [21 §6l](21-UI-UX.md), [32 TST-12](32-Testframework.md) | `txt:placeDisplayName@eslint.config.js` | gebaut |
 
 ## Typen
 
