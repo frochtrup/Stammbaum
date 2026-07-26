@@ -66,6 +66,12 @@ Konkret: der Parser baut zu jedem Record einen Baum aus `{tag, value, children[]
 
 Wird ein bisher verbatim durchgereichter `_`-Tag *modelliert* (editierbar gemacht), MUSS der Parser ihn aus dem Passthrough **herauslösen**, sonst Doppelschreibung pro Roundtrip (`_REPO_MODELLED`-Lehre). Beim Modellieren gilt: genau *eine* Writer-Stelle je logischem Kontext. Betrifft u. a. `_EVAL` (Evidenz), `_HYPO` (Hypothese), `_RTYPE`/`_FAURL` (Repository) — siehe [12](12-Forschungsdaten.md)/[10](10-Domaenenmodell.md).
 
+### 2.4 Passthrough unter Edit, Merge und Cross-Family
+
+- **Nativer Edit:** Ein geänderter Record behält seine nicht-erkannten Kind-Zeilen an Ort und Stelle (Merge-in-place, INV-PT); nur die erkannten Feldgruppen werden aus dem Modell neu geschrieben. Editieren einer Person/eines Ortes verliert ihren Passthrough NICHT.
+- **Dedup/Merge:** Der Passthrough des Verlierer-Records wird verlustfrei in den Gewinner übernommen — Default, ohne Auswahl-UI, einheitlich für Personen- und Orts-/Hof-Dedup ([ADR-v9-129](04-Entscheidungslog.md#adr-v9-129)). Vereinigung mit Dedup byte-identischer Subtrees; wo die Zielformat-Kardinalität zwei verbietet (GRAMPS-DTD), gewinnt der Gewinner (dokumentierter Rest). Damit umfasst das „verlustfrei"-Versprechen der Merge-Flächen ([20 §1.12](20-Funktionen.md)/[20 §1.8](20-Funktionen.md)) auch die un-modellierten Zeilen.
+- **Cross-Family-Emission:** Passthrough geht bewusst verloren — der Zielbaum wird nur aus dem Modell gebaut (RT-4, §1.1 At-Risk-Mengen). Deshalb Download/Suffix statt in-place ([14 §3.2](14-Dateihandling.md)).
+
 ---
 
 ## 3. GEDCOM 5.5.1 (Standard)
