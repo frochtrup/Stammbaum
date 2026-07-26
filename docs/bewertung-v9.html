@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stammbaum v9 — Bewertung des erreichten Stands</title>
+<style>
+  :root {
+    --ground:#f4eee1; --surface:#fbf7ee; --surface-2:#ede4d2; --raise:#fffdf7;
+    --ink:#2a2419; --ink-soft:#5c5346; --ink-faint:#8b806d;
+    --line:#e2d8c3; --line-strong:#cfc3aa;
+    --accent:#9c6a1c; --accent-soft:#c1934099;
+    --good:#3f6d34; --warn:#a97614; --crit:#9d3a26;
+    --good-bg:#e5edd9; --warn-bg:#f2e7cd; --crit-bg:#f2ddd4;
+    --shadow:0 1px 2px rgba(60,45,20,.06), 0 8px 28px rgba(60,45,20,.05);
+    --serif:"Hoefler Text","Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --mono:"SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#15110c; --surface:#1d180f; --surface-2:#251f15; --raise:#221c12;
+      --ink:#ede4d0; --ink-soft:#b6ab93; --ink-faint:#867b66;
+      --line:#332b1f; --line-strong:#463c2b;
+      --accent:#d9ac52; --accent-soft:#8a6a2e66;
+      --good:#84b46b; --warn:#d7ac57; --crit:#dd7a5e;
+      --good-bg:#20291a; --warn-bg:#2c2515; --crit-bg:#2e1d16;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f4eee1; --surface:#fbf7ee; --surface-2:#ede4d2; --raise:#fffdf7;
+    --ink:#2a2419; --ink-soft:#5c5346; --ink-faint:#8b806d;
+    --line:#e2d8c3; --line-strong:#cfc3aa;
+    --accent:#9c6a1c; --accent-soft:#c1934099;
+    --good:#3f6d34; --warn:#a97614; --crit:#9d3a26;
+    --good-bg:#e5edd9; --warn-bg:#f2e7cd; --crit-bg:#f2ddd4;
+    --shadow:0 1px 2px rgba(60,45,20,.06), 0 8px 28px rgba(60,45,20,.05);
+  }
+  :root[data-theme="dark"]{
+    --ground:#15110c; --surface:#1d180f; --surface-2:#251f15; --raise:#221c12;
+    --ink:#ede4d0; --ink-soft:#b6ab93; --ink-faint:#867b66;
+    --line:#332b1f; --line-strong:#463c2b;
+    --accent:#d9ac52; --accent-soft:#8a6a2e66;
+    --good:#84b46b; --warn:#d7ac57; --crit:#dd7a5e;
+    --good-bg:#20291a; --warn-bg:#2c2515; --crit-bg:#2e1d16;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .page{
+    background:var(--ground); color:var(--ink);
+    font-family:var(--sans); line-height:1.62;
+    font-size:17px; -webkit-font-smoothing:antialiased;
+    padding:clamp(1.2rem,4vw,3.5rem) 1.2rem 5rem;
+  }
+  .wrap{max-width:50rem; margin:0 auto}
+  .measure{max-width:38rem}
+
+  /* ---- rhythm ---- */
+  section{margin-top:3.2rem}
+  p{margin:0 0 1rem; color:var(--ink-soft)}
+  p strong{color:var(--ink); font-weight:600}
+  a{color:var(--accent); text-underline-offset:2px}
+
+  /* ---- masthead ---- */
+  .eyebrow{
+    font-family:var(--mono); font-size:.72rem; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 1rem;
+    display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;
+  }
+  .eyebrow::before{content:""; width:1.6rem; height:1px; background:var(--accent); opacity:.6}
+  h1{
+    font-family:var(--serif); font-weight:600; color:var(--ink);
+    font-size:clamp(2.1rem,6vw,3.3rem); line-height:1.04; letter-spacing:-.01em;
+    margin:0 0 1rem; text-wrap:balance;
+  }
+  .lede{font-size:1.13rem; color:var(--ink-soft); max-width:36rem; margin:0}
+  .lede em{color:var(--ink); font-style:normal; font-weight:600}
+  .meta{
+    margin-top:1.6rem; padding-top:1.2rem; border-top:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:.5rem 2rem;
+    font-family:var(--mono); font-size:.76rem; color:var(--ink-faint);
+  }
+  .meta b{color:var(--ink-soft); font-weight:500}
+
+  h2{
+    font-family:var(--serif); font-weight:600; color:var(--ink);
+    font-size:1.62rem; letter-spacing:-.01em; margin:0 0 .3rem;
+    display:flex; align-items:baseline; gap:.7rem; text-wrap:balance;
+  }
+  h2 .n{font-family:var(--mono); font-size:.8rem; color:var(--accent); font-weight:400}
+  .sub{color:var(--ink-faint); font-size:.9rem; margin:0 0 1.4rem}
+  h3{font-family:var(--sans); font-size:.95rem; font-weight:700; color:var(--ink);
+     margin:1.6rem 0 .5rem; letter-spacing:.005em}
+
+  /* ---- verdict banner ---- */
+  .verdict{
+    margin-top:2.2rem; background:var(--surface); border:1px solid var(--line);
+    border-left:3px solid var(--accent); border-radius:10px;
+    padding:1.3rem 1.5rem; box-shadow:var(--shadow);
+  }
+  .verdict .grade{
+    font-family:var(--serif); font-size:2.6rem; font-weight:600; color:var(--accent);
+    line-height:1; float:left; margin:.1rem 1rem .2rem 0;
+  }
+  .verdict p{margin:0; color:var(--ink-soft)}
+  .verdict p strong{color:var(--ink)}
+
+  /* ---- scorecard ---- */
+  .scores{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));
+    gap:.8rem; margin-top:1.4rem;
+  }
+  .score{
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:1rem 1.1rem; box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .score::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--bar,var(--accent))}
+  .score .top{display:flex; justify-content:space-between; align-items:baseline; gap:.5rem}
+  .score .axis{font-weight:700; font-size:.95rem; color:var(--ink)}
+  .score .g{font-family:var(--serif); font-size:1.7rem; font-weight:600; color:var(--bar,var(--accent)); line-height:1}
+  .score .note{font-size:.83rem; color:var(--ink-faint); margin:.35rem 0 0}
+  .g-a{--bar:var(--good)} .g-b{--bar:var(--warn)}
+
+  /* ---- stat strip ---- */
+  .stats{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+    gap:1px; background:var(--line); border:1px solid var(--line);
+    border-radius:10px; overflow:hidden; margin-top:1.4rem;
+  }
+  .stat{background:var(--surface); padding:1rem 1.1rem}
+  .stat .v{font-family:var(--serif); font-size:1.7rem; font-weight:600; color:var(--ink);
+    line-height:1; font-variant-numeric:tabular-nums}
+  .stat .v .u{font-size:.9rem; color:var(--ink-faint); font-family:var(--sans); font-weight:500}
+  .stat .k{font-size:.78rem; color:var(--ink-faint); margin-top:.35rem; line-height:1.35}
+  .stat .v .ok{color:var(--good)}
+
+  /* ---- tables ---- */
+  .tablewrap{overflow-x:auto; margin:1.2rem 0; border:1px solid var(--line);
+    border-radius:10px; box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; font-size:.9rem; min-width:32rem}
+  caption{text-align:left; font-size:.8rem; color:var(--ink-faint); padding:.6rem .9rem 0; caption-side:top}
+  th,td{text-align:left; padding:.62rem .9rem; border-bottom:1px solid var(--line); vertical-align:top}
+  thead th{background:var(--surface-2); font-size:.74rem; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--ink-soft); font-weight:700}
+  tbody tr:last-child td{border-bottom:none}
+  td:first-child{color:var(--ink); font-weight:600; white-space:nowrap}
+  .col-v8 td, .col-v8 th{color:var(--ink-faint)}
+  table.cmp td:nth-child(2){color:var(--ink-faint)}
+  table.cmp td:nth-child(3){color:var(--ink-soft)}
+
+  /* ---- lists ---- */
+  ul.plain{list-style:none; padding:0; margin:1rem 0}
+  ul.plain li{position:relative; padding:.15rem 0 .15rem 1.4rem; color:var(--ink-soft); margin-bottom:.5rem}
+  ul.plain li::before{content:""; position:absolute; left:.15rem; top:.75rem;
+    width:.4rem; height:.4rem; border-radius:50%; background:var(--accent)}
+  ul.plain li strong{color:var(--ink); font-weight:600}
+  .two-col{display:grid; grid-template-columns:1fr; gap:0 2rem}
+  @media(min-width:40rem){.two-col{grid-template-columns:1fr 1fr}}
+
+  /* ---- gap rows ---- */
+  .gaps{display:flex; flex-direction:column; gap:.6rem; margin-top:1.2rem}
+  .gap{
+    display:grid; grid-template-columns:auto 1fr; gap:.9rem; align-items:start;
+    background:var(--surface); border:1px solid var(--line); border-radius:9px;
+    padding:.85rem 1rem; box-shadow:var(--shadow);
+  }
+  .chip{
+    font-family:var(--mono); font-size:.66rem; letter-spacing:.05em; text-transform:uppercase;
+    padding:.28rem .5rem; border-radius:5px; white-space:nowrap; font-weight:600;
+    align-self:start; margin-top:.1rem;
+  }
+  .chip.basis{background:var(--crit-bg); color:var(--crit); border:1px solid color-mix(in srgb,var(--crit) 30%,transparent)}
+  .chip.test{background:var(--warn-bg); color:var(--warn); border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+  .chip.kuer{background:var(--surface-2); color:var(--ink-faint); border:1px solid var(--line-strong)}
+  .gap .body{font-size:.92rem}
+  .gap .body b{color:var(--ink)}
+  .gap .body .id{font-family:var(--mono); font-size:.78rem; color:var(--ink-faint)}
+
+  code{font-family:var(--mono); font-size:.85em; background:var(--surface-2);
+    padding:.08em .35em; border-radius:4px; color:var(--ink)}
+
+  .pillrow{display:flex; flex-wrap:wrap; gap:.4rem; margin:.4rem 0 0}
+  .pill{font-family:var(--mono); font-size:.72rem; padding:.25rem .55rem; border-radius:20px;
+    background:var(--surface-2); border:1px solid var(--line); color:var(--ink-soft)}
+
+  footer{margin-top:3.5rem; padding-top:1.4rem; border-top:1px solid var(--line);
+    font-size:.8rem; color:var(--ink-faint); font-family:var(--mono)}
+
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+    @keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="reveal">
+    <p class="eyebrow">Technische Bewertung · v9-dev</p>
+    <h1>Stammbaum v9 — der erreichte Stand</h1>
+    <p class="lede">Ein spezifikationsgetriebener Neuaufsatz der Genealogie-PWA, bewertet nach <em>Architektur, Code, Security, Usability, Design</em> und Datenerhalt — verifiziert am Code, nicht aus der Doku zitiert, und verglichen gegen v8 sowie gängige Genealogie-Programme.</p>
+    <div class="meta">
+      <span><b>Stand</b> 26.07.2026</span>
+      <span><b>Basis</b> Code · Lint + 2.505 Tests grün · App an Realdaten</span>
+      <span><b>Umfang</b> 45.322 Zeilen Produktcode</span>
+    </div>
+  </header>
+
+  <div class="verdict reveal">
+    <div class="grade">A−</div>
+    <p><strong>Architektonisch vorbildlicher, testgetriebener Neuaufsatz.</strong> v9 hat v8 im Kern eingeholt und im Alleinstellungsmerkmal — Ortsidentität, Roundtrip-Treue, Evidenzmodell — überholt. Was zwischen „starkem Fundament" und „rundem Produkt" steht, ist keine Architektur-, sondern Feature-Fläche: überwiegend UI-Verdrahtung auf bereits gebautem Kern.</p>
+  </div>
+
+  <!-- SCORECARD -->
+  <section class="reveal">
+    <h2><span class="n">01</span>Scorecard</h2>
+    <p class="sub">Note je Achse. Grün = trägt; amber = benutzbar mit klarer Lücke.</p>
+    <div class="scores">
+      <div class="score g-a"><div class="top"><span class="axis">Architektur</span><span class="g">A</span></div>
+        <p class="note">Vier echte Schichten, Kern-Grenze mechanisch erzwungen, build-frei testbar.</p></div>
+      <div class="score g-a"><div class="top"><span class="axis">Code-Qualität</span><span class="g">A</span></div>
+        <p class="note">0× <code>any</code>, 0× <code>@ts-ignore</code> in 45k Zeilen · 1 TODO · Test-vor-Code gelebt.</p></div>
+      <div class="score g-a"><div class="top"><span class="axis">Security</span><span class="g">A−</span></div>
+        <p class="note">Strikte CSP ohne <code>unsafe-*</code>, kein Server/Cloud, minimale Angriffsfläche.</p></div>
+      <div class="score g-a"><div class="top"><span class="axis">Usability &amp; Design</span><span class="g">A−</span></div>
+        <p class="note">Konsistentes Dunkel-Thema, echt responsiv, genealogische Tiefe im UI sichtbar.</p></div>
+      <div class="score g-a"><div class="top"><span class="axis">Interop / Datenerhalt</span><span class="g">A</span></div>
+        <p class="note">GEDCOM + GRAMPS-Write-Back, Roundtrip <code>net_delta=0</code> getestet — das Kronjuwel.</p></div>
+      <div class="score g-b"><div class="top"><span class="axis">Funktionsumfang</span><span class="g">B</span></div>
+        <p class="note">Kern vollständig; Medien-UI, Reports, History-Nav &amp; Komfort-Features offen.</p></div>
+    </div>
+  </section>
+
+  <!-- KENNZAHLEN -->
+  <section class="reveal">
+    <h2><span class="n">02</span>Kennzahlen</h2>
+    <p class="sub">Gemessen im Repo, nicht geschätzt.</p>
+    <div class="stats">
+      <div class="stat"><div class="v">45.322</div><div class="k">Zeilen Produktcode<br>core 11,7k · ui 30,8k · services 2,0k</div></div>
+      <div class="stat"><div class="v">2.505 <span class="u ok">✓</span></div><div class="k">Tests grün<br>214 Dateien, ~7 s headless</div></div>
+      <div class="stat"><div class="v">0</div><div class="k"><code>any</code> / <code>@ts-ignore</code><br>bei 560 typgeprüften Dateien</div></div>
+      <div class="stat"><div class="v">122</div><div class="k">ADRs<br>37 benannte Invarianten, je mit Test</div></div>
+      <div class="stat"><div class="v">3</div><div class="k">Lint-Gates<br>eslint + tsc + svelte-check, 0 Fehler</div></div>
+      <div class="stat"><div class="v">764<span class="u">KB</span></div><div class="k">Prod-Bundle<br>inkl. Leaflet-Karte</div></div>
+    </div>
+  </section>
+
+  <!-- ARCHITEKTUR -->
+  <section class="reveal">
+    <h2><span class="n">03</span>Architektur</h2>
+    <p class="sub">Sehr gut — die Invarianten sind Zwang, nicht Zusage.</p>
+    <div class="measure">
+      <p>Vier saubere Schichten (<code>core → services → ui → app</code>), und die Kern-Invariante wird <strong>mechanisch erzwungen</strong>: ein Boundary-Gate verbietet im Kern jeden Import aus höheren Schichten <em>und</em> jede Plattform-API (<code>window</code>, <code>document</code>, <code>fetch</code>, <code>indexedDB</code> …). Genau der Königsweg „Zwang statt Erinnerung".</p>
+      <p>Der Domänenkern ist dadurch DOM- und framework-frei und build-frei testbar — sichtbar daran, dass 2.505 Tests in rund sieben Sekunden durchlaufen. Die imperativen SVG-Inseln (Baum, Fächer, Karte) sind sauber von der reaktiven Svelte-5-Schale getrennt.</p>
+      <p><strong>Kleiner Kritikpunkt:</strong> die größten Dateien (<code>gramps-write-back.ts</code> 974 Z., <code>PlaceDetail.svelte</code> 919 Z., <code>app-state.svelte.ts</code> 806 Z.) sind die natürlichen nächsten Extraktionskandidaten; die <code>max-lines</code>-Ratsche greift bereits.</p>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section class="reveal">
+    <h2><span class="n">04</span>Security</h2>
+    <p class="sub">Dem Bedrohungsmodell einer lokalen, serverlosen PWA angemessen.</p>
+    <div class="measure">
+      <p>Strikte Content-Security-Policy, als <em>eine</em> Quelle von Vite-Plugin und Prüf-Scanner gelesen: kein <code>unsafe-inline</code>, kein <code>unsafe-eval</code>, <code>connect-src 'self'</code>, <code>object-src 'none'</code>, <code>frame-ancestors 'none'</code>. Einzige externe Quelle sind die OSM-Kartenkacheln — bewusst und begründet.</p>
+      <p>Kein Server, kein OAuth/Cloud-Zubehör (gegenüber v8 bewusst reduziert), kein Fremdcode-Load. Die Angriffsfläche ist minimal und korrekt eingezäunt. Wenn Geocoding/GOV kommt, muss <code>connect-src</code> bewusst geöffnet werden — im CSP-Kommentar bereits antizipiert.</p>
+    </div>
+  </section>
+
+  <!-- USABILITY -->
+  <section class="reveal">
+    <h2><span class="n">05</span>Usability &amp; Design</h2>
+    <p class="sub">Stark — verifiziert durch fünf Kernbereiche an Realdaten.</p>
+    <div class="measure">
+      <p>Warmes Dunkel-Thema mit Gold-Akzent, konsistent und ruhig — „archivarisch" statt SaaS-bunt. Echt responsiv: Desktop-Sidebar mit vier Rollengruppen wechselt zu mobiler Bottom-Nav + Entitäts-Segmentreihe an einer benannten Breakpoint-Quelle (900/640 px), mit Wächter gegen unbenannte Media-Queries.</p>
+    </div>
+    <ul class="plain">
+      <li><strong>Personen-Detail</strong> zeigt die klickbare Ortskette (Ochtrup → Steinfurt → NRW), Koordinaten-Icon, Sprung-Icon und ein <strong>QUAY-Beweiskraft-Meter</strong> am Quellen-Badge — genealogische Tiefe im UI greifbar, nicht nur im Modell.</li>
+      <li><strong>Drei Baum-Diagramme</strong> (Sanduhr/Kekulé, Nachkommen, Fächer) mit Pan/Zoom/Vollbild/Export, geschlechtsgefärbt; der Fächer über sechs Generationen ist wirklich schön gelayoutet.</li>
+      <li><strong>Karte</strong> (Leaflet/OSM) mit drei Modi und Marker-Clustering; <strong>Orte-Liste</strong> mit Typ-Badges, Anreicherungspillen und dem „Ohne Bezug"-Filter — die USP-Ortslogik ist sichtbar.</li>
+      <li><strong>Offen:</strong> die a11y-Grundlage ist adressiert (WCAG-AA-Kontrast angehoben), aber der axe-core-Scanner fehlt noch — Barrierefreiheit ist bisher manuell, nicht automatisch bewacht.</li>
+    </ul>
+  </section>
+
+  <!-- INTEROP -->
+  <section class="reveal">
+    <h2><span class="n">06</span>Interop &amp; Datenerhalt</h2>
+    <p class="sub">Das Kronjuwel — eingelöst.</p>
+    <div class="measure">
+      <p>Der zentrale Anspruch (<code>net_delta=0</code>, <code>out1===out2</code>) ist über neun Roundtrip-Testdateien abgesichert, inklusive <strong>GRAMPS-Write-Back vom Modell in den Baum</strong> — Ereignisse, Daten, Zitate, Orte, sowie Hinzufügen/Entfernen ganzer geteilter Records, byte-treu am Unveränderten. Gegenüber v8 ein Sprung, gegenüber vielen kommerziellen Tools ein Alleinstellungsmerkmal.</p>
+    </div>
+  </section>
+
+  <!-- VERGLEICH v8 -->
+  <section class="reveal">
+    <h2><span class="n">07</span>Vergleich gegen v8</h2>
+    <p class="sub">v9 hat den Kernumfang eingeholt und in Schlüsselbereichen überholt.</p>
+    <div class="tablewrap">
+      <table class="cmp">
+        <thead><tr><th>Achse</th><th>v8</th><th>v9</th></tr></thead>
+        <tbody>
+          <tr><td>Substanz</td><td>~34k Z. Vanilla-JS-Monolith, gewachsen</td><td>45k Z., geschichtet, typisiert, 2.505 Tests</td></tr>
+          <tr><td>Testbarkeit</td><td>faktisch keine</td><td>Kern build-frei, jede Invariante mit Test</td></tr>
+          <tr><td>Interop</td><td>GEDCOM + GRAMPS-Passthrough</td><td>+ echtes GRAMPS-Write-Back, Roundtrip-Garantie</td></tr>
+          <tr><td>Orte / Höfe</td><td>flache Strings</td><td>Identitätsauflösung, Review, Dedup, Hierarchie</td></tr>
+          <tr><td>Cloud</td><td>OneDrive / Graph / OAuth</td><td>bewusst entfernt → OS-Sync-Ordner (ADR-v9-04)</td></tr>
+          <tr><td>Konsistenz</td><td>inkonsistent (Anlass des Neuaufsatzes)</td><td>eine Routen-/ViewState-Quelle, geteilte Primitive</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="measure">Der einzige bewusste Rückschritt — die App-verwaltete Cloud — ist eine Architekturentscheidung, kein Defizit.</p>
+  </section>
+
+  <!-- VERGLEICH PROGRAMME -->
+  <section class="reveal">
+    <h2><span class="n">08</span>Vergleich gegen gängige Programme</h2>
+    <p class="sub">Gramps · RootsMagic · webtrees · Ahnenblatt · Ancestry / MyHeritage.</p>
+    <div class="two-col">
+      <div>
+        <h3 style="color:var(--good)">Wo v9 heraussticht</h3>
+        <ul class="plain">
+          <li><strong>Hof-/Ortsidentität</strong> mit historischer Disambiguierung — die meisten Programme behandeln Orte flach.</li>
+          <li><strong>Byte-genaue Roundtrip-Treue</strong> — die meisten Tools verlieren Daten; hier getestete Garantie.</li>
+          <li><strong>Evidenz-/GPS-Modell integriert</strong> — Beweiskraft-Achsen, Hypothesen, Forschungsprotokoll, eng verzahnt.</li>
+          <li><strong>Local-first PWA</strong>, offline, iPhone/iPad + Desktop aus einer Codebasis.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color:var(--warn)">Wo reife Programme vorn sind</h3>
+        <ul class="plain">
+          <li><strong>Medienverwaltung</strong> (Foto-Galerie, Bild-Regionen) — Kern steht, UI fehlt.</li>
+          <li><strong>Reports/Ausgaben</strong> (PDF-Ahnentafeln, Narrative, Register) — „folgt".</li>
+          <li><strong>Verwandtschaftsrechner</strong> &amp; Quellen-Vorlagen — geplant, offen.</li>
+          <li><strong>Geocoding, DNA, Online-Matching</strong> — teils Scope-Grenze der local-first-Idee.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFENE PUNKTE -->
+  <section class="reveal">
+    <h2><span class="n">09</span>Ehrliche offene Punkte</h2>
+    <p class="sub">Fast alle Kern-Punkte sind gebaut; die Lücken sind überwiegend Komfort. Zwei Ausnahmen stechen heraus.</p>
+    <div class="gaps">
+      <div class="gap"><span class="chip basis">basis</span><div class="body"><b>History-Navigation</b> (Zurück/Vorwärts, Swipe-Right) <span class="id">· BL-07</span> — als Basis klassifiziert und noch offen; die spürbarste Alltags-Lücke.</div></div>
+      <div class="gap"><span class="chip basis">basis</span><div class="body"><b>Einstellungen &amp; Proband konfigurierbar</b> <span class="id">· BL-120</span> — im UI sichtbar deaktiviert; blockiert „Zum Probanden"-Navigation.</div></div>
+      <div class="gap"><span class="chip test">test-lücke</span><div class="body"><b>Skalen-Gate zu schmal</b> <span class="id">· BL-89</span> — erzeugt 23 statt real ~416 Orts-Kandidaten; Disambiguierungspfade laufen unter Last ungetestet. Kein Bug, aber eine Blindstelle im teuersten Subsystem.</div></div>
+      <div class="gap"><span class="chip kuer">kür</span><div class="body"><b>Medien-UI · Assoziationen-UI · CSV-Export · Quellen-Vorlagen · Story-Modus · Beziehungsrechner</b> — Kern jeweils gebaut, reine UI-Verdrahtung offen.</div></div>
+    </div>
+    <h3>Empfehlung zur Reihenfolge</h3>
+    <p class="measure">Für den größten Alltagsnutzen: <strong>BL-07</strong> (History-Nav) und <strong>BL-126</strong> (Medien-UI) zuerst; <strong>BL-89</strong> schließt die einzige ernste Test-Blindstelle.</p>
+    <div class="pillrow">
+      <span class="pill">BL-07 History</span>
+      <span class="pill">BL-126 Medien</span>
+      <span class="pill">BL-89 Skalen-Gate</span>
+      <span class="pill">BL-120 Proband</span>
+      <span class="pill">BL-134 Verwandtschaft</span>
+    </div>
+  </section>
+
+  <footer>
+    Verifiziert an <code>~/dev/stammbaum-v9</code> (Branch v9-dev) · Lint + Test frisch gelaufen · App an Realdaten Averbeck/Ochtrup geprüft · Spec-Wahrheit: <code>specs/v9/05-Backlog.md</code>
+  </footer>
+
+</div>
+</div>
+
+</body>
+</html>
