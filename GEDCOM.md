@@ -34,8 +34,9 @@ Spalten: **Tag** · **Level** · **Bedeutung**. Die Zuordnung auf das v9-Modell 
 | `NOTE` | 1/2 | Inline-Text (mehrere akkumuliert) oder `@Ref@` |
 | `ADDR` | 2 | Adresse + Sub-Tags (CITY, POST, CONT, …) |
 | `SOUR` / `PAGE` / `QUAY` | 1–4 | Zitat auf jeder Ebene; PAGE = Seite, QUAY = Zuverlässigkeit 0–3 |
-| `OBJE` / `FILE` / `FORM` / `_TYPE` | 1/2/2/2 | Medien-Objekt-Ebene (global, gilt für ALLE Referenzen — `Media`, [10 §4](specs/v9/10-Domaenenmodell.md)): FILE = relativer Pfad (einzige Wahrheitsquelle), FORM = Dateiformat, `_TYPE` = Medientyp (Foto/Dokument/…) |
+| `OBJE` / `FILE` / `FORM` / `MEDI` | 1/2/3/4 | Medien-Objekt-Ebene (global, gilt für ALLE Referenzen — `Media`, [10 §4](specs/v9/10-Domaenenmodell.md)): FILE = relativer Pfad (einzige Wahrheitsquelle), FORM = Dateiformat, **`MEDI`** = Medientyp (Standard-Tag, Enum unter FORM — Foto/Dokument/…). **Nicht `_TYPE`** (das ist eine v8-interne Größe, kein GEDCOM-Tag). |
 | `OBJE` / `TITL` / `_DATE` / `NOTE` / `_PRIM` (an der Referenzstelle) | 1–2 | Referenz-spezifische Ebene (NUR für DIESE Verknüpfung — `MediaCitation`, [10 §4](specs/v9/10-Domaenenmodell.md)): TITL = Beschriftung in diesem Kontext, `_DATE` = Aufnahmedatum in diesem Kontext, `_PRIM` = Hauptfoto für diesen Datensatz |
+| `OBJE` — zwei Wire-Formen | 1 | **Pointer** `1 OBJE @M1@` → Top-Level-Record `0 @M1@ OBJE` (trägt FILE/FORM/MEDI): in 5.5.1 optional, in **7.0 die EINZIGE zulässige Form**. **Inline** `1 OBJE` mit direktem FILE-Kind: nur 5.5.1. Beide werden auf dieselbe `Media`/`MediaCitation`-Struktur projiziert (Identität = Xref bzw. FILE-Pfad, [10 §4](specs/v9/10-Domaenenmodell.md)). |
 | `FAMC` | 1 | Mitgliedschaft als Kind |
 | `PEDI` | 2 | Eltern-Kind-Verhältnis: `birth` \| `adopted` \| `foster` \| `sealing` |
 | `FAMS` | 1 | Mitgliedschaft als Elternteil |

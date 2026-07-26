@@ -189,7 +189,11 @@ MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Med
 ```
 `Person.media`/`Event.media`/`Citation.media`/`Source.media` sind `MediaCitation[]` (Familien-Medien hängen an den Familien-Ereignissen, `Event.media`). EIN Medium, viele typisierte Referenzen mit eigenen Feldern, gleiche Rollenverteilung wie `Source`/`Citation`. Trägt die globale Kachelgalerie und „Speichern (alle Ref.)" ([20 §1.4](20-Funktionen.md)).
 
-**Identität & Wire-Format:** `MediaId === file` (die Datei IST die Identität) — dieselbe Datei über mehrere Referenzen hinweg ergibt EIN `Media` mit N `MediaCitation`. `db.media` wird beim Parsen in einem Post-Pass über den Passthrough-Baum assembliert. Das Wire-Format bleibt **inline OBJE je Referenz** (kein Umschreiben auf Top-Level-`@M@`-Records); `MediaId` ist app-intern und wird nie serialisiert. Globale Felder (`file`/`form`/`type`) leben allein in `db.media`; der Writer resolvt sie beim Emittieren. GRAMPS-Medien bleiben Passthrough (nicht ins Modell projiziert).
+**Identität & Wire-Format.** Der GEDCOM-Standard kennt zwei OBJE-Formen, beide werden auf dieselbe Struktur projiziert:
+- **Pointer** `n OBJE @M1@` → Top-Level-Record `0 @M1@ OBJE` (trägt FILE/FORM/MEDI). In 5.5.1 optional, in **7.0 die einzige zulässige Form**. `MediaId` = der Xref (`@M1@`).
+- **Inline** `n OBJE`→`FILE`→`FORM`→`MEDI` (nur 5.5.1). `MediaId` = der FILE-Pfad (content-adressiert).
+
+Dieselbe Identität über mehrere Referenzen ergibt EIN `Media` mit N `MediaCitation`. `db.media` wird beim Parsen in einem Post-Pass über den Passthrough-Baum assembliert; `MediaId` ist app-intern und wird nie serialisiert (das Wire-Format je Referenz bleibt erhalten — Pointer bleibt Pointer, inline bleibt inline). Globale Felder (`file`/`form`/`type`) leben allein in `db.media`; der Writer resolvt sie beim Emittieren. Der Medientyp ist der **`MEDI`**-Standard-Tag (Enum unter `FORM`), nicht das v8-interne `_TYPE`. GRAMPS-Medien bleiben Passthrough (nicht ins Modell projiziert).
 
 ---
 
