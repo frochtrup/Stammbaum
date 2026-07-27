@@ -94,14 +94,25 @@ Durchlauf.
 | ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 89 (87 · 88 gebaut) | `core/places`, Karten-Insel |
 | ⑤ | Personen, Navigation & Beziehungen | BL-120⚡, BL-07ᴮ, 134, 10, 94 (Spec-first) | Shell/Navigation |
 | ⑥ | Medien, Quellen & Export | BL-127⚡, 128, 125, 133 (126 gebaut) | `ui/views`, Export/Medien |
+| ⑦ | Ausgaben & Reports (§4) | BL-169 (Hub/Hülle, zuerst) · 170–174 · 175 (nach BL-134) · 176–179 (Buch-Grad) | `services/reports`, Ausgaben-Hub |
 | — | Standalone (kein Bündel) | BL-83 (_EVAL, Interop) · BL-66 (a11y-Scanner) | — |
 
 Bündel ① (UI-Politur, Spec 21 §10 — BL-67…71) und Bündel ③ (Diagramm-Inseln, ADR-v9-123 —
 BL-151/122/123/152/121/124) sind abgeschlossen und daher hier entfallen; die Zeilen stehen
 unter „Erledigte Punkte".
 
-**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit. Alternativ ein „Aufräum-Sprint" der
-bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127, 131, 132.
+**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit, ⑦ zuletzt (reine Ausgaben, blockiert
+nichts). Alternativ ein „Aufräum-Sprint" der bereitliegenden Quick-Wins über alle Bündel:
+BL-135, 57, 120, 127, 131, 132.
+
+**Nachtrag 2026-07-27 (BL-169…179):** Die §4-Ausgaben-Tabelle ([20 §4](20-Funktionen.md), 13
+Standalone-Reports des v8-Stands) war bis hierher **nicht** als Backlog-Zeilen erfasst — die
+S/E-Inventur (BL-51) deckte nur die §1-Bullets ab, nicht die §4-Tabelle. Ist-Abgleich am Code:
+**#5 Statistik-Report** ist gebaut (BL-114, teilt `computeStatistics`), **#8 Großposter-A1** und
+**#10 Stammtafel-Wall-Chart** sind über die Diagramm-Insel + Vektor-Export abgedeckt (BL-19/122/123
++ BL-124); die übrigen **10** (#1–4, 6, 7, 9, 11–13) sind ungebaut und werden hier nachgetragen. §4
+nennt keine Pro-Ausgabe-Priorität — [K]/[S]/[E] ist daher aus dem nächstliegenden §1-Anker
+abgeleitet (Regel 5), Buch-Grad-Ausgaben (#7/#11/#12/#13) als [E] wie Story (§1.10).
 
 ## Offene Punkte
 
@@ -127,6 +138,17 @@ bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 120, 127, 131, 132.
 | BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations\s*:@core/places/types.ts` | offen |
 | BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
 | BL-66 | — | hygiene | kür | a11y-Scanner (TST-15) | [32 §3](32-Testframework.md) | `txt:axe-core@package.json` | offen |
+| BL-169 | S | feature | kür | **Ausgaben-Report-Fundament** (Primitive vor BL-170…179): den „Ausgaben"-Hub-Eintrag echt machen (heute `ComingSoonPanel`-Platzhalter in `MoreView`) + geteilte Druck-HTML-Hülle in `services/reports` (Cover/Seitenzahlen/Print-CSS). Trägt NUR das gemeinsame Druck-Layout „aus dem Modell gerechnet, nie aus dem DOM" (Goldfile-testbar, TST) — keine zweite Berechnung; BL-114/124 rechnen bereits so | [20 §4](20-Funktionen.md), [02 §5](02-Zielarchitektur-v9.md) | `datei:services/reports/report-shell.ts` | offen |
+| BL-170 | S | feature | kür | Report #1 **Ahnenliste** (Kekulé-Tabelle aller Vorfahren des Probanden) — reine Renderfunktion über die BFS-Ahnenkette. v8-Orakel `ui-print.js` | [20 §4](20-Funktionen.md), [20 §1.1](20-Funktionen.md) | `sym:buildAncestorList` | offen |
+| BL-171 | S | feature | kür | Report #2 **Familienbogen** (Druckblatt einer Person: Eltern, Ehen, Kinder, Ereignisse). v8-Orakel `ui-print.js` | [20 §4](20-Funktionen.md) | `sym:buildFamilyGroupSheet` | offen |
+| BL-172 | S | feature | kür | Report #3 **Quellenverzeichnis/Bibliographie** mit Belegzählung je Quelle und Orphan-Markierung (0 Zitate). Rechnet über die vorhandenen `Citation[]`-Träger | [20 §4](20-Funktionen.md), [20 §1.6](20-Funktionen.md) | `sym:buildBibliography` | offen |
+| BL-173 | S | feature | kür | Report #4 **Forschungsprotokoll-Report** (gedruckte Fassung der Log-Einträge; die Live-Ansicht ist BL-116). Teilt sich die Log-Projektion, kein zweiter Rechenweg | [20 §4](20-Funktionen.md), [20 §1.11b](20-Funktionen.md) | `sym:buildResearchLogReport` | offen |
+| BL-174 | S | feature | kür | Report #6 **Nachkommentafel** in d'Aboville-Nummerierung (nummerierte Textliste, abgegrenzt vom Nachkommen-Diagramm BL-122). Nutzt dieselbe Nachkommen-Traversierung | [20 §4](20-Funktionen.md), [20 §1.10](20-Funktionen.md) | `sym:buildDAbovilleReport` | offen |
+| BL-175 | S | feature | kür | Report #9 **Verwandtschaftsnachweis** (Pfaddiagramm mit gemeinsamem Vorfahren). Konsumiert den Beziehungsrechner — **hängt an BL-134** (`findRelationshipPath`) | [20 §4](20-Funktionen.md), [20 §1.12](20-Funktionen.md) | `sym:buildRelationshipProof` | offen |
+| BL-176 | E | feature | kür | Report #7 **Familienbuch** (buchreif: Coverfoto, Seitenzahlen, Glossar) — die aufwendigste Ausgabe, Buch-Grad wie Story (§1.10 = [E]). Baut auf der Druck-HTML-Hülle BL-169 auf | [20 §4](20-Funktionen.md) | `sym:buildFamilyBook` | offen |
+| BL-177 | E | feature | kür | Report #11 **Ortssippenbuch** (Familien nach Ort, narrativ gegliedert). Nutzt die Orts-/Hof-Bindung (`PlaceContext`); Narrativ verwandt mit Story (BL-133) | [20 §4](20-Funktionen.md), [11 §4](11-Orte-Hoefe-Identitaet.md) | `sym:buildLocalFamilyBook` | offen |
+| BL-178 | E | feature | kür | Report #12 **Hofchronik** (Ort › Hof › Eigentümer/Bewohner mit Zu-/Wegzug) — trägt das Höfe-Alleinstellungsmerkmal in die Ausgabe. Nutzt den Hof-Apparat (`core/places`) | [20 §4](20-Funktionen.md), [11 §7](11-Orte-Hoefe-Identitaet.md) | `sym:buildFarmChronicle` | offen |
+| BL-179 | E | feature | kür | Report #13 **Ortsbuch** (ortssortiertes Nachschlagewerk: Namensvarianten, Verwaltungszugehörigkeit, alle dort verzeichneten Ereignisse samt Personen — Nachschlage-Struktur, abgegrenzt vom Ortssippenbuch #11) | [20 §4](20-Funktionen.md), [11 §1](11-Orte-Hoefe-Identitaet.md) | `sym:buildPlaceGazetteer` | offen |
 
 ## Erledigte Punkte
 
