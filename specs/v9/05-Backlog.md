@@ -79,7 +79,7 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | `basis` | Nötig für ein benutzbares Produkt, ohne Sogwirkung auf anderes. |
 | `kür` | Verbessert, blockiert nichts. |
 
-## Bündel & Reihenfolge (Lese-Reihenfolge, Stand 2026-07-25)
+## Bündel & Reihenfolge (Lese-Reihenfolge, Stand 2026-07-27)
 
 Eine **Leseordnung** über die offenen Punkte — keine zweite Status-Wahrheit. Der Status je
 Zeile bleibt die achte Spalte unten; erledigte Items fallen hier einfach weg. Bündel = Items,
@@ -92,18 +92,18 @@ Durchlauf.
 |---|---|---|---|
 | ② | Forschung abschließen | BL-57ᴮ (Rest gebaut) | `core/research`, `ui/views/research` |
 | ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 89 (87 · 88 gebaut) | `core/places`, Karten-Insel |
-| ⑤ | Personen, Navigation & Beziehungen | BL-120⚡, BL-07ᴮ, 134, 10, 94 (Spec-first) | Shell/Navigation |
+| ⑤ | Personen, Navigation & Beziehungen | BL-07ᴮ, 10, 94 (Spec-first) — (120 · 134 gebaut) | Shell/Navigation |
 | ⑥ | Medien, Quellen & Export | BL-127⚡, 128, 125, 133 (126 gebaut) | `ui/views`, Export/Medien |
-| ⑦ | Ausgaben & Reports (§4) | BL-169 (Hub/Hülle, zuerst) · 170–174 · 175 (nach BL-134) · 176–179 (Buch-Grad) | `services/reports`, Ausgaben-Hub |
+| ⑦ | Ausgaben & Reports (§4) | BL-176–179 (Buch-Grad [E], auf der BL-169-Druckhülle) — (169 · 170–175 gebaut) | `services/reports`, Ausgaben-Hub |
 | — | Standalone (kein Bündel) | BL-83 (_EVAL, Interop) · BL-66 (a11y-Scanner) | — |
 
 Bündel ① (UI-Politur, Spec 21 §10 — BL-67…71) und Bündel ③ (Diagramm-Inseln, ADR-v9-123 —
 BL-151/122/123/152/121/124) sind abgeschlossen und daher hier entfallen; die Zeilen stehen
 unter „Erledigte Punkte".
 
-**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit, ⑦ zuletzt (reine Ausgaben, blockiert
-nichts). Alternativ ein „Aufräum-Sprint" der bereitliegenden Quick-Wins über alle Bündel:
-BL-135, 57, 120, 127, 131, 132.
+**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit, ⑦ zuletzt (nur noch die Buch-Grad-Ausgaben
+#7/#11/#12/#13, blockiert nichts). Alternativ ein „Aufräum-Sprint" der bereitliegenden Quick-Wins
+über alle Bündel: BL-135, 57, 127, 131, 132.
 
 **Nachtrag 2026-07-27 (BL-169…179):** Die §4-Ausgaben-Tabelle ([20 §4](20-Funktionen.md), 13
 Standalone-Reports des v8-Stands) war bis hierher **nicht** als Backlog-Zeilen erfasst — die
@@ -113,6 +113,9 @@ S/E-Inventur (BL-51) deckte nur die §1-Bullets ab, nicht die §4-Tabelle. Ist-A
 + BL-124); die übrigen **10** (#1–4, 6, 7, 9, 11–13) sind ungebaut und werden hier nachgetragen. §4
 nennt keine Pro-Ausgabe-Priorität — [K]/[S]/[E] ist daher aus dem nächstliegenden §1-Anker
 abgeleitet (Regel 5), Buch-Grad-Ausgaben (#7/#11/#12/#13) als [E] wie Story (§1.10).
+**Fortschritt (2026-07-27, noch selben Tag):** BL-169…174 (#1–4/#6) gebaut (ADR-v9-138), sowie
+BL-134 (Beziehungsrechner) + BL-175 (#9, ADR-v9-139) und BL-120 (Session-Proband, ADR-v9-140).
+Offen bleiben nur die vier Buch-Grad-Ausgaben BL-176…179 (#7/#11/#12/#13, [E]).
 
 ## Offene Punkte
 
