@@ -61,9 +61,24 @@
 
 > Es wird der **Datei-Text** gecacht (Arbeitskopie), nicht das In-Memory-Modell (Sets/Referenzen nicht trivial serialisierbar; die Datei ist ohnehin die Wahrheit). Vollständiges Dateihandling: [14](14-Dateihandling.md).
 
-### 2.2 App-Konfiguration (geräteweit, reist NICHT mit Datei)
+### 2.2 App-privater Zustand (geräteweit in IndexedDB, reist NICHT mit der Genealogie-Datei)
 
-Proband-ID · Theme (dark/light) · Anonymisierungs-Flag · GED-Version · Strict-Flag · Duplikat-Ignorierliste · Quick-Templates · Validierungs-Config · Projekte ([12 §5](12-Forschungsdaten.md)) · letzter Dateiname + FS-Handle der Arbeitskopie ([14](14-Dateihandling.md)).
+Zwei Klassen mit unterschiedlichem Sync-Bedarf — bewusst getrennt, weil nur eine davon einen geräteübergreifenden Weg braucht:
+
+**Kategorie A — gerätespezifisch** (bleibt lokal; eine Mitnahme wäre sinnlos oder falsch):
+Theme (dark/light) · FS-Handle + letzter Dateiname der Arbeitskopie ([14](14-Dateihandling.md)) · Arbeitskopie selbst (IDB) · Foto-/Medien-Cache (`img:<relPath>`, [§3](#3-medien-pfad-modell)).
+
+**Kategorie B — nutzer-erarbeiteter Zustand** (geräteweit gespeichert, aber echte Nutzerarbeit; geht heute bei Gerätewechsel verloren):
+Projekte ([12 §5](12-Forschungsdaten.md)) · Duplikat-Ignorierliste · Quick-Templates · Validierungs-Config · Export-Vorwahl (Anonymisierungs-Flag · GED-Version · Strict-Flag). Diese Klasse erhält einen geräteübergreifenden Mitnahme-Weg — [§2.3](#23-geräteübergreifende-mitnahme-des-kategorie-b-zustands).
+
+**Nicht persistiert — Proband-ID:** eine benutzerabhängige Ansichtswahl (welcher Ast gerade interessiert), weder Baum-Eigenschaft noch Geräte-Zustand. Bewusst **transienter Session-Zustand** (keine Kategorie A/B, kein Sync); Default beim Dateistart ist das Individuum mit der kleinsten ID ([ADR-v9-135](04-Entscheidungslog.md#adr-v9-135)).
+
+### 2.3 Geräteübergreifende Mitnahme des Kategorie-B-Zustands
+
+Kategorie-B-Zustand reist über **dasselbe Muster wie `orte.json`** ([14 §6](14-Dateihandling.md), [§4](#4-multi-device-konfliktschutz-lp-9)) — kein neuer Sync-Mechanismus, kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1 unberührt):
+
+- Ein geräteweiter **IDB-Spiegel** (Wahrheit zur Laufzeit) plus ein optionaler **Datei-Ein-/Ausgang** (`app-data.json`) im Sync-Ordner über dasselbe `FileService`-Adapter-Muster ([14 §4](14-Dateihandling.md)) — eigenes FS-Handle, **explizite** Export-/Import-Aktion, kein stiller Schreib-Sync pro Mutation (Tier-2-Share-Sheet-Spam).
+- Konflikterkennung/-auflösung wie bei `orte.json`: `_rev`/`_device`/`_ts`-Wrapper, Drei-Wege-Merge gegen den gemeinsamen Vorfahren, Union bei disjunkten Änderungen ([§4](#4-multi-device-konfliktschutz-lp-9)). Keine neue Plattform-Verzweigung (INV-FILE-3).
 
 ---
 
