@@ -12,14 +12,14 @@ Jedes Navigations-Element hat **genau eine** von vier Rollen. Das ist die zentra
 
 | Rolle | Was | Elemente |
 |---|---|---|
-| **Entitäten** | Datenkategorien zum Browsen/Bearbeiten | Personen · Familien · Quellen · Orte · **Höfe** |
+| **Entitäten** | Datenkategorien zum Browsen/Bearbeiten | Personen · Familien · Quellen · Orte · Höfe · **Medien** |
 | **Ansichten (Lenses)** | *dieselben* Daten anders betrachtet | **Baum** (Sanduhr/Nachkommen/Fächer) · Karte · Zeitleiste · Statistik · Story |
 | **Forschung** | Arbeitsflächen der Quellenforschung, je eigenes Nav-Ziel | Dashboard · Aufgaben · Protokoll · Hypothesen |
 | **Arbeitsflächen** | querschnittlich | **Suche** · Ausgaben · Einstellungen · Datei (Laden/Speichern) |
 
 Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**, keine Segmente innerhalb eines Sammel-Ziels: mobil erreichbar über einen Segment-Umschalter unter dem **Forschung**-Slot, auf Desktop als beschriftete Sidebar-Einträge der Gruppe „Forschung" (INV-UI-2 bleibt gewahrt — genau derselbe Mechanismus wie bei den Entitäten).
 
-**Anzeigenamen der Gruppen — EINE Quelle** (`NAV_ROLE_LABELS` in `nav-model.ts`, ADR-v9-122). Jede Rolle erscheint dem Nutzer als Gruppen-Beschriftung, und zwar **gleich auf beiden Formfaktoren**: mobil als Name des Gruppen-Bottom-Slots, auf Desktop als Sidebar-Gruppen-Header. Entitäten = **„Daten"** (nicht das Fachwort „Entitäten"; und ausdrücklich nicht „Personen", das nur EINE der fünf Kategorien ist), Ansichten = „Ansichten", Forschung = „Forschung", Arbeitsflächen = „Arbeit". Vorher hatte dieselbe Gruppe je Gerät zwei Namen — mobil trug der Slot das Label seines Default-Ziels („Personen"/„Baum"/„Aufgaben"), und „Personen" kollidierte mit dem gleichnamigen Segment darunter. Sidebar-Header und Gruppen-Bottom-Slots ziehen ihre Beschriftung jetzt aus derselben Konstante, driften also nicht mehr auseinander.
+**Anzeigenamen der Gruppen — EINE Quelle** (`NAV_ROLE_LABELS` in `nav-model.ts`, ADR-v9-122). Jede Rolle erscheint dem Nutzer als Gruppen-Beschriftung, und zwar **gleich auf beiden Formfaktoren**: mobil als Name des Gruppen-Bottom-Slots, auf Desktop als Sidebar-Gruppen-Header. Entitäten = **„Daten"** (nicht das Fachwort „Entitäten"; und ausdrücklich nicht „Personen", das nur EINE der sechs Kategorien ist), Ansichten = „Ansichten", Forschung = „Forschung", Arbeitsflächen = „Arbeit". Vorher hatte dieselbe Gruppe je Gerät zwei Namen — mobil trug der Slot das Label seines Default-Ziels („Personen"/„Baum"/„Aufgaben"), und „Personen" kollidierte mit dem gleichnamigen Segment darunter. Sidebar-Header und Gruppen-Bottom-Slots ziehen ihre Beschriftung jetzt aus derselben Konstante, driften also nicht mehr auseinander.
 
 **INV-UI-1:** Ansichten sind **Lenses, keine Nav-Ziele.** Der Wechsel zwischen ihnen läuft über *einen* einheitlichen Lens-Umschalter ([§4](#4-lens-umschalter)), nicht über verstreute Topbar-Glyphen.
 
@@ -52,7 +52,7 @@ Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**
 Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
 
 - **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den vier Rollen —
-  - *Daten:* Personen · Familien · Quellen · Orte · Höfe
+  - *Daten:* Personen · Familien · Quellen · Orte · Höfe · Medien
   - *Ansichten:* Baum · Karte · Zeitleiste · Statistik · Story
   - *Forschung:* Dashboard · Aufgaben · Protokoll · Hypothesen
   - *Arbeit:* Suche · **Datei** · Ausgaben · Einstellungen
@@ -253,7 +253,7 @@ Protokoll:   [Filter · N] [🕒 Timeline] [+ Eintrag]
 Hypothesen:  [Filter · N] [+ Hypothese]
 Dashboard:   [Filter · N] [✓ Bericht] [⚙]
 ```
-Vier Segmente in Zeile 1 sind zulässig, weil `EntityTab`s Segment-Reihe bei derselben Breite bereits fünf Segmente (Personen/Familien/Quellen/Orte/Höfe) umbruchfrei zeigt — die Wortlängen sind vergleichbar. **Beim Bau am echten Screenshot gegengeprüft (375px): umbruchfrei.** `[✓ Bericht]` im Dashboard statt `[Projekt-Kontext geerbt]`: der vollständige Prüfbericht ([20 §1.11h](20-Funktionen.md)) ist die einzige Fläche, die auch Orts-/Hof-Befunde zeigt, und gehört damit neben das personbezogene Dashboard — nicht in die Aufgaben-Kopfzeile, die sonst vier Elemente trüge (ADR-v9-98).
+Vier Segmente in Zeile 1 sind zulässig, weil `EntityTab`s Segment-Reihe bei derselben Breite fünf Segmente (Personen/Familien/Quellen/Orte/Höfe) umbruchfrei zeigt — die Wortlängen sind vergleichbar. **Beim Bau am echten Screenshot gegengeprüft (375px): umbruchfrei.** *(Nachtrag BL-126/ADR-v9-132: `EntityTab` trägt seit dem Medien-Segment SECHS Entitäten; bei 375px füllen die ersten fünf Zeile 1, „Medien" bricht in Zeile 2 um — gemessen, graziöser `flex-wrap` wie in ADR-v9-111 gewollt, kein Overflow/Scroll. Betrifft die vier Forschungs-Segmente nicht, die weiterhin in EINER Zeile stehen.)* `[✓ Bericht]` im Dashboard statt `[Projekt-Kontext geerbt]`: der vollständige Prüfbericht ([20 §1.11h](20-Funktionen.md)) ist die einzige Fläche, die auch Orts-/Hof-Befunde zeigt, und gehört damit neben das personbezogene Dashboard — nicht in die Aufgaben-Kopfzeile, die sonst vier Elemente trüge (ADR-v9-98).
 
 ---
 
