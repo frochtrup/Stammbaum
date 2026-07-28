@@ -94,16 +94,15 @@ Durchlauf.
 | ④ | Orte & Geo | BL-131⚡, 132⚡, 130, 59 · 60, 09, 89 (87 · 88 gebaut) | `core/places`, Karten-Insel |
 | ⑤ | Personen, Navigation & Beziehungen | BL-07ᴮ, 10, 94 (Spec-first) — (120 · 134 gebaut) | Shell/Navigation |
 | ⑥ | Medien, Quellen & Export | BL-127⚡, 128, 125, 133 (126 gebaut) | `ui/views`, Export/Medien |
-| ⑦ | Ausgaben & Reports (§4) | BL-176–179 (Buch-Grad [E], auf der BL-169-Druckhülle) — (169 · 170–175 gebaut) | `services/reports`, Ausgaben-Hub |
+| ⑦ | Ausgaben & Reports (§4) | **abgeschlossen** — BL-169…179 alle gebaut (Buch-Grad 176–179 zuletzt, ADR-v9-142) | `services/reports`, Ausgaben-Hub |
 | — | Standalone (kein Bündel) | BL-83 (_EVAL, Interop) · BL-66 (a11y-Scanner) | — |
 
 Bündel ① (UI-Politur, Spec 21 §10 — BL-67…71) und Bündel ③ (Diagramm-Inseln, ADR-v9-123 —
 BL-151/122/123/152/121/124) sind abgeschlossen und daher hier entfallen; die Zeilen stehen
 unter „Erledigte Punkte".
 
-**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit, ⑦ zuletzt (nur noch die Buch-Grad-Ausgaben
-#7/#11/#12/#13, blockiert nichts). Alternativ ein „Aufräum-Sprint" der bereitliegenden Quick-Wins
-über alle Bündel: BL-135, 57, 127, 131, 132.
+**Empfohlene Reihenfolge:** ② → ④/⑤/⑥ nach Appetit (⑦ ist abgeschlossen). Alternativ ein
+„Aufräum-Sprint" der bereitliegenden Quick-Wins über alle Bündel: BL-135, 57, 127, 131, 132.
 
 **Nachtrag 2026-07-27 (BL-169…179):** Die §4-Ausgaben-Tabelle ([20 §4](20-Funktionen.md), 13
 Standalone-Reports des v8-Stands) war bis hierher **nicht** als Backlog-Zeilen erfasst — die
@@ -115,7 +114,8 @@ nennt keine Pro-Ausgabe-Priorität — [K]/[S]/[E] ist daher aus dem nächstlieg
 abgeleitet (Regel 5), Buch-Grad-Ausgaben (#7/#11/#12/#13) als [E] wie Story (§1.10).
 **Fortschritt (2026-07-27, noch selben Tag):** BL-169…174 (#1–4/#6) gebaut (ADR-v9-138), sowie
 BL-134 (Beziehungsrechner) + BL-175 (#9, ADR-v9-139) und BL-120 (Session-Proband, ADR-v9-140).
-Offen bleiben nur die vier Buch-Grad-Ausgaben BL-176…179 (#7/#11/#12/#13, [E]).
+**Abschluss (2026-07-28):** die vier Buch-Grad-Ausgaben BL-176…179 (#7/#11/#12/#13, ADR-v9-142)
+gebaut — die §4-Tabelle ist damit vollständig abgedeckt.
 
 ## Offene Punkte
 
@@ -138,10 +138,6 @@ Offen bleiben nur die vier Buch-Grad-Ausgaben BL-176…179 (#7/#11/#12/#13, [E])
 | BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations\s*:@core/places/types.ts` | offen |
 | BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
 | BL-66 | — | hygiene | kür | a11y-Scanner (TST-15) | [32 §3](32-Testframework.md) | `txt:axe-core@package.json` | offen |
-| BL-176 | E | feature | kür | Report #7 **Familienbuch** (buchreif: Coverfoto, Seitenzahlen, Glossar) — die aufwendigste Ausgabe, Buch-Grad wie Story (§1.10 = [E]). Baut auf der Druck-HTML-Hülle BL-169 auf | [20 §4](20-Funktionen.md) | `sym:buildFamilyBook` | offen |
-| BL-177 | E | feature | kür | Report #11 **Ortssippenbuch** (Familien nach Ort, narrativ gegliedert). Nutzt die Orts-/Hof-Bindung (`PlaceContext`); Narrativ verwandt mit Story (BL-133) | [20 §4](20-Funktionen.md), [11 §4](11-Orte-Hoefe-Identitaet.md) | `sym:buildLocalFamilyBook` | offen |
-| BL-178 | E | feature | kür | Report #12 **Hofchronik** (Ort › Hof › Eigentümer/Bewohner mit Zu-/Wegzug) — trägt das Höfe-Alleinstellungsmerkmal in die Ausgabe. Nutzt den Hof-Apparat (`core/places`) | [20 §4](20-Funktionen.md), [11 §7](11-Orte-Hoefe-Identitaet.md) | `sym:buildFarmChronicle` | offen |
-| BL-179 | E | feature | kür | Report #13 **Ortsbuch** (ortssortiertes Nachschlagewerk: Namensvarianten, Verwaltungszugehörigkeit, alle dort verzeichneten Ereignisse samt Personen — Nachschlage-Struktur, abgegrenzt vom Ortssippenbuch #11) | [20 §4](20-Funktionen.md), [11 §1](11-Orte-Hoefe-Identitaet.md) | `sym:buildPlaceGazetteer` | offen |
 | BL-180 | — | feature | kür | **Kategorie-B-Sync-Bündel** (ADR-v9-134): geräteweiter, nutzer-erarbeiteter app-privater Zustand (Projekte, Duplikat-Ignorierliste, Quick-Templates, Validierungs-Config, Export-Vorwahl) reist über das `orte.json`-Muster — IDB-Spiegel (Laufzeit-Wahrheit) + optionaler `app-data.json`-Ex-/Import über `FileService`, `_rev`/`_device`/`_ts`-Wrapper mit Drei-Wege-Merge (ADR-v9-110), Union bei disjunkten Änderungen. Generalisiert `PlacesSyncService`; kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1). Klasse A (Theme/FS-Handle/Arbeitskopie/Medien-Cache) bleibt gerätelokal | [30 §2.2/§2.3](30-NFR-und-Persistenz.md), [14 §6](14-Dateihandling.md), [ADR-v9-134](04-Entscheidungslog.md#adr-v9-134) | `sym:AppDataSyncService` | offen |
 
 ## Erledigte Punkte
@@ -160,6 +156,10 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 | BL-188 | E | feature | kür | Story: Inline-SVG-Diagramm (`buildStoryDiagramSvg`; Eltern·Proband+Partner·Kinder bzw. Paar·Kinder), klickbare Karten re-zentrieren die Story (`tree-model`-Traversierung, kein zweiter Rechenweg). Browser-verifiziert. 5 Tests | [20 §1.10](20-Funktionen.md) | `datei:ui/islands/story/story-diagram.ts` | gebaut |
 | BL-189 | E | feature | kür | Story: eingebettete Fotos (`collectStoryMedia`; Personen-Fotos als `data:`-URI in Lens + Download, `isDisplayableImage`-Wiederverwendung wie BL-181, Primärfoto zuerst; bloße Pfade weggelassen). 3 Tests | [20 §1.10](20-Funktionen.md), [20 §1.5](20-Funktionen.md) | `sym:collectStoryMedia` | gebaut |
 | BL-190 | E | feature | kür | Story-Download (`buildStoryHtml`): selbst-enthaltenes, druckbares HTML über die geteilte Report-Hülle (ADR-v9-138; Fotos + Karte-SVG + Diagramm-SVG inline), öffnet im neuen Tab (`openReportInNewTab`), Download-Fallback bei Popup-Block. Browser-verifiziert (kein Konsolenfehler). 6 Tests | [20 §1.10](20-Funktionen.md), [20 §4](20-Funktionen.md) | `sym:buildStoryHtml` | gebaut |
+| BL-176 | E | feature | kür | Report #7 **Familienbuch** (`buildFamilyBook`, ADR-v9-142): buchreife Ausgabe auf der geteilten Druck-Hülle (BL-169) — Coverfoto (`collectStoryMedia`, wie Story), Inhaltsverzeichnis, Ahnen-Sektionen in Kekulé-Reihenfolge (`computeKekuleNumbers`, kein zweiter Rechenweg), Glossar, Namenindex; Seitenzahlen aus dem @page-Zähler der Hülle. Ins §4-Katalog (`REPORTS`) verdrahtet. Selbst browser-verifiziert (gerendertes HTML). 3 Tests | [20 §4](20-Funktionen.md) | `sym:buildFamilyBook` | gebaut |
+| BL-177 | E | feature | kür | Report #11 **Ortssippenbuch** (`buildLocalFamilyBook`, ADR-v9-142): Familien nach Ort gruppiert (Heiratsort → Geburtsort Mann → Frau via Chokepoint `eventPlaceId`), je Familie ein Erzählsatz (Orakel `_osbFamNarrative`). Nutzt die Orts-/Hof-Bindung (`PlaceContext`); leere-Ortsmenge graziler Leerzustand. 2 Tests | [20 §4](20-Funktionen.md), [11 §4](11-Orte-Hoefe-Identitaet.md) | `sym:buildLocalFamilyBook` | gebaut |
+| BL-178 | E | feature | kür | Report #12 **Hofchronik** (`buildFarmChronicle`, ADR-v9-142): Ort › Hof › Eigentümer (PROP)/Bewohner (RESI) mit Zu-/Wegzug (Stations-Sequenz je Person, Orakel `_hofMoveLine`) — trägt das Höfe-Alleinstellungsmerkmal in die Ausgabe. Enumeriert `db.hofObjects`, Personen-Zuordnung über Chokepoint `eventHofId`. 3 Tests | [20 §4](20-Funktionen.md), [11 §7](11-Orte-Hoefe-Identitaet.md) | `sym:buildFarmChronicle` | gebaut |
+| BL-179 | E | feature | kür | Report #13 **Ortsbuch** (`buildPlaceGazetteer`, ADR-v9-142): ortssortiertes Nachschlagewerk je `db.placeObjects` — Typ, Verwaltungszugehörigkeit (`enclosureChainAsOf`), datierte Namensvarianten, häufigste Familiennamen, Ereignisse nach Jahrzehnt samt Personen (Chokepoint `eventPlaceId`); nach Personenzahl sortiert. Abgegrenzt vom Ortssippenbuch #11 (Nachschlage- statt Narrativ-Struktur). 3 Tests | [20 §4](20-Funktionen.md), [11 §1](11-Orte-Hoefe-Identitaet.md) | `sym:buildPlaceGazetteer` | gebaut |
 | BL-126 | S | feature | kür | **Medien-Verwaltung — ABGESCHLOSSEN** (ADR-v9-132). UI dreistufig: `MediaGallery` (Kacheln, Filter Alle/Personen/Familien/Quellen + Zähler, Suche Datei/Titel/Notiz, ⚠ bei fehlendem Pfad) · `MediaDetail` (globale Feldgruppe „Speichern (alle Ref.)" vs. Per-Ref-Override/Datum/Notiz/Primär; leerer Override ⇒ globaler Titel) · Referenzliste mit `Picker`-„+ Person/+ Familie/+ Quelle" (INV-UI-4), Event-/Zitat-Fundstellen read-only. **Eigenes Entitäten-Segment** (6., 📎, Nutzer-Entscheidung; bei 375px einzeilig via Kurz-Labels `Pers.`/`Fam.`, ADR-v9-133). 📷-Schnellzugriff im Ereignis-Editor. Kern-Kommandos `saveMedia`/`deleteMedia`/`with{Added,Removed,Updated}MediaCitation`. Interop-Rest: GRAMPS-`<object>`-Write-Back modellgetrieben + Citation-`<objref>` (Passthrough abgelöst); GEDCOM-Citation-`OBJE` verriegelt. 2720 grün, Lint 0, Roundtrip `net_delta=0` (Realdaten), browser-verifiziert | [20 §1.4/§1.5](20-Funktionen.md), [10 §4](10-Domaenenmodell.md), [ADR-v9-132](04-Entscheidungslog.md#adr-v9-132) | `datei:ui/views/media/MediaGallery.svelte` | gebaut |
 | BL-181 | S | feature | kür | **Medien-Vorschau** (ADR-v9-136, Nachtrag zu BL-126): direkt darstellbare Bilder (eingebettete `data:image/…`-URIs) werden als Thumbnail (`MediaGallery`) bzw. Vorschau (`MediaDetail`) angezeigt — ein bloßer Pfad trägt im serverlosen Browser keine Bytes → Metadaten-Kachel. `media-mime` um `svg`↔`image/svg+xml` symmetrisch ergänzt (`data:`-URI + `FORM svg` round-trippt `net_delta=0`, `tests/fixtures/media-datauri.small.ged`). Beispieldatei mit 8 Record-Medien (globale Titel + anonymisierte Pseudofotos) angereichert | [20 §1.4](20-Funktionen.md), [13 §4](13-Interop-Roundtrip.md), [ADR-v9-136](04-Entscheidungslog.md#adr-v9-136) | `sym:isDisplayableImage` | gebaut |
 | BL-182 | S | feature | kür | **Hilfelink zum Handbuch** (ADR-v9-137): „📖 Hilfe & Handbuch ↗" im mobilen Mehr-Hub (`MoreView`) + am Fuß der Desktop-`Sidebar`, öffnet `HANDBUCH.html` (neuer Tab). Handbuch zog nach `app/public/` → wird mit-deployt (dist, unter der Pages-`base`), war vorher unerreichbar. Vom SW-Precache ausgeschlossen (Doku-Änderung darf App-Cache-Version nicht bumpen), Test verankert | [21 §2/§3](21-UI-UX.md), [30](30-NFR-und-Persistenz.md), [ADR-v9-137](04-Entscheidungslog.md#adr-v9-137) | `txt:handbuchUrl@ui/shell/Sidebar.svelte` | gebaut |
