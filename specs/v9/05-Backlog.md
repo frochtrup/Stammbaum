@@ -90,9 +90,8 @@ bewusst vertagt.
 
 | Cluster | Offene Items (interne Reihenfolge) | Fläche / Dateien |
 |---|---|---|
-| Ⓐ Personen & Familien — Feinanzeige | BL-195⚡ · 198⚡ · 211 · 199⚡ | `ui/views/person`, `ui/views/family`, `ui/shell/DetailHeader`, `GlobalSearchView` |
-| Ⓑ Geteilte Ereigniszeile & -Eingabe | BL-196 · 197⚡ · 212 | `ui/shell/EventLine`, `event-line-row`, `EventEditModal` |
-| Ⓒ Listen-Zähler & Präsenz-Marker (INV-UI-4) | BL-204 · 205 · 200 · 202 · 206 | Orte/Höfe/Quellen `*-list-model` + Views |
+| Ⓑ Ereignis-Eingabe (Anzeige gebaut) | BL-212 | `ui/shell/EventEditModal`, `ui-quicktpl`-Erbe |
+| Ⓒ Listen-Werkzeug-Badges (Zähler/Marker gebaut) | BL-206 | Orte/Höfe-Werkzeugleisten |
 | Ⓓ Quellen & Archive — Detail, Vorlagen, Assoziationen | BL-201⚡ · 203 · 128 · 127⚡ | `ui/views/source`, `ui/views/repository` |
 | Ⓔ Orte, Karte & Geo | BL-131⚡ · 60 · 210⚡ · 89 | `core/places`, Karten-Insel, `MapLensView` |
 | Ⓕ Forschung | BL-57ᴮ · 208 · 209 | `ui/views/research*`, `SourceCitationRow`, `core/research` |
@@ -100,13 +99,18 @@ bewusst vertagt.
 | Ⓗ Import / Export / Dedup | BL-125 · 207 · 166⏸ | Export-Pipe, Import-Vergleich, Dedup |
 | — Standalone / Infra | BL-83 (_EVAL, Interop) · BL-66 (a11y) · BL-180 (Kat-B-Sync) | — |
 
+**Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
+(BL-196/197) und Ⓒ-Zähler/Marker (BL-200/202/204/205) — alle browser-verifiziert an Realdaten;
+die Zeilen stehen unter „Erledigte Punkte". Offen aus den Startclustern bleiben nur BL-212
+(Eingabe-Komfort) und BL-206 (Werkzeug-Badges).
+
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang):**
 
-1. **Welle 1 — Sichtbare Parität zu v8, billig (`basis` + `⚡`-Kleinlücken):** BL-07ᴮ · Ⓐ (195 →
-   198 → 211 → 199) · Ⓑ-Anzeige (196 → 197) · Ⓒ-Zähler (204 → 205 → 200 → 202). Fast alles
-   „Feld/Kern da, nur UI fehlt" — viel Wiedererkennungswert pro Aufwand.
-2. **Welle 2 — Komfort & Forschung:** BL-57ᴮ · Ⓕ (208 → 209) · Ⓓ-Anzeige (201 → 203) · 206 ·
-   207 · 212 · Ⓔ-Kontextsprünge (60 → 210).
+1. ~~**Welle 1 — Sichtbare Parität zu v8, billig:** Ⓐ (195/198/211/199) · Ⓑ-Anzeige (196/197) ·
+   Ⓒ-Zähler (204/205/200/202)~~ — **gebaut (2026-07-29)**, s. „Erledigte Punkte". Offen bleibt
+   nur das `basis`-Item BL-07ᴮ (History-Navigation, keine Kleinlücke — größerer Bau).
+2. **Welle 2 — Komfort & Forschung:** BL-07ᴮ · BL-57ᴮ · Ⓕ (208 → 209) · Ⓓ-Anzeige (201 → 203) ·
+   206 · 207 · 212 · Ⓔ-Kontextsprünge (60 → 210).
 3. **Welle 3 — Größere Kür-Features (Spec-first, wo nötig):** 127 → 128 → 131 · 125 · 10 · 213 ·
    94 (Inhalt zuerst spezifizieren).
 4. **Welle 4 — Infra / Hygiene / vertagt (opportunistisch):** 83 · 89 · 66 · 180 · 166⏸.
@@ -138,23 +142,13 @@ Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-
 | BL-60 | S | feature | kür | Personen-Kontext-Sprung in die Karte | [20 §1.9](20-Funktionen.md) | `sym:goToMapForPerson` | offen |
 | BL-66 | — | hygiene | kür | a11y-Scanner (TST-15) | [32 §3](32-Testframework.md) | `txt:axe-core@package.json` | offen |
 | BL-180 | — | feature | kür | **Kategorie-B-Sync-Bündel** (ADR-v9-134): geräteweiter, nutzer-erarbeiteter app-privater Zustand (Projekte, Duplikat-Ignorierliste, Quick-Templates, Validierungs-Config, Export-Vorwahl) reist über das `orte.json`-Muster — IDB-Spiegel (Laufzeit-Wahrheit) + optionaler `app-data.json`-Ex-/Import über `FileService`, `_rev`/`_device`/`_ts`-Wrapper mit Drei-Wege-Merge (ADR-v9-110), Union bei disjunkten Änderungen. Generalisiert `PlacesSyncService`; kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1). Klasse A (Theme/FS-Handle/Arbeitskopie/Medien-Cache) bleibt gerätelokal | [30 §2.2/§2.3](30-NFR-und-Persistenz.md), [14 §6](14-Dateihandling.md), [ADR-v9-134](04-Entscheidungslog.md#adr-v9-134) | `sym:AppDataSyncService` | offen |
-| BL-195 | K | feature | kür | Personenlisten-Zeilenmarker: Kekulé-`#N` (relativ zum Probanden, `computeKekuleNumbers` wiederverwenden — kein zweiter Rechenweg) + Geschlechts-Icon je Zeile. v8-Orakel `_buildKekuleMap`/`p-kekule` (`ui-views-person.js`); v9 zeigt Kekulé nur in Baum-Insel/Reports | [20 §1.4](20-Funktionen.md) | `txt:[Kk]ekule@ui/views/person/person-list-model.ts` | offen |
-| BL-196 | S | feature | kür | Alter-bei-Ereignis in der geteilten Ereigniszeile (`42 J.`/`~42 J.` bei unscharfem Datum). v8-Orakel `_ageAt` (`ui-views-person.js`); v9-`EventLine`/`event-line-row` kennen kein Alter-Feld | [20 §1.4](20-Funktionen.md) | `sym:ageAtEvent` | offen |
-| BL-197 | S | feature | kür | `datePhrase` (menschenlesbares Datum, z.B. „vor 1650") in der Ereigniszeile rendern — Feld ist im Modell (`Event.datePhrase`) und Interop vorhanden, wird in `EventLine` aber nicht angezeigt | [20 §1.4](20-Funktionen.md) | `txt:datePhrase@ui/shell/EventLine.svelte` | offen |
-| BL-198 | K | feature | kür | Personen-Detailkopf: Rufname/Spitzname (`nick`, im Modell vorhanden), Geschlechts-Icon, „Geändert <Datum>". v8-Orakel `ui-views-person.js:762-765`; `DetailHeader`/`person-display` zeigen nur den Namen | [20 §1.4](20-Funktionen.md) | `txt:nick@ui/shell/person-display.ts` | offen |
-| BL-199 | S | feature | kür | Kind-Verhältnis `pedigree` (leiblich/adoptiert/Pflegekind, PEDI) an der Kind-Zeile (Familien-Detail) und als Suffix an der Eltern-Zeile (Personen-Detail). Feld im Modell (`core/model/types.ts`), in der UI ungenutzt | [20 §1.5](20-Funktionen.md), [10 §2](10-Domaenenmodell.md) | `txt:pedigree@ui/views/family/FamilyDetail.svelte` | offen |
-| BL-200 | S | feature | kür | Medien-Präsenz-Marker (📎) durchgängig in Listen/Zeilen (Familienliste, Quellenliste, Ereigniszeile) — ein Mechanismus (INV-UI-4). v8-Orakel `ui-views-family.js:17`/`ui-views-person.js:662`/`ui-views-source.js:274` | [20 §1.5](20-Funktionen.md) | `sym:hasMedia` | offen |
 | BL-201 | S | feature | kür | Quellen-Detail: Deckungsbereich `dataEvents` (SOUR.DATA.EVEN) + externe Referenz-Nummern `externalRefs` (REFN) + Signatur-Medium `callMedia` anzeigen — alle drei Felder im Modell vorhanden, `SourceDetail` zeigt sie nicht | [20 §1.6](20-Funktionen.md) | `txt:dataEvents@ui/views/source/SourceDetail.svelte` | offen |
-| BL-202 | S | feature | kür | Quellen-Liste: Archiv-Badge (🏛, in welchem Archiv die Quelle liegt) in der Listenzeile. v8-Orakel `ui-views-source.js:272`; v9-Zeile zeigt nur `refCount`+Notiz-Pille | [20 §1.6](20-Funktionen.md) | `txt:repoName@ui/views/source/source-list-model.ts` | offen |
 | BL-203 | S | feature | kür | Archivtyp als kuratiertes Dropdown mit deutschen Labels (GRAMPS-Wert↔Anzeige-Mapping, „Library"→„Bibliothek") statt Freitext/Rohwert. v8-Orakel `REPO_TYPES`/`_repoTypeLabel` (`ui-forms-repo.js`) | [20 §1.6](20-Funktionen.md) | `sym:REPO_TYPE_LABELS` | offen |
-| BL-204 | K | feature | kür | Orts-Liste: Personen-Zähler pro Zeile („N Personen") + alphabetische Trenner. v8-Orakel `ui-views-place.js:306-308`; `place-list-model` berechnet keinen Zähler | [20 §1.7](20-Funktionen.md) | `txt:personCount@ui/views/place/place-list-model.ts` | offen |
-| BL-205 | K | feature | kür | Hof-Liste: Bewohner-/Eigentümer-Zähler + Jahres-Spanne (min–max) + Notiz-Marker (📝) in der Listenzeile. v8-Orakel `ui-views-hof.js:86-95`; `HofDetail` zeigt Bewohner, die Liste nicht | [20 §1.8](20-Funktionen.md) | `txt:residentCount@ui/views/hof/hof-list-model.ts` | offen |
 | BL-206 | S | feature | kür | Orte/Höfe: Trefferzahl-Badges auf den Werkzeug-Buttons (Validator ⚠N, Dedup ⇉N, GOV ⚙N, Admin N) — Handlungsbedarf proaktiv sichtbar statt erst nach Klick. v8-Orakel `ui-views-place.js:24-56` | [20 §1.7](20-Funktionen.md), [21 §10c](21-UI-UX.md) | `sym:toolBadgeCounts` | offen |
 | BL-207 | S | feature | kür | Import-Vergleich: Sektions-Massen-Aktionen („alle übernehmen"/„alle Forschungseintrag") + Score-Begründungs-Tooltip (`reasons`) in der Trefferliste. v8-Orakel `ui-import-compare.js:388/297` | [20 §1.2](20-Funktionen.md) | `sym:bulkApplySection` | offen |
 | BL-208 | S | feature | kür | Forschungs-Sichtbarkeit farbcodiert (ein Signal-Mechanismus): Protokoll-Ergebnis-Ampel (4 Zustände found/partial/notfound/pending), Hypothesen-Konfidenz-Badge-Stufe, Statistik-Tooltip mit % + Gesamt-Caption. v8-Orakel `ui-views-rlog.js:25`/`ui-views-hypo.js:64`/`ui-views-stats.js:266` | [20 §1.11](20-Funktionen.md) | `sym:logResultTone` | offen |
 | BL-209 | S | feature | kür | Forschungsprojekte: Farbcodierung (Chip-Punkt + Swatch-Picker) + Notizfeld + JSON-Export/Import. v8-Orakel `PROJ_COLORS` (`ui-views-projects.js`); v9-`ProjectBar` hat weder Farbe noch Notiz noch Portabilität | [20 §1.11](20-Funktionen.md) | `sym:PROJECT_COLORS` | offen |
 | BL-210 | S | feature | kür | Karte: Marker-Klick → Orts-Explorationspanel (Personen an diesem Ort, mit Navigation). Der Insel-Callback `onSelectPlace` existiert, `MapLensView` verdrahtet ihn als No-op. v8-Orakel `_showExplorationPanel` (`ui-views-map.js:399`). Abgegrenzt von BL-60 (Person→Karte) | [20 §1.9](20-Funktionen.md) | `sym:placePeoplePanel` | offen |
-| BL-211 | S | feature | kür | Globale Suche: Geschlechts-Avatar/Icon + Lebensdaten-Meta in den Ergebniszeilen (INV-UI-4, geteilt mit BL-195). v8-Orakel `ui-views-search.js:91`; `GlobalSearchView` zeigt nur Primär-/Sekundärtext | [20 §1.1](20-Funktionen.md) | `txt:sex@ui/views/search/GlobalSearchView.svelte` | offen |
 | BL-212 | E | feature | kür | Ereignis-Eingabekomfort: Quick-Add-Chips mit Wert-Vorbelegung (`+ röm.-kath.`/`+ evang.`) + Geburtsdatum aus Sterbedatum+Sterbealter ableiten + Ereignis-Zwischenablage („+ Übernehmen" auf die nächste Person). v8-Orakel `ui-views-person.js:612`/`ui-quicktpl.js:140`/`ui-views-person.js:526` | [20 §1.4](20-Funktionen.md) | `sym:eventQuickPresets` | offen |
 | BL-213 | E | feature | kür | Onboarding-Spotlight: 4-Schritt-Erstnutzer-Rundgang nach „Demo laden" (Spotlight-Löcher, „Schritt X von 4"). v8-Orakel `maybeStartOnboarding` (`ui-onboarding.js`); in v9 nicht vorhanden | [20 §1.1](20-Funktionen.md) | `sym:startOnboarding` | offen |
 
@@ -164,6 +158,16 @@ Bleiben stehen — jede Zeile hier ist ein aktiver Wächter (Regel 6, Lint-Regel
 Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder verschwunden.
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
+| BL-195 | K | feature | kür | **Personenlisten-Zeilenmarker** (Welle-1-Kleinlücke): Kekulé-`#N` relativ zum Proband (`computeKekuleNumbers` wiederverwendet, kein zweiter Rechenweg) + Geschlechts-Icon (♂/♀/◇, `sexSymbol`) + alphabetische Trenner. Browser-verifiziert an Realdaten (`#1` am gesetzten Proband, Icons je Zeile). Geteilte Primitiven `sexSymbol`/`pedigreeLabel` in `person-display.ts` | [20 §1.4](20-Funktionen.md) | `txt:[Kk]ekule@ui/views/person/person-list-model.ts` | gebaut |
+| BL-196 | S | feature | kür | **Alter-bei-Ereignis** in der geteilten Ereigniszeile (`42 J.`/`~42 J.` bei unscharfem Datum, Qualifier≠EXACT), beim Geburtsereignis unterdrückt. Reiner Helfer `ageAtEvent` (v8-Orakel `_ageAt`). Browser-verifiziert („73 J." an Tod-Zeile) | [20 §1.4](20-Funktionen.md) | `sym:ageAtEvent` | gebaut |
+| BL-197 | S | feature | kür | **`datePhrase`** (GEDCOM PHRASE) in der Ereigniszeile gerendert (kursiv, auch ohne formatiertes Datum) — Modell-Feld, das `EventLine` bisher verschwieg. Über alle drei Row-Typen (EventLineRow/EventRow/FamilyEventRow) durchgereicht | [20 §1.4](20-Funktionen.md) | `txt:datePhrase@ui/shell/EventLine.svelte` | gebaut |
+| BL-198 | K | feature | kür | **Personen-Detailkopf-Untertitel**: Geschlechts-Icon + Rufname/`nick` + „Geändert <Datum>" (`lastChanged`, formatiert), je nur bei Vorhandensein (§10f). Browser-verifiziert (♂-Icon im Kopf). Beleg-Ort korrigiert: `nick` wird in `PersonDetail.svelte` gezeigt (Helfer in person-display) | [20 §1.4](20-Funktionen.md) | `txt:nick@ui/views/person/PersonDetail.svelte` | gebaut |
+| BL-199 | S | feature | kür | **Kind-Verhältnis `pedigree`** (adoptiert/Pflegekind/gesiegelt, PEDI) an der Kind-Zeile (Familien-Detail) UND als Suffix an der Herkunftsfamilie-Zeile (Personen-Detail) — leer bei leiblich (kein Rauschen). Geteilte `pedigreeLabel` (INV-UI-4) | [20 §1.5](20-Funktionen.md), [10 §2](10-Domaenenmodell.md) | `txt:pedigree@ui/views/family/FamilyDetail.svelte` | gebaut |
+| BL-200 | S | feature | kür | **Medien-📎-Marker in der Quellenliste** (`Source.media`). Skopiert (ADR-Notiz): v9-`Family` und `Event` tragen KEIN Medienfeld (nur `citations`=Quellen), die Personenliste hat 📎 bereits (BL-23) — der einzige ungedeckte Ort war die Quellenliste. Familien-/Ereignis-Medien wären eine Modell-Erweiterung, kein Anzeige-Fix | [20 §1.6](20-Funktionen.md) | `txt:hasMedia@ui/views/source/source-list-model.ts` | gebaut |
+| BL-202 | S | feature | kür | **Archiv-🏛-Badge in der Quellenliste** (`Source.repo` über `db.repositories` aufgelöst, freier Repo-Text durchgereicht). Browser-verifiziert („🏛 Oldenburger Auswanderer"). Geteilt mit BL-200 (ein Bau) | [20 §1.6](20-Funktionen.md) | `txt:repoName@ui/views/source/source-list-model.ts` | gebaut |
+| BL-204 | K | feature | kür | **Orts-Liste: Personen-Zähler** pro Zeile (distinkte Personen über `eventPlaceId`-Chokepoint, `countPersonsPerPlace`) + alphabetische Trenner. Browser-verifiziert an Realdaten (auch am unangereicherten Ort, TST-16) | [20 §1.7](20-Funktionen.md) | `txt:personCount@ui/views/place/place-list-model.ts` | gebaut |
+| BL-205 | K | feature | kür | **Hof-Liste: Bewohner-/Eigentümer-Zähler + Jahres-Spanne + Notiz-📝** (`countHofOccupancy` über `eventHofId`-Chokepoint, Rollen-Regel `hofRole` geteilt mit dem Steckbrief). Browser-verifiziert an Realdaten (u. a. „2 Bewohner 1986–2003", 📝 an Hof mit Notiz, unangereicherter Hof TST-16). Beleg auf das Export-Symbol umgestellt | [20 §1.8](20-Funktionen.md) | `sym:countHofOccupancy` | gebaut |
+| BL-211 | S | feature | kür | **Geschlechts-Icon in den globalen Suchergebnissen** (Personen-Treffer, `SearchResultRow.sex`) — geteiltes `sexSymbol` mit BL-195 (INV-UI-4). Browser-verifiziert (♀-Icons in Treffern) | [20 §1.1](20-Funktionen.md) | `txt:sex@ui/views/search/GlobalSearchView.svelte` | gebaut |
 | BL-09 | K | feature | kür | Mini-Karte im Ort-Steckbrief (und Hof-Steckbrief; gemeinsamer reiner SVG-Renderer, auch in Ortsbuch/Hofchronik-Report, ADR-v9-145) | [20 §1.7](20-Funktionen.md) | `datei:ui/views/place/PlaceMiniMap.svelte` | gebaut |
 | BL-59 | S | feature | kür | Ortsübersetzungen (`PlaceObject.translations`) — app-privat wie `shortName` (nur orte.json, nie Wire), Steckbrief-Edit + Ortsbuch-Report, ADR-v9-144 | [11 §1](11-Orte-Hoefe-Identitaet.md) | `txt:translations\s*:@core/places/types.ts` | gebaut |
 |---|---|---|---|---|---|---|---|
