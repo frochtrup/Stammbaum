@@ -52,6 +52,10 @@ HofObject {
 
 `DatedName`/`DatedRef`/`DatedAddress` = `{ value, from, to }` (Wert mit optionalem Gültigkeitszeitraum).
 
+**GOV-Anreicherung (BL-131, [ADR-v9-154](04-Entscheidungslog.md#adr-v9-154)).** `govId`/`govTypes` werden aus der eingefügten GOV-Textzusammenfassung gefüllt (`core/places/gov.ts`, Bedienung [20 §1.7](20-Funktionen.md)). Die Zuordnung folgt den v9-Achsen, nicht der v8-Form: deutsche GOV-Namen → `pnames` (Zeitachse), fremdsprachige → `translations` (Sprachachse), Typwörter roh → `govTypes`, der aktuelle Typ (offen endender Eintrag mit dem spätesten `ab`) → `type`, die `gehört-zu`-Zeilen → `enclosedBy`. **`pnames` bekommt dabei KEINE synthetischen Typ-Namen** („Königreich Preußen") — es ist Match-Kriterium der Auflösung (§4.2), ein erfundener Name veränderte die Ereignis-Zuordnung. **`type` wird nie `Farm`/`Building`** (Höfe sind eigene Entität); ein solcher GOV-Typ bleibt allein in `govTypes`.
+
+**GOV-Platzhalter** entstehen für Elternorte, deren eigene GOV-Zusammenfassung noch fehlt: ein PlaceObject, dessen `title` seine GOV-Kennung IST. Das ist ein **abgeleitetes** Prädikat (`isUnresolvedGovPlaceholder`), kein persistiertes Feld — kein `PLACES_SCHEMA_VERSION`-Bump, nichts, was beim Union-Merge veralten kann, und die Semantik stimmt von selbst: wer dem Ort einen Namen gibt, hat ihn aufgelöst. Die Id ist deterministisch (`_gov_<slug>`), damit zwei Geräte denselben Platzhalter als EINEN Ort erkennen ([30 §4](30-NFR-und-Persistenz.md)).
+
 **Warum getrennt (dauerhafte Entscheidung):** Ein Hof ist keine Verwaltungseinheit. Die frühere v8-Modellierung als `placeObject type='Farm'` scheiterte an vier Punkten: Adress-Doppelung, semantische Vermischung Geografie/Adresse, `pnames` mit Adress-Historie überladen, Hof-Lebenszyklus nicht erstklassig. v9 startet direkt mit der getrennten Entität.
 
 ---

@@ -32,8 +32,10 @@ const L3_RATSCHE = 0;
 
 /** L7-Ratsche: [S]/[E]-Bullets in Spec 20, Stand der abgeschlossenen Inventur (BL-51,
  *  2026-07-21). Wer ein Bullet ergänzt, legt zuerst die Backlog-Zeile an und zieht dann
- *  diese Zahl nach — nicht umgekehrt. */
-const SE_BULLETS = 30;
+ *  diese Zahl nach — nicht umgekehrt.
+ *  30 → 31 (2026-07-30): §1.9 hat das Orts-Explorationspanel als eigenen [S]-Bullet
+ *  bekommen; die Backlog-Zeile BL-210 gab es vorher. */
+const SE_BULLETS = 31;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 

@@ -94,6 +94,10 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 
 **INV-UI-3:** Es gibt genau einen Lens-Umschalter-Mechanismus; kein Diagramm bringt eigene Wechsel-Buttons mit.
 
+**Absprung-Modus für Flächen, die selbst keine Lens sind (BL-60, [ADR-v9-153](04-Entscheidungslog.md#adr-v9-153)).** Derselbe Umschalter steht auch im Personen-Steckbrief — dort ohne aktiven Eintrag (`active=null`): die Reihe ist dann kein `tablist` mit ausgewähltem Tab, sondern eine `role="group"` gleichrangiger Sprung-Knöpfe mit Bezugs-Label („Diese Person in einer anderen Ansicht öffnen"). Ein `tablist` ohne gewählten Tab wäre für Screenreader eine Falschaussage ([§6i](#6i-barrierefreiheit--operationalisierter-kontrakt-lp-8-adr-v9-67)/LP-8). Optik und Mechanismus bleiben identisch — genau deshalb ist es derselbe Umschalter und keine zweite Sprung-Leiste. Der Fokus wird beim Absprung mitgesetzt: `lensFocus` UND die lens-eigene Auswahl samt Anzeige-Modus (`ui/shell/lens-jump.ts`), weil `lensFocus` allein für Karte und Zeitleiste nur eine Vorbelegung ist (ADR-v9-102) und ab dem zweiten Sprung wirkungslos bliebe.
+
+**Segment-/Tab-Reihen zählen nicht ins Befehlsflächen-Budget** ([§6h](#6h-befehlsflächen-budget-inv-ui-11-adr-v9-66)) — sie sind Navigation. Der Absprung im Steckbrief ersetzt zwei vormalige Befehls-Knöpfe („⧖ Im Baum anzeigen"/„📖 Story") und bringt die dortige Aktions-Reihe damit von gemessenen 3 Zeilen / 5 Elementen zurück auf 1 Zeile / 3 Elemente.
+
 ---
 
 <a id="5-view-state--lifecycle-kontrakt-aus-v8-adr-025-dauerhaft"></a>
@@ -242,6 +246,8 @@ Beide Stufen nutzen denselben zugrunde liegenden `core/model/gedcom-date.ts`-Par
 **Vor dem Bau eines neuen Toolbar-Elements:** das Budget der Ziel-View am echten Screenshot bei 375px nachzählen (nicht schätzen) — ist es bereits ausgeschöpft, MUSS ein bestehendes Element hinter Disclosure wandern, bevor ein neues hinzukommt.
 
 **Vollzogen (ADR-v9-98):** `TasksView`/`LogView`/`HypothesesView` überschritten das Budget (Aufgaben-Tab: 3 gestapelte Kopfzeilen mit 9 dauerhaft sichtbaren Elementen; Protokoll-Tab: 2 Zeilen, 6 Elemente, dessen Filterreihe bei 375px ohne Restbreite endete). Der `FilterBar`-Retrofit war Voraussetzung für das Dashboard-Segment und ist mit ihm zusammen gebaut — Filter und Export liegen hinter der Disclosure, der Liste⇄Board-Umschalter kommt aus `ViewModeToggle`. Am echten Screenshot bei 375px nachgezählt, nicht geschätzt: je Segment EINE Toolbar-Zeile, höchstens drei Elemente.
+
+**Vollzogen (ADR-v9-153).** Der Personen-Steckbrief überschritt das Budget unbemerkt: `← Zur Liste` · `✎ Bearbeiten` · `☆ Als Proband` · `⧖ Im Baum anzeigen` · `📖 Story` ergaben bei 375px **drei** Zeilen und fünf dauerhaft sichtbare Elemente (am Screenshot nachgezählt, nicht geschätzt). Die zwei Lens-Sprünge sind in den kanonischen Lens-Umschalter gewandert ([§4](#4-lens-umschalter), Absprung-Modus) — eine Segmentreihe, die laut Zuordnungsregel nicht mitzählt. **Nachgemessen: 1 Zeile / 3 Elemente.**
 
 **Konsolidierte Ziel-Struktur für die Forschungs-Arbeitsfläche** (`ResearchTab`, [20 §1.11](20-Funktionen.md)):
 ```
