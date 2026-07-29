@@ -258,7 +258,9 @@ Drei zusammenhängende Regeln, die die volle (§2) statt gefilterte Persistenz v
 
 Beide Prädikate sind reine, headless testbare Kern-Funktionen (`core/places`), **nicht** als persistiertes Feld geführt (würde bei Mutation veralten können — LP-5 eine Ebene tiefer angewandt: „ist angereichert" ist selbst wieder deterministisch aus den vorhandenen Feldern berechenbar).
 
-**Verwendung — Pillen-Text bewusst ohne Herkunfts-Aussage:** Orte-/Höfe-Tab ([20 §1.7/§1.8](20-Funktionen.md)) markiert plain (`!isEnriched…`) Einträge mit einer Pille „**ohne Zusatzangaben**" (nicht „automatisch erkannt" — das Prädikat prüft nur den INHALT, nicht die Herkunft: ein von Hand über „+ neuen Ort anlegen" ([20 §2](20-Funktionen.md), ADR-v9-42) frisch angelegter, noch nicht weiter ausgefüllter Ort erfüllt dieselbe Bedingung wie ein Seed-Ergebnis, wurde aber nicht automatisch erkannt — ein Herkunfts-Claim wäre hier schlicht falsch). Keine Auswirkung auf Persistenz, Auflösung oder Export — reine Anzeige-Information.
+**Verwendung — als Filter in den Listen, als Pille nur im Dedup-Dialog (ADR-v9-149).** Der Orte-/Höfe-Tab ([20 §1.7/§1.8](20-Funktionen.md)) bietet plain (`!isEnriched…`) Einträge über den Filter „**nur unvollständige**" hinter der `FilterBar`-Disclosure an; eine Zeilen-Pille tragen sie NICHT mehr (sie war der Regelfall — 79 % der Orte — und damit Rauschen; [21 §10l](21-UI-UX.md)). Wo das Prädikat Entscheidungsgrundlage ist (Dedup-Dialog, §9.2), bleibt es eine sichtbare Pille „**ohne Zusatzangaben**".
+
+**Der Text bleibt bewusst ohne Herkunfts-Aussage** (nicht „automatisch erkannt" — das Prädikat prüft nur den INHALT, nicht die Herkunft: ein von Hand über „+ neuen Ort anlegen" ([20 §2](20-Funktionen.md), ADR-v9-42) frisch angelegter, noch nicht weiter ausgefüllter Ort erfüllt dieselbe Bedingung wie ein Seed-Ergebnis, wurde aber nicht automatisch erkannt — ein Herkunfts-Claim wäre hier schlicht falsch). Keine Auswirkung auf Persistenz, Auflösung oder Export — reine Anzeige-Information.
 
 ### 9.2 Massen-Dedup (ADR-v9-45)
 
