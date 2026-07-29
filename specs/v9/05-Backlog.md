@@ -91,7 +91,7 @@ bewusst vertagt.
 | Cluster | Offene Items (interne Reihenfolge) | Fläche / Dateien |
 |---|---|---|
 | Ⓑ Ereignis-Eingabe (Anzeige gebaut) | BL-212 | `ui/shell/EventEditModal`, `ui-quicktpl`-Erbe |
-| Ⓒ Listen-Werkzeug-Badges (Zähler/Marker gebaut) | BL-206 | Orte/Höfe-Werkzeugleisten |
+| Ⓒ Kurations-Handlungsbedarf am Werkzeuge-Trigger (Listen-Marker gebaut) | BL-206 | Orte/Höfe-Werkzeugleisten |
 | Ⓓ Quellen & Archive — Detail, Vorlagen, Assoziationen | BL-201⚡ · 203 · 128 · 127⚡ | `ui/views/source`, `ui/views/repository` |
 | Ⓔ Orte, Karte & Geo | BL-131⚡ · ~~214 (gebaut 2026-07-29)~~ · 60 · 210⚡ · 89 | `core/places`, Karten-Insel, `MapLensView`, `mini-map` |
 | Ⓕ Forschung | BL-57ᴮ · 208 · 209 | `ui/views/research*`, `SourceCitationRow`, `core/research` |
@@ -102,7 +102,7 @@ bewusst vertagt.
 **Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
 (BL-196/197) und Ⓒ-Zähler/Marker (BL-200/202/204/205) — alle browser-verifiziert an Realdaten;
 die Zeilen stehen unter „Erledigte Punkte". Offen aus den Startclustern bleiben nur BL-212
-(Eingabe-Komfort) und BL-206 (Werkzeug-Badges).
+(Eingabe-Komfort) und BL-206 (Kurations-Achtungs-Punkt am Werkzeuge-Trigger).
 
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang):**
 
@@ -144,7 +144,7 @@ Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-
 | BL-180 | — | feature | kür | **Kategorie-B-Sync-Bündel** (ADR-v9-134): geräteweiter, nutzer-erarbeiteter app-privater Zustand (Projekte, Duplikat-Ignorierliste, Quick-Templates, Validierungs-Config, Export-Vorwahl) reist über das `orte.json`-Muster — IDB-Spiegel (Laufzeit-Wahrheit) + optionaler `app-data.json`-Ex-/Import über `FileService`, `_rev`/`_device`/`_ts`-Wrapper mit Drei-Wege-Merge (ADR-v9-110), Union bei disjunkten Änderungen. Generalisiert `PlacesSyncService`; kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1). Klasse A (Theme/FS-Handle/Arbeitskopie/Medien-Cache) bleibt gerätelokal | [30 §2.2/§2.3](30-NFR-und-Persistenz.md), [14 §6](14-Dateihandling.md), [ADR-v9-134](04-Entscheidungslog.md#adr-v9-134) | `sym:AppDataSyncService` | offen |
 | BL-201 | S | feature | kür | Quellen-Detail: Deckungsbereich `dataEvents` (SOUR.DATA.EVEN) + externe Referenz-Nummern `externalRefs` (REFN) + Signatur-Medium `callMedia` anzeigen — alle drei Felder im Modell vorhanden, `SourceDetail` zeigt sie nicht | [20 §1.6](20-Funktionen.md) | `txt:dataEvents@ui/views/source/SourceDetail.svelte` | offen |
 | BL-203 | S | feature | kür | Archivtyp als kuratiertes Dropdown mit deutschen Labels (GRAMPS-Wert↔Anzeige-Mapping, „Library"→„Bibliothek") statt Freitext/Rohwert. v8-Orakel `REPO_TYPES`/`_repoTypeLabel` (`ui-forms-repo.js`) | [20 §1.6](20-Funktionen.md) | `sym:REPO_TYPE_LABELS` | offen |
-| BL-206 | S | feature | kür | Orte/Höfe: Trefferzahl-Badges auf den Werkzeug-Buttons (Validator ⚠N, Dedup ⇉N, GOV ⚙N, Admin N) — Handlungsbedarf proaktiv sichtbar statt erst nach Klick. v8-Orakel `ui-views-place.js:24-56` | [20 §1.7](20-Funktionen.md), [21 §10c](21-UI-UX.md) | `sym:toolBadgeCounts` | offen |
+| BL-206 | S | feature | kür | Orte/Höfe: **Achtungs-Punkt am „Werkzeuge"-Disclosure-Trigger** (reiner Dot, keine Außen-Zahl), sobald ein Kurations-Werkzeug offene Fälle hat (Dedup-Gruppen ∨ unaufgelöste GOV-Platzhalter ∨ Review-Pending); beschriftete Einzelzähler nur aufgeklappt. Via `FilterBar`-`activeCount`-Slot im Dot-Modus (INV-UI-4). **Validator-Anteil zurückgezogen** — gedeckt durch Dashboard + Sanduhr-Heatmap (§6h, „keine zweite Badge-Fundstelle"). Ersetzt die v8-Glyphenreihe `⚠N/⇉N/⚙N/N` auf den Buttons (Altlast §10, hinter Disclosure ohnehin unsichtbar). v8-Orakel `ui-views-place.js:24-56` | [20 §1.7/§1.8](20-Funktionen.md), [21 §6h/§10c](21-UI-UX.md), ADR-v9-148 | `sym:toolAttentionDot@ui/shell/FilterBar.svelte` | offen |
 | BL-207 | S | feature | kür | Import-Vergleich: Sektions-Massen-Aktionen („alle übernehmen"/„alle Forschungseintrag") + Score-Begründungs-Tooltip (`reasons`) in der Trefferliste. v8-Orakel `ui-import-compare.js:388/297` | [20 §1.2](20-Funktionen.md) | `sym:bulkApplySection` | offen |
 | BL-208 | S | feature | kür | Forschungs-Sichtbarkeit farbcodiert (ein Signal-Mechanismus): Protokoll-Ergebnis-Ampel (4 Zustände found/partial/notfound/pending), Hypothesen-Konfidenz-Badge-Stufe, Statistik-Tooltip mit % + Gesamt-Caption. v8-Orakel `ui-views-rlog.js:25`/`ui-views-hypo.js:64`/`ui-views-stats.js:266` | [20 §1.11](20-Funktionen.md) | `sym:logResultTone` | offen |
 | BL-209 | S | feature | kür | Forschungsprojekte: Farbcodierung (Chip-Punkt + Swatch-Picker) + Notizfeld + JSON-Export/Import. v8-Orakel `PROJ_COLORS` (`ui-views-projects.js`); v9-`ProjectBar` hat weder Farbe noch Notiz noch Portabilität | [20 §1.11](20-Funktionen.md) | `sym:PROJECT_COLORS` | offen |

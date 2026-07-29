@@ -33,7 +33,7 @@ const L3_RATSCHE = 0;
 /** L7-Ratsche: [S]/[E]-Bullets in Spec 20, Stand der abgeschlossenen Inventur (BL-51,
  *  2026-07-21). Wer ein Bullet ergänzt, legt zuerst die Backlog-Zeile an und zieht dann
  *  diese Zahl nach — nicht umgekehrt. */
-const SE_BULLETS = 29;
+const SE_BULLETS = 30;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
@@ -243,7 +243,7 @@ function pruefe() {
 
   // L7-Ratsche: Zahl der [S]/[E]-Bullets in Spec 20.
   //
-  // BL-51 hat die S/E-Inventur abgeschlossen — jeder der 29 Bullets trägt eine Zeile
+  // BL-51 hat die S/E-Inventur abgeschlossen — jeder der 30 Bullets trägt eine Zeile
   // (zwei begründete Ausnahmen, s. Kopf von 05-Backlog.md). Diese Aussage verrottet
   // still, sobald jemand ein neues [S]-Bullet ins Spec schreibt, ohne eine Zeile
   // anzulegen: nichts im Projekt bemerkt das.
