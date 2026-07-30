@@ -89,74 +89,67 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 | `basis` | Nötig für ein benutzbares Produkt, ohne Sogwirkung auf anderes. |
 | `kür` | Verbessert, blockiert nichts. |
 
-## Priorisierung & Clusterung der offenen Items (Stand 2026-07-30)
+## Priorisierung & Clusterung der offenen Items (Stand 2026-07-31)
 
 Eine **Priorisierung + Leseordnung** über die offenen Punkte — **keine zweite Status-Wahrheit**
-(der Status je Zeile bleibt die Statusspalte unten; erledigte Items fallen hier weg). Ein
-**Cluster** bündelt Items, die dieselben Dateien/dasselbe Subsystem berühren (ein fokussierter
-Bau) oder voneinander abhängen (Primitive vor Konsument). Marker: **ᴮ** = Klasse `basis` (vor
-`kür`) · **⚡** = bereitliegend (Kern/Feld schon gebaut, nur UI/Verdrahtung fehlt) · **⏸** =
-bewusst vertagt.
+(der Status je Zeile bleibt die Statusspalte unten). **Hier steht ausschließlich Offenes:** wird
+eine Zeile `gebaut`, verschwindet sie aus diesem Abschnitt, statt durchgestrichen zu werden —
+ihre Geschichte tragen „Erledigte Punkte" und das [Entscheidungslog](04-Entscheidungslog.md).
+Ein **Cluster** bündelt Items, die dieselben Dateien/dasselbe Subsystem berühren (ein
+fokussierter Bau) oder voneinander abhängen (Primitive vor Konsument); er sagt nichts über die
+Reihenfolge **zwischen** Clustern — die steht in den Wellen darunter. Die Klasse wird **nicht
+je Item** wiederholt (Regel 1: Zeiger, kein Inhalt) — sie steht in der Spalte `Klasse`; die
+Wellen ordnen danach und benennen sie einmal je Welle.
+
+Die Cluster-Buchstaben sind stabile Bezeichner; ADRs verweisen auf sie. **Ⓐ, Ⓑ und Ⓒ sind
+vollständig gebaut** (Kleinlücken-Wellen 2026-07-29/30) und stehen deshalb nicht mehr in der
+Tabelle.
 
 | Cluster | Offene Items (interne Reihenfolge) | Fläche / Dateien |
 |---|---|---|
-| Ⓒ Kurations-Handlungsbedarf am Werkzeuge-Trigger | ~~BL-206 (gebaut 2026-07-29)~~ — Cluster leer | Orte/Höfe-Werkzeugleisten |
-| Ⓓ Quellen & Archive — Detail, Vorlagen | BL-217 · 128 (Vorleistung für 228) (~~127 gebaut 2026-07-30~~) | `ui/views/source`, `ui/views/repository` |
-| Ⓔ Orte, Karte & Geo | BL-230 (~~214/2026-07-29; 60·210·131·89/2026-07-30 gebaut~~) | `core/places`, Karten-Insel, `MapLensView`, `mini-map` |
-| Ⓕ Forschung | BL-57ᴮ → **83** → 229 (Kette, [ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)) · 228 (nach 128) · 231 (unabhängig, [ADR-v9-167](04-Entscheidungslog.md#adr-v9-167)) (~~208 · 209 · 219 gebaut 2026-07-30~~) | `ui/views/research*`, `SourceCitationRow`, `core/research`, `core/validate` |
-| Ⓖ Navigation & Shell | BL-07ᴮ · 94 · 213 | Shell / Navigation |
-| Ⓗ Import / Export / Dedup | ~~125 + 10 (gebaut 2026-07-30)~~ · 207 · 166⏸ | Export-Pipe, Import-Vergleich, Dedup |
-| Ⓘ Orte-Editor (Standalone) | BL-220ᴮ → 221ᴮ → 222ᴮ (Vertrag + Gates + Bau) · 223 · 224 → 225 → 226 (Handbuch) · 227⏸ | `ui/shell/places-host.ts`, `ui/views/place`+`hof`, `tools/handbuch` |
-| — Standalone / Infra | BL-83 (_EVAL, Interop) · BL-66 (a11y) · BL-180 (Kat-B-Sync) | — |
+| Ⓓ Quellen & Archive | BL-128 (Vorleistung für Ⓕ BL-228) · BL-217 | `ui/views/source`, `ui/views/repository`, `core/interop` |
+| Ⓔ Orte, Karte & Geo | BL-230 (Ebenen-Wahl reist mit BL-180) | Karten-Insel, `MapLensView` |
+| Ⓕ Forschung | BL-57 → BL-83 → BL-229 (Kette, [ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)) · BL-228 (nach BL-128) · BL-231 (unabhängig, [ADR-v9-167](04-Entscheidungslog.md#adr-v9-167)) | `ui/views/research*`, `SourceCitationRow`, `core/research`, `core/validate`, `core/interop` |
+| Ⓖ Navigation & Shell | BL-07 · BL-213 · BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation |
+| Ⓗ Import / Export / Dedup | BL-207 · BL-166 (vertagt) | Import-Vergleich, Dedup, Export-Pipe |
+| Ⓘ Orte-Editor (Standalone) | BL-220 → BL-221 → BL-222 (Vertrag + Gates) · BL-223 · BL-224 → BL-225 → BL-226 (Handbuch) · BL-227 (vertagt) | `ui/shell/places-host.ts`, `ui/views/place`+`hof`, `tools/handbuch`, Build/CI |
+| — ohne Cluster (je für sich baubar) | BL-66 · BL-180 | `package.json` (axe-core), `services/` (`AppDataSyncService`) |
 
-**Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
-(BL-196/197) und Ⓒ-Zähler/Marker (BL-200/202/204/205) — alle browser-verifiziert an Realdaten;
-die Zeilen stehen unter „Erledigte Punkte". BL-206 (Kurations-Achtungs-Punkt am Werkzeuge-
-Trigger, ADR-v9-148) ist ebenfalls gebaut (2026-07-29), BL-212 (Eingabe-Komfort) am 2026-07-30 —
-aus den Startclustern ist damit nichts mehr offen.
+**Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang).** Die Wellen der Kleinlücken-
+Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch Offenes.
 
-**Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang):**
+1. **Welle 1 — `blockiert`, dann `basis` ohne Vorbedingung:** Ⓘ BL-220 → BL-221 → BL-222 (der
+   `PlacesHost`-Vertrag mit seinen zwei Gates; ohne ihn steht der gesamte `OE-n`-Strang in
+   [05a](05a-Backlog-Orte-Editor.md) still) · BL-07 (History-Navigation) · BL-57
+   (Evidenz-Eingabe, Kopf der Ⓕ-Kette) · BL-223.
+2. **Welle 2 — was auf Welle 1 aufsetzt** (Rest-`basis` + die zwei Ketten): Ⓘ-Handbuch
+   BL-224 → BL-225 → BL-226 · BL-83 → BL-229 (beide nach BL-57) · BL-128 → BL-228.
+3. **Welle 3 — eigenständige Kür:** BL-217 · BL-230 (ohne BL-180 bleibt die Ebenen-Wahl
+   sitzungslokal — kein Hindernis) · BL-231 · BL-207 · BL-213.
+4. **Welle 4 — Infra & Hygiene (opportunistisch):** BL-180 (macht die BL-230-Wahl
+   gerätefest) · BL-66 · BL-94 (erst den Inhalt spezifizieren).
 
-1. ~~**Welle 1 — Sichtbare Parität zu v8, billig:** Ⓐ (195/198/211/199) · Ⓑ-Anzeige (196/197) ·
-   Ⓒ-Zähler (204/205/200/202)~~ — **gebaut (2026-07-29)**, s. „Erledigte Punkte". Offen bleibt
-   nur das `basis`-Item BL-07ᴮ (History-Navigation, keine Kleinlücke — größerer Bau).
-2. **Welle 2 — Komfort & Forschung:** BL-07ᴮ · BL-57ᴮ · ~~Ⓕ 208 → 209 (gebaut 2026-07-30)~~ · Ⓓ-Anzeige (201 → 203) ·
-   ~~206 (gebaut 2026-07-29)~~ · 207 · ~~212 (gebaut 2026-07-30)~~ · ~~Ⓔ-Kontextsprünge 60 → 210 (gebaut 2026-07-30)~~.
-3. **Welle 3 — Größere Kür-Features (Spec-first, wo nötig):** ~~127 (gebaut 2026-07-30)~~ → 128 · ~~131 (gebaut 2026-07-30)~~ · ~~125+10 (gebaut 2026-07-30)~~ · 213 ·
-   94 (Inhalt zuerst spezifizieren).
-
-**Planungsstand 2026-07-30 (BL-208/209/125/127/10/212, [ADR-v9-156](04-Entscheidungslog.md#adr-v9-156)…[160](04-Entscheidungslog.md#adr-v9-160)).**
-Vier Bündel, geordnet nach Dateimengen statt nach Themen (`CLAUDE.md`). **① 209 + 208 + 219** und
-**② 125 + 10** sind disjunkt und wurden parallel gebaut (2026-07-30, s. „Erledigte Punkte"); die
-Gates liefen erst auf dem ZUSAMMENGEFÜHRTEN Stand, weil jeder Agent eine Testdatei des anderen
-aussparen musste. **③ 127 und ④ 212 sind gebaut** (2026-07-30) — nacheinander, weil beide `PersonDetail.svelte`
-anfassen. Damit ist die geplante Menge vollständig abgearbeitet. 127 brauchte keine eigene Form-Entscheidung:
-[20 §1.4](20-Funktionen.md) schreibt Sektion, Picker, Rollen-Presets und die „Patenkinder"-
-Rückprojektion bereits aus (Kern ist geparst/geschrieben/verglichen, nur ohne UI).
-
-4. **Welle 4 — Infra / Hygiene / vertagt (opportunistisch):** 83 · ~~89 (gebaut 2026-07-30)~~ · 66 · 180 · 166⏸.
+**Bewusst vertagt — nicht einplanen, bis sich der Anlass ändert:** BL-166 (Orte/Höfe-Dedup,
+Weg 3 vom 2026-07-26 — geringer Wert gegen hohe Hürde) · BL-227 (Staging-Ziel; lohnt erst,
+wenn der Editor auf einem echten Gerät zu prüfen ist).
 
 **Cluster Ⓘ ist eigenständig und hat eine feste innere Reihenfolge** ([ADR-v9-161](04-Entscheidungslog.md#adr-v9-161)…[164](04-Entscheidungslog.md#adr-v9-164)). BL-220 (Vertrag) ist Voraussetzung für alles Weitere und fasst dieselben 16 Dateien an wie der spätere Anschluss der Flächen — es gibt hier **keine** parallelisierbare Dateimenge, auch wenn die Themen getrennt aussehen. BL-221/222 sind die Gates, ohne die die Trennung nur eine Vereinbarung wäre; sie gehören in denselben Zug, nicht ans Ende. Die eigentliche Bauarbeit am Editor steht in [05a](05a-Backlog-Orte-Editor.md) (`OE-n`).
 
 **Herkunft BL-195…213:** Kleinlücken-Inventur v8↔v9 (2026-07-29) — zwei Muster: (a) Modell-Feld
 vorhanden, in der UI nicht gezeigt (`nick`/`datePhrase`/`pedigree`/`dataEvents`/`externalRefs`/
 `callMedia`); (b) Listen-Zähler/Badges, die v8 proaktiv zeigte. Bereits getrackte Überschneidungen
-NICHT dupliziert: Soundex (BL-10), History-Nav (BL-07), CSV (BL-125), Assoziationen (BL-127),
-GOV (BL-131). `AGNC`/`callMedia`-Wire-Struktur vor UI-Bau am v8-Writer fachlich prüfen —
-**erledigt für BL-201** ([ADR-v9-151](04-Entscheidungslog.md#adr-v9-151)): `callMedia` ist projiziert
-und gebaut, `AGNC` hatte gar kein Modellfeld und trug — obwohl hier benannt — in keiner Zeile;
-er ist jetzt Teil von BL-217. Muster (a) trägt damit einen dritten Fall: **Feld im Modell, aber von
-KEINEM Parser gefüllt** (`dataEvents`) — vor dem Bau einer Anzeige prüfen, ob das Feld überhaupt
-je einen Wert bekommt, nicht nur, ob es deklariert ist. **Abgleich erledigt für BL-208/209/212**
-(2026-07-30, [ADR-v9-156](04-Entscheidungslog.md#adr-v9-156)…[158](04-Entscheidungslog.md#adr-v9-158)):
-209 ist unkritisch (Modellfelder liegen bereit), 208 wurde zerlegt, **212 fiel durch** — die wörtlich
-übernommene Chipreihe ist Altlast §10 UND kollidiert mit dem Modell (`RELI` ist Skalarfeld, kein
-Ereignistyp; ein Chip hätte beim Export eine zweite `1 RELI`-Zeile erzeugt). Damit ist BL-206 kein
-Einzelfall: **die v8-Form kann nicht nur die Oberfläche, sondern auch das Datenmodell verfehlen** —
-der Abgleich fragt beides.
-
-Abgeschlossene Bündel (Zeilen unter „Erledigte Punkte"): ① UI-Politur (BL-67…71), ③ Diagramm-
-Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-169…179, ADR-v9-138/142).
+wurden NICHT dupliziert: Soundex (BL-10), History-Nav (BL-07), CSV (BL-125), Assoziationen
+(BL-127), GOV (BL-131). **Offen aus dieser Inventur sind noch BL-207 und BL-213** sowie BL-217
+als Abspaltung aus BL-201 — für sie gilt weiter der in `CLAUDE.md` vorgeschriebene Abgleich VOR
+dem Bau: die vom Orakel übernommene **Form** gegen [03-Altlasten](03-Altlasten.md), die
+einschlägigen `INV-…` **und das Datenmodell** halten. Drei Befunde dieses Abgleichs, die seinen
+Umfang begründen: BL-206 hätte eine abgeschaffte Glyphenreihe zurückgeholt (Altlast §10,
+[ADR-v9-148](04-Entscheidungslog.md#adr-v9-148)); BL-212 verfehlte zusätzlich das **Modell**
+(`RELI` ist Skalarfeld, kein Ereignistyp — ein Chip hätte beim Export eine zweite `1 RELI`-Zeile
+erzeugt, [ADR-v9-156](04-Entscheidungslog.md#adr-v9-156)); und `dataEvents` war zwar deklariert,
+aber von **keinem Parser gefüllt** ([ADR-v9-151](04-Entscheidungslog.md#adr-v9-151)) — Muster (a)
+trägt damit einen dritten Fall: vor dem Bau einer Anzeige prüfen, ob das Feld überhaupt je einen
+Wert bekommt, nicht nur, ob es deklariert ist.
 
 ## Offene Punkte
 
