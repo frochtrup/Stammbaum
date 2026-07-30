@@ -204,6 +204,29 @@ export function parseBacklog(text, praefix = 'BL') {
   return zeilen;
 }
 
+/** L9: Zeilennummern (1-basiert) von Tabellen, deren Kopfzeile KEINE Trennzeile folgt.
+ *
+ *  WARUM DIESE REGEL EXISTIERT (Nutzer-Fund 2026-07-31): am 2026-07-28 wurden zwei frisch
+ *  erledigte Zeilen zwischen die Kopfzeile und die Trennzeile von „Erledigte Punkte"
+ *  eingefügt statt darunter. Ohne Trennzeile an zweiter Stelle ist es in GFM gar keine
+ *  Tabelle mehr — der ganze Abschnitt rendert auf GitHub als Absatz voller Striche. Der
+ *  Prüfer meldete trotzdem zwölf Commits lang „konsistent", weil er Zeilen per Regex
+ *  liest und die Struktur nie ansah; jeder weitere Erledigt-Commit schob die Trennzeile
+ *  eine Zeile tiefer, am Ende 23 Zeilen. Aufgefallen ist es beim Lesen, nicht beim Prüfen
+ *  — dieselbe Lücke wie bei L5, eine Ebene tiefer: dort stand die Zeile im falschen
+ *  Abschnitt, hier ist der Abschnitt selbst nicht mehr lesbar. */
+export function tabellenBrueche(text) {
+  const L = text.split('\n');
+  const brueche = [];
+  let fence = false;
+  for (let i = 0; i < L.length; i++) {
+    if (/^```/.test(L[i])) fence = !fence;
+    if (fence || !/^\|/.test(L[i]) || (i > 0 && /^\|/.test(L[i - 1]))) continue;
+    if (!/^\|[-| :]+\|$/.test(L[i + 1] || '')) brueche.push(i + 1);
+  }
+  return brueche;
+}
+
 /** L5: Welcher Abschnitt zu welchem Status gehört. */
 const ABSCHNITT_FUER_STATUS = { offen: 'Offene Punkte', gebaut: 'Erledigte Punkte' };
 
@@ -248,6 +271,12 @@ function pruefe() {
     // haben. Deshalb hart, nicht als Warnung.
     if (dateiZeilen.length === 0 && /^\| ID \| P \|/m.test(text))
       fehler.push(`${bl.datei}: Tabelle vorhanden, aber keine ${bl.praefix}-Zeilen erkannt — falscher ID-Präfix?`);
+
+    for (const z of tabellenBrueche(text))
+      fehler.push(
+        `L9 ${bl.datei}:${z}: Tabellenkopf ohne Trennzeile |---|…| direkt darunter — ` +
+          `rendert nicht als Tabelle (neue Zeile UNTER die Trennzeile, nicht darüber)`,
+      );
 
     for (const z of dateiZeilen) {
       if (ids.has(z.id)) fehler.push(`${z.id}: doppelte ID (IDs werden nie wiederverwendet)`);
@@ -447,6 +476,27 @@ function selftest() {
   );
   if (!l5ok) bad++;
 
+  // L9 negativ prüfen: genau die Form, die den Fund ausgelöst hat — eine Datenzeile
+  // zwischen Kopf- und Trennzeile. Die Gegenprobe mit gesunder Tabelle gehört dazu, sonst
+  // wäre eine Regel, die immer anschlägt, ebenfalls „grün getestet".
+  const l9Kaputt = [
+    '## Erledigte Punkte',
+    '| ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |',
+    '| BL-92 | K | feature | basis | zwischen Kopf und Trenner | [20](20-Funktionen.md) | `sym:x` | gebaut |',
+    '|---|---|---|---|---|---|---|---|',
+  ].join('\n');
+  const l9Heil = [
+    '| ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |',
+    '|---|---|---|---|---|---|---|---|',
+    '| BL-93 | K | feature | basis | korrekt | [20](20-Funktionen.md) | `sym:y` | gebaut |',
+  ].join('\n');
+  const l9ok = tabellenBrueche(l9Kaputt).join() === '2' && tabellenBrueche(l9Heil).length === 0;
+  console.log(
+    `${l9ok ? '  ok  ' : ' FAIL '} L9 erkennt Kopfzeile ohne Trennzeile`.padEnd(50) +
+      `  → ${tabellenBrueche(l9Kaputt).join(',') || 'nichts erkannt'} (heile Tabelle: ${tabellenBrueche(l9Heil).length})`,
+  );
+  if (!l9ok) bad++;
+
   // L6 negativ prüfen: die Ableitung aus dem Quelltext muss eine Regel finden, die NUR
   // implementiert ist, und eine, die NUR dokumentiert ist. Ohne diese Gegenprobe wäre
   // nicht belegt, dass L6 in beide Richtungen schaut — und die eine Richtung, die fehlt,
@@ -456,11 +506,13 @@ function selftest() {
   // als implementierte Regel L9 mit — der Prüfer vergiftete sich an seinem eigenen
   // Selbsttest. Genau so passiert, beim ersten Lauf, sofort sichtbar am Normallauf.
   const q = '`';
-  const impl = implementierteRegeln(`fehler.push(${q}L1 x${q}); warnungen.push(${q}L9 y${q});`);
+  // Die erfundene Regel heißt L99, nicht L9: seit L9 wirklich existiert, wäre „L9" hier
+  // beim Lesen nicht mehr als Vorlage erkennbar.
+  const impl = implementierteRegeln(`fehler.push(${q}L1 x${q}); warnungen.push(${q}L99 y${q});`);
   const doku = dokumentierteRegeln('| L1 | … |\n| L8 | … |\n');
   const nurImpl = [...impl].filter((r) => !doku.has(r));
   const nurDoku = [...doku].filter((r) => !impl.has(r));
-  const l6ok = nurImpl.join() === 'L9' && nurDoku.join() === 'L8';
+  const l6ok = nurImpl.join() === 'L99' && nurDoku.join() === 'L8';
   console.log(
     `${l6ok ? '  ok  ' : ' FAIL '} L6 erkennt Drift in beide Richtungen`.padEnd(50) +
       `  → nur implementiert: ${nurImpl.join() || '–'} · nur dokumentiert: ${nurDoku.join() || '–'}`,
