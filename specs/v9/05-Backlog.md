@@ -94,9 +94,9 @@ bewusst vertagt.
 | Ⓒ Kurations-Handlungsbedarf am Werkzeuge-Trigger | ~~BL-206 (gebaut 2026-07-29)~~ — Cluster leer | Orte/Höfe-Werkzeugleisten |
 | Ⓓ Quellen & Archive — Detail, Vorlagen, Assoziationen | BL-217 · 128 · 127⚡ | `ui/views/source`, `ui/views/repository` |
 | Ⓔ Orte, Karte & Geo | ~~alle gebaut (214/2026-07-29; 60·210·131·89/2026-07-30)~~ — Cluster leer | `core/places`, Karten-Insel, `MapLensView`, `mini-map` |
-| Ⓕ Forschung | BL-57ᴮ · 208 · 209 | `ui/views/research*`, `SourceCitationRow`, `core/research` |
-| Ⓖ Navigation & Shell | BL-07ᴮ · 10 · 94 · 213 | Shell / Navigation |
-| Ⓗ Import / Export / Dedup | BL-125 · 207 · 166⏸ | Export-Pipe, Import-Vergleich, Dedup |
+| Ⓕ Forschung | BL-57ᴮ · 208 · 209 (+ 219, andere Fläche, gleicher Zug) | `ui/views/research*`, `SourceCitationRow`, `core/research`, `design-system.css` |
+| Ⓖ Navigation & Shell | BL-07ᴮ · 94 · 213 | Shell / Navigation |
+| Ⓗ Import / Export / Dedup | **BL-125 + 10** (ein Bau) · 207 · 166⏸ | Listen-Modelle + `FilterBar`, Export-Pipe, Import-Vergleich, Dedup |
 | — Standalone / Infra | BL-83 (_EVAL, Interop) · BL-66 (a11y) · BL-180 (Kat-B-Sync) | — |
 
 **Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
@@ -112,8 +112,17 @@ BL-212 (Eingabe-Komfort).
    nur das `basis`-Item BL-07ᴮ (History-Navigation, keine Kleinlücke — größerer Bau).
 2. **Welle 2 — Komfort & Forschung:** BL-07ᴮ · BL-57ᴮ · Ⓕ (208 → 209) · Ⓓ-Anzeige (201 → 203) ·
    ~~206 (gebaut 2026-07-29)~~ · 207 · 212 · ~~Ⓔ-Kontextsprünge 60 → 210 (gebaut 2026-07-30)~~.
-3. **Welle 3 — Größere Kür-Features (Spec-first, wo nötig):** 127 → 128 · ~~131 (gebaut 2026-07-30)~~ · 125 · 10 · 213 ·
+3. **Welle 3 — Größere Kür-Features (Spec-first, wo nötig):** 127 → 128 · ~~131 (gebaut 2026-07-30)~~ · **125+10 (ein Bau)** · 213 ·
    94 (Inhalt zuerst spezifizieren).
+
+**Planungsstand 2026-07-30 (BL-208/209/125/127/10/212, ADR-v9-156…159).** Vier Bündel, Reihenfolge nach
+Dateimengen (nicht nach Themen — `CLAUDE.md`): ① **209 + 208(+219)** — `ProjectBar`/`LogView`/
+`HypothesesView`/`StatisticsView` + Token in `design-system.css`. ② **125 + 10** — dieselben Listen-
+Modelle und dieselbe `FilterBar`-Fläche, deshalb EIN Auftrag, nicht zwei parallele. ③ **127** und
+④ **212** fassen beide `PersonDetail.svelte` an und dürfen **nicht** gleichzeitig laufen. ① und ②
+sind disjunkt und damit die einzige zulässige Parallelität. Alle vier Form-Entscheidungen liegen als
+ADR vor; 127 braucht keine — [20 §1.4](20-Funktionen.md) schreibt Sektion, Picker, Rollen-Presets und
+die „Patenkinder"-Rückprojektion bereits aus (Kern ist geparst/geschrieben/verglichen, nur ohne UI).
 4. **Welle 4 — Infra / Hygiene / vertagt (opportunistisch):** 83 · ~~89 (gebaut 2026-07-30)~~ · 66 · 180 · 166⏸.
 
 **Herkunft BL-195…213:** Kleinlücken-Inventur v8↔v9 (2026-07-29) — zwei Muster: (a) Modell-Feld
@@ -125,7 +134,13 @@ GOV (BL-131). `AGNC`/`callMedia`-Wire-Struktur vor UI-Bau am v8-Writer fachlich 
 und gebaut, `AGNC` hatte gar kein Modellfeld und trug — obwohl hier benannt — in keiner Zeile;
 er ist jetzt Teil von BL-217. Muster (a) trägt damit einen dritten Fall: **Feld im Modell, aber von
 KEINEM Parser gefüllt** (`dataEvents`) — vor dem Bau einer Anzeige prüfen, ob das Feld überhaupt
-je einen Wert bekommt, nicht nur, ob es deklariert ist.
+je einen Wert bekommt, nicht nur, ob es deklariert ist. **Abgleich erledigt für BL-208/209/212**
+(2026-07-30, [ADR-v9-156](04-Entscheidungslog.md#adr-v9-156)…[158](04-Entscheidungslog.md#adr-v9-158)):
+209 ist unkritisch (Modellfelder liegen bereit), 208 wurde zerlegt, **212 fiel durch** — die wörtlich
+übernommene Chipreihe ist Altlast §10 UND kollidiert mit dem Modell (`RELI` ist Skalarfeld, kein
+Ereignistyp; ein Chip hätte beim Export eine zweite `1 RELI`-Zeile erzeugt). Damit ist BL-206 kein
+Einzelfall: **die v8-Form kann nicht nur die Oberfläche, sondern auch das Datenmodell verfehlen** —
+der Abgleich fragt beides.
 
 Abgeschlossene Bündel (Zeilen unter „Erledigte Punkte"): ① UI-Politur (BL-67…71), ③ Diagramm-
 Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-169…179, ADR-v9-138/142).
@@ -147,9 +162,10 @@ Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-
 | BL-180 | — | feature | kür | **Kategorie-B-Sync-Bündel** (ADR-v9-134): geräteweiter, nutzer-erarbeiteter app-privater Zustand (Projekte, Duplikat-Ignorierliste, Quick-Templates, Validierungs-Config, Export-Vorwahl) reist über das `orte.json`-Muster — IDB-Spiegel (Laufzeit-Wahrheit) + optionaler `app-data.json`-Ex-/Import über `FileService`, `_rev`/`_device`/`_ts`-Wrapper mit Drei-Wege-Merge (ADR-v9-110), Union bei disjunkten Änderungen. Generalisiert `PlacesSyncService`; kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1). Klasse A (Theme/FS-Handle/Arbeitskopie/Medien-Cache) bleibt gerätelokal | [30 §2.2/§2.3](30-NFR-und-Persistenz.md), [14 §6](14-Dateihandling.md), [ADR-v9-134](04-Entscheidungslog.md#adr-v9-134) | `sym:AppDataSyncService` | offen |
 | BL-217 | S | feature | kür | **Quellen-`SOUR.DATA` als Interop-Projektion** (Abspaltung aus BL-201, [ADR-v9-151](04-Entscheidungslog.md#adr-v9-151)): `dataEvents` (DATA.EVEN + DATE/PLAC) ist ein TOTES Modellfeld — deklariert, mit `[]` initialisiert, von keinem Parser gefüllt und keinem Writer geschrieben; `AGNC` („Behörde", v8 `ui-views-source.js:56`) hat gar kein Modellfeld. Beide hängen am selben `1 DATA`-Container und sind daher EIN Stück Arbeit: Parse+Emit, `DATA` in `RECOGNIZED_SOURCE`, `sourceEqual` erweitert — Gate `roundtrip-verify` `net_delta=0`, erst danach eine Anzeige. Am Realbestand: DATA.EVEN 0×, AGNC 1× | [20 §1.6](20-Funktionen.md), [13 §2](13-Interop-Roundtrip.md) | `test:tests/roundtrip/source-data-roundtrip.test.ts` | offen |
 | BL-207 | S | feature | kür | Import-Vergleich: Sektions-Massen-Aktionen („alle übernehmen"/„alle Forschungseintrag") + Score-Begründungs-Tooltip (`reasons`) in der Trefferliste. v8-Orakel `ui-import-compare.js:388/297` | [20 §1.2](20-Funktionen.md) | `sym:bulkApplySection` | offen |
-| BL-208 | S | feature | kür | Forschungs-Sichtbarkeit farbcodiert (ein Signal-Mechanismus): Protokoll-Ergebnis-Ampel (4 Zustände found/partial/notfound/pending), Hypothesen-Konfidenz-Badge-Stufe, Statistik-Tooltip mit % + Gesamt-Caption. v8-Orakel `ui-views-rlog.js:25`/`ui-views-hypo.js:64`/`ui-views-stats.js:266` | [20 §1.11](20-Funktionen.md) | `sym:logResultTone` | offen |
-| BL-209 | S | feature | kür | Forschungsprojekte: Farbcodierung (Chip-Punkt + Swatch-Picker) + Notizfeld + JSON-Export/Import. v8-Orakel `PROJ_COLORS` (`ui-views-projects.js`); v9-`ProjectBar` hat weder Farbe noch Notiz noch Portabilität | [20 §1.11](20-Funktionen.md) | `sym:PROJECT_COLORS` | offen |
-| BL-212 | E | feature | kür | Ereignis-Eingabekomfort: Quick-Add-Chips mit Wert-Vorbelegung (`+ röm.-kath.`/`+ evang.`) + Geburtsdatum aus Sterbedatum+Sterbealter ableiten + Ereignis-Zwischenablage („+ Übernehmen" auf die nächste Person). v8-Orakel `ui-views-person.js:612`/`ui-quicktpl.js:140`/`ui-views-person.js:526` | [20 §1.4](20-Funktionen.md) | `sym:eventQuickPresets` | offen |
+| BL-208 | S | feature | kür | **Forschungs-Signal vollständig** ([ADR-v9-157](04-Entscheidungslog.md#adr-v9-157), zerlegt — Statistik-Teil → BL-219): Protokoll-Ergebnis über ALLE VIER Zustände (heute nur `found`/`partial` als Linksbalken, `notfound`/`pending` signallos) + Hypothesen-Konfidenz als dreistufig getöntes Label (**nicht** QuayMeter-Pips, INV-H1). Vorarbeit im selben Zug: `--stb-ok` ist nirgends definiert, wird aber 3× über Inline-Fallback benutzt → echter Token. v8-Orakel `ui-views-rlog.js:25`/`ui-views-hypo.js:64` | [20 §1.11b/d](20-Funktionen.md) | `sym:logResultTone` | offen |
+| BL-209 | S | feature | kür | ⚡ **Forschungsprojekte: Farbe + Notiz** ([ADR-v9-158](04-Entscheidungslog.md#adr-v9-158)) — beide Felder existieren im Modell (`core/research/types.ts`), `ProjectBar` zeigt/editiert sie nur nie: Chip-Punkt + Swatch-Auswahl aus einem Token-Satz (kein roher v8-Hex, Kontrast messen) + Notizfeld. **JSON-Export/Import gestrichen** — Portabilität app-privaten Zustands ist BL-180 (`app-data.json`), ein zweiter Pfad wäre derselbe Mechanismus doppelt | [20 §1.11f](20-Funktionen.md) | `sym:PROJECT_COLORS` | offen |
+| BL-212 | E | feature | kür | **Ereignis-Eingabekomfort, v9-Form** ([ADR-v9-156](04-Entscheidungslog.md#adr-v9-156) — die v8-Chipreihe ist verworfen, sie ist Altlast §10 und `RELI` ist in v9 ein Skalarfeld, kein Ereignistyp): ① Religions-Presets als `<datalist>` am vorhandenen Feld ② Geburtsdatum aus Sterbedatum+Alter als Kern-Funktion (`CAL`-Kodierung wie Orakel `_qtCalcBirthFromAge`, Alter transient) ③ Ereignis-Zwischenablage als Eintrag im vorhandenen „+ Ereignis"-Menü. Mitzuziehen: `story-model.ts` sucht ein RELI-*Ereignis* (toter Zweig) | [20 §1.4](20-Funktionen.md) | `sym:RELIGION_PRESETS` | offen |
+| BL-219 | E | feature | kür | Statistik-Balken beziffern sich selbst: Tooltip mit **%** neben der absoluten Zahl + Gesamt-Caption je Verteilung („N Familien gesamt"). Abspaltung aus BL-208 ([ADR-v9-157](04-Entscheidungslog.md#adr-v9-157)) — anderer Spec-Abschnitt, anderer Mechanismus (vorhandenes `use:tooltip`, Prozente im `stats-model` gerechnet und dort getestet). v8-Orakel `ui-views-stats.js:266` | [20 §1.13](20-Funktionen.md) | `txt:Gesamt@ui/views/stats/StatisticsView.svelte` | offen |
 | BL-213 | E | feature | kür | Onboarding-Spotlight: 4-Schritt-Erstnutzer-Rundgang nach „Demo laden" (Spotlight-Löcher, „Schritt X von 4"). v8-Orakel `maybeStartOnboarding` (`ui-onboarding.js`); in v9 nicht vorhanden | [20 §1.1](20-Funktionen.md) | `sym:startOnboarding` | offen |
 
 ## Erledigte Punkte
