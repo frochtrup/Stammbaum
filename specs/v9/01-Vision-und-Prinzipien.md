@@ -75,6 +75,7 @@ Gleichzeitige Bearbeitung auf mehreren Geräten darf nicht zu stillem last-write
 - **Nominatim (OSM)** — Geocoding (opt-in, Einzel + Batch).
 - **GOV (gov.genealogy.net)** — historische Verwaltungszugehörigkeiten.
 - **Kartenkacheln (OSM)** — Kartenansicht.
+- **Historische Kartenkacheln** — OpenHistoricalMap bzw. eine vom Nutzer eingetragene Kachel-Adresse, als **Ebene** in der Kartenansicht (opt-in, kein kommerzieller Anbieter fest verdrahtet — [20 §1.9](20-Funktionen.md), [ADR-v9-166](04-Entscheidungslog.md#adr-v9-166)).
 - **Kartenbibliothek** — lokal ausgeliefert (kein CDN).
 
 Alle externen Aufrufe sind nutzerausgelöst und für den Kern-Workflow entbehrlich (LP-2).
@@ -91,7 +92,7 @@ Bewusste Abgrenzungen, die auch der Neuaufsatz nicht anstrebt:
 - **Server-Backend** jeglicher Art für den Kern-Workflow.
 - **Zwei-Schichten-Evidenz / Alternativ-Bäume** mit widersprüchlichen Faktenversionen (würde Roundtrip-Treue brechen; Hypothesen bleiben leichte Annotation, [12](12-Forschungsdaten.md)).
 
-Optionale Zukunfts-Kandidaten (nicht Teil des Kern-Neuaufsatzes): Pedigree-Collapse/Inzuchtkoeffizient, historische Kartenlayer, LLM-gestützte Story (opt-in, anonymisiert), OCR (opt-in).
+Optionale Zukunfts-Kandidaten (nicht Teil des Kern-Neuaufsatzes): Pedigree-Collapse/Inzuchtkoeffizient, LLM-gestützte Story (opt-in, anonymisiert), OCR (opt-in). *(Historische Kartenlayer standen hier ebenfalls; sie sind mit [ADR-v9-166](04-Entscheidungslog.md#adr-v9-166) entschieden und stehen jetzt als Anforderung in [20 §1.9](20-Funktionen.md).)*
 
 ---
 

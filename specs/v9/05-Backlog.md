@@ -91,7 +91,7 @@ Risiko für relevant hält, macht es entscheidbar (BL-54 ist genau diese Umwandl
 
 ## Priorisierung & Clusterung der offenen Items (Stand 2026-07-30)
 
-Eine **Priorisierung + Leseordnung** über die 33 offenen Punkte — **keine zweite Status-Wahrheit**
+Eine **Priorisierung + Leseordnung** über die offenen Punkte — **keine zweite Status-Wahrheit**
 (der Status je Zeile bleibt die Statusspalte unten; erledigte Items fallen hier weg). Ein
 **Cluster** bündelt Items, die dieselben Dateien/dasselbe Subsystem berühren (ein fokussierter
 Bau) oder voneinander abhängen (Primitive vor Konsument). Marker: **ᴮ** = Klasse `basis` (vor
@@ -101,9 +101,9 @@ bewusst vertagt.
 | Cluster | Offene Items (interne Reihenfolge) | Fläche / Dateien |
 |---|---|---|
 | Ⓒ Kurations-Handlungsbedarf am Werkzeuge-Trigger | ~~BL-206 (gebaut 2026-07-29)~~ — Cluster leer | Orte/Höfe-Werkzeugleisten |
-| Ⓓ Quellen & Archive — Detail, Vorlagen | BL-217 · 128 (~~127 gebaut 2026-07-30~~) | `ui/views/source`, `ui/views/repository` |
-| Ⓔ Orte, Karte & Geo | ~~alle gebaut (214/2026-07-29; 60·210·131·89/2026-07-30)~~ — Cluster leer | `core/places`, Karten-Insel, `MapLensView`, `mini-map` |
-| Ⓕ Forschung | BL-57ᴮ (~~208 · 209 · 219 gebaut 2026-07-30~~) | `ui/views/research*`, `SourceCitationRow`, `core/research` |
+| Ⓓ Quellen & Archive — Detail, Vorlagen | BL-217 · 128 (Vorleistung für 228) (~~127 gebaut 2026-07-30~~) | `ui/views/source`, `ui/views/repository` |
+| Ⓔ Orte, Karte & Geo | BL-230 (~~214/2026-07-29; 60·210·131·89/2026-07-30 gebaut~~) | `core/places`, Karten-Insel, `MapLensView`, `mini-map` |
+| Ⓕ Forschung | BL-57ᴮ → **83** → 229 (Kette, [ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)) · 228 (nach 128) (~~208 · 209 · 219 gebaut 2026-07-30~~) | `ui/views/research*`, `SourceCitationRow`, `core/research`, `core/validate` |
 | Ⓖ Navigation & Shell | BL-07ᴮ · 94 · 213 | Shell / Navigation |
 | Ⓗ Import / Export / Dedup | ~~125 + 10 (gebaut 2026-07-30)~~ · 207 · 166⏸ | Export-Pipe, Import-Vergleich, Dedup |
 | Ⓘ Orte-Editor (Standalone) | BL-220ᴮ → 221ᴮ → 222ᴮ (Vertrag + Gates + Bau) · 223 · 224 → 225 → 226 (Handbuch) · 227⏸ | `ui/shell/places-host.ts`, `ui/views/place`+`hof`, `tools/handbuch` |
@@ -112,8 +112,8 @@ bewusst vertagt.
 **Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
 (BL-196/197) und Ⓒ-Zähler/Marker (BL-200/202/204/205) — alle browser-verifiziert an Realdaten;
 die Zeilen stehen unter „Erledigte Punkte". BL-206 (Kurations-Achtungs-Punkt am Werkzeuge-
-Trigger, ADR-v9-148) ist ebenfalls gebaut (2026-07-29); offen aus den Startclustern bleibt nur
-BL-212 (Eingabe-Komfort).
+Trigger, ADR-v9-148) ist ebenfalls gebaut (2026-07-29), BL-212 (Eingabe-Komfort) am 2026-07-30 —
+aus den Startclustern ist damit nichts mehr offen.
 
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang):**
 
@@ -162,6 +162,9 @@ Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-228 | S | feature | kür | **Forschungsschritt-Vorschlag** ([ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)): `suggestResearchStep(finding, ctx)` bildet einen Validierungs-Befund auf Quellengattung + (wo ableitbar) Archiv ab und belegt darüber die Aufgabe vor, die der **vorhandene** „→ Als Aufgabe übernehmen"-Knopf anlegt (`category`/`sourceRef`, kein neues Modellfeld, kein neues Bedienelement — INV-UI-11). Gattungs-Vokabular ist **das** der Quellen-Vorlagen (BL-128), nicht eine zweite Liste — BL-128 daher zuerst | [20 §3](20-Funktionen.md), [12 §1](12-Forschungsdaten.md) | `sym:suggestResearchStep` | offen |
+| BL-229 | S | feature | kür | **Regel `EVIDENCE_CONFLICT`** ([ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)): Faktum mit ≥2 Zitaten gegenläufiger Evidenz-Achse (`direct` ↔ `negative`), ⚠ Warnung, ab Werk **an** (schlägt nur auf bewusst gesetzten Bewertungen an — anders als `MISSING_EVAL`). **Reihenfolge ist Teil der Entscheidung: BL-57 (Eingabe) → BL-83 (`_EVAL`-Wire) → diese Zeile** — vorher prüfte die Regel Daten, die das Speichern nicht überleben (gemessen: `_STYP`/`_EVID`/`_INFO` kommen in `core/interop` 0× vor) | [20 §3](20-Funktionen.md), [12 §3](12-Forschungsdaten.md) | `txt:EVIDENCE_CONFLICT@core/validate/rules.ts` | offen |
+| BL-230 | S | feature | usp | **Historische Kartenebene** ([ADR-v9-166](04-Entscheidungslog.md#adr-v9-166)): Ebenen-Umschalter in der Karte-Lens (OSM · OpenHistoricalMap · nutzereigene XYZ-/TMS-Adresse), opt-in; kein kommerzieller Anbieter verdrahtet. Wahl + Adresse als Kategorie-B-Zustand (reisen mit BL-180, kein eigener Speicher); Offline-Vektor-Pfad und Mini-Karte bleiben unberührt; Attribution je Ebene sichtbar, Klick-Guard aus ADR-v9-150 gilt weiter | [20 §1.9](20-Funktionen.md), [30 §2.2](30-NFR-und-Persistenz.md), [01 §3](01-Vision-und-Prinzipien.md) | `sym:TILE_LAYERS` | offen |
 | BL-220 | K | feature | blockiert | `PlacesHost`-Vertrag (12 Kommandos + `PlacesHostCaps` + `PlacesNav`) in `ui/shell/places-host.ts`; die 16 Orts-/Hof-Views nehmen ihn statt `AppState`/`ViewState` als Prop-Typ, `AppState` erfüllt ihn mit allen Fähigkeiten. Die sechs Abweichungen D1–D6 hängen an den Fähigkeiten, nicht an Kopien (INV-ORTE-1). Kein Verhaltenswechsel — Nachweis ist der unveränderte Testlauf | [22 §3](22-Orte-Editor-Standalone.md), [02 §3](02-Zielarchitektur-v9.md) | `sym:PlacesHost` | offen |
 | BL-221 | K | hygiene | blockiert | Zwei Gates gegen den Rückfall in den Monolithen: `check:arch` verbietet `ui/shell/app-state`-Importe in `ui/views/place`/`ui/views/hof`, und ein Fork-Guard verbietet in `app-orte/` Dateien, deren Basisname in diesen Verzeichnissen existiert. Beide einmal absichtlich brechen, damit der Rot-Fall belegt ist | [22 §3](22-Orte-Editor-Standalone.md), [31 §3](31-Dev-Umgebung.md) | `txt:app-orte@tests/arch-boundary/check-arch-boundary.mjs` | offen |
 | BL-222 | K | hygiene | blockiert | `npm run build`, `npm run dev:orte` und `check:csp` erfassen BEIDE Programme. Ohne diesen Punkt bliebe der Editor grün und würde nie gebaut — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon hatte | [22 §2](22-Orte-Editor-Standalone.md), [31 §3](31-Dev-Umgebung.md) | `txt:dev:orte@package.json` | offen |

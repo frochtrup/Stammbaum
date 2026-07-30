@@ -58,6 +58,8 @@ EvidenceEval { sourceType, infoQuality, evidence, informant }
 
 `evalToQuay()` leitet einen QUAY-*Vorschlag* ab (`original+primary`→3, `negative`→0, `authored/undetermined/indirect`→1, sonst 2). Serialisiert als **modellierter** `_EVAL`-Subtree unter SOUR (nicht verbatim — [13 §2.3](13-Interop-Roundtrip.md)). Validator-Regel `MISSING_EVAL` bewusst **default-off** (opt-in-Disziplin, [20 §3](20-Funktionen.md)). UI-Verdrahtung (Bewertungs-Aufklapper an der Zitat-Zeile): [20 §1.11c](20-Funktionen.md).
 
+**Widerspruch zwischen Belegen — `EVIDENCE_CONFLICT`** ([ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)): trägt ein Faktum ≥2 Zitate, deren `evidence`-Achse gegenläufig ist (eines `direct`, eines `negative`), meldet die Validierungs-Engine das als ⚠ Warnung ([20 §3](20-Funktionen.md)) — **dieselbe Engine, keine zweite Prüfstelle**. Ab Werk **an**, anders als `MISSING_EVAL`: die Regel schlägt ausschließlich dort an, wo jemand zwei Bewertungen bewusst gesetzt hat, klagt also nicht über Abwesenheit. Sie verlangt **keine** zweite Faktenschicht — der Widerspruch lebt in der Bewertung der Belege, nicht in konkurrierenden Werten (§4 unten, [01 §4](01-Vision-und-Prinzipien.md)). **Voraussetzungskette:** die Achsen müssen erst eingebbar (Aufklapper) und über den Roundtrip haltbar (`_EVAL`-Wire-Format) sein — sonst prüft die Regel Daten, die das Speichern nicht überleben.
+
 ---
 
 ## 4. Hypothese (leichtes GPS-Modell)
