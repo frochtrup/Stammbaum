@@ -111,6 +111,8 @@ Persistenzschichten (Spec 11 §2): ein geräteweiter **IndexedDB-Spiegel** (imme
 
 Kein stiller Schreib-Sync bei jeder einzelnen Orts-/Hof-Mutation (auf Tier-2-Plattformen wäre das Share-Sheet-Spam bei jedem Edit) — Export/Import bleiben explizite Nutzeraktionen.
 
+Dieselbe Datei ist zugleich das **Dokument des Standalone-Orte-Editors** ([22](22-Orte-Editor-Standalone.md)): dort gibt es keinen Spiegel, die Datei ist die einzige Wahrheit (INV-ORTE-3), und Speichern läuft durch dasselbe Export-Rohr (INV-FILE-2/-3) mit `rev`-Erhöhung und eigener Gerätekennung. Eine dort bearbeitete Datei erscheint dem Hauptprogramm beim Import als Stand eines anderen Geräts und läuft durch den regulären Union-Merge — kein zweiter Abgleichspfad.
+
 ---
 
 ## 7. Medien

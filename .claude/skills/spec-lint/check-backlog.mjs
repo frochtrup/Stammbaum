@@ -22,7 +22,31 @@ import { fileURLToPath } from 'node:url';
 
 const SPEC = path.resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const CODE = path.join(process.env.HOME ?? '', 'dev/stammbaum-v9');
-const BACKLOG = path.join(SPEC, 'specs/v9/05-Backlog.md');
+
+/** Code-Wurzeln des Standalone-Orte-Editors. Alles darunter gehoert in dessen eigene
+ *  Statusdatei, alles daneben ins Hauptbacklog — die Grenze wird nicht beurteilt,
+ *  sondern gerechnet (L8). */
+const ORTE_WURZELN = ['app-orte/', 'tests/orte/'];
+
+/** Die Statusdateien des Projekts — je Programm eine. `gehoert(pfad)` entscheidet
+ *  anhand des Beleg-Pfads, ob eine Zeile in diese Datei gehoert; genau diese Funktion
+ *  macht die Aufteilung ueberpruefbar statt vereinbart. Eine zweite Statusdatei OHNE
+ *  Lint-Abdeckung waere ein Backlog ohne Beleg-Pruefung — also das, was dieses Skript
+ *  ueberhaupt verhindern soll. */
+const BACKLOGS = [
+  {
+    datei: 'specs/v9/05-Backlog.md',
+    praefix: 'BL',
+    bereich: 'Hauptprogramm',
+    gehoert: (p) => !ORTE_WURZELN.some((w) => p.startsWith(w)),
+  },
+  {
+    datei: 'specs/v9/05a-Backlog-Orte-Editor.md',
+    praefix: 'OE',
+    bereich: `Orte-Editor (${ORTE_WURZELN.join(', ')})`,
+    gehoert: (p) => ORTE_WURZELN.some((w) => p.startsWith(w)),
+  },
+];
 
 /** L3-Ratsche: Ist-Stand der Status-Wörter in den Specs 10–32 am 2026-07-18.
  *  Seit BL-50 (2026-07-18) auf 0 — die 33 Altlast-Stellen sind entfernt. NIE WIEDER
@@ -80,11 +104,19 @@ function expandGlob(pattern) {
 
 // --- Beleg-Auswertung (Syntax: s. 05-Backlog.md) ----------------------------
 
-let codeSources = null;
-const getCodeSources = () =>
-  (codeSources ??= ['core', 'services', 'ui', 'app']
+/** Alle Code-Dateien MIT ihrem Pfad — der Pfad wird fuer L8 gebraucht (welcher
+ *  Statusdatei gehoert der Beleg?), nicht nur der Inhalt. `app-orte` ist mit drin:
+ *  ein Symbol, das nur der Editor exportiert, muss auffindbar sein, sonst meldete
+ *  L2 dessen Zeilen fuer immer als „umbenannt/geloescht". */
+let codeDateien = null;
+const getCodeDateien = () =>
+  (codeDateien ??= ['core', 'services', 'ui', 'app', 'app-orte']
     .flatMap((d) => walk(path.join(CODE, d)))
-    .map((f) => stripComments(fs.readFileSync(f, 'utf8'))));
+    .map((f) => ({ rel: path.relative(CODE, f), src: stripComments(fs.readFileSync(f, 'utf8')) })));
+
+/** Regex, die einen Export dieses Namens findet — eine Quelle fuer evalBeleg und belegPfade. */
+const exportRe = (name) =>
+  new RegExp(`export\\s+(async\\s+)?(function|const|class|interface|type)\\s+${name}\\b`);
 
 /** Trifft der Beleg? „Trifft" heißt: die Fertig-Bedingung ist erfüllt. */
 export function evalBeleg(beleg) {
@@ -99,9 +131,7 @@ export function evalBeleg(beleg) {
   switch (art) {
     case 'sym':
       // Kommentare entfernt: hier ist Prosa in Kommentaren die Gefahr.
-      treffer = getCodeSources().some((s) =>
-        new RegExp(`export\\s+(async\\s+)?(function|const|class|interface|type)\\s+${wert}\\b`).test(s),
-      );
+      treffer = getCodeDateien().some((d) => exportRe(wert).test(d.src));
       break;
     case 'datei':
       treffer = fs.existsSync(path.join(CODE, wert));
@@ -133,12 +163,31 @@ export function evalBeleg(beleg) {
   return negiert ? !treffer : treffer;
 }
 
+/**
+ * Die Code-Pfade (relativ zum Code-Repo), auf die ein Beleg zeigt — Grundlage von L8.
+ * Leer, wenn der Beleg nicht code-gebunden ist (`spec:`/`txt:` treffen Spec-Dateien) oder
+ * ins Leere zeigt: ein `!sym:`-Beleg ist genau dann erfuellt, wenn das Symbol NICHT
+ * existiert, hat also naturgemaess keinen Pfad. L8 ueberspringt solche Zeilen, statt sie
+ * zu verurteilen — sonst waere jede negierte Zeile automatisch falsch einsortiert.
+ */
+export function belegPfade(beleg) {
+  const b = beleg.startsWith('!') ? beleg.slice(1) : beleg;
+  const i = b.indexOf(':');
+  if (i < 0) return [];
+  const art = b.slice(0, i);
+  const wert = b.slice(i + 1);
+  if (art === 'datei' || art === 'test') return [wert];
+  if (art === 'sym') return getCodeDateien().filter((d) => exportRe(wert).test(d.src)).map((d) => d.rel);
+  return [];
+}
+
 /** Zerlegt die Backlog-Tabellen in Zeilen — inklusive des Abschnitts (`## …`), unter dem
  *  die Zeile steht. Der Abschnitt ist das, was ein Mensch beim Überfliegen tatsächlich
  *  liest; die Status-Spalte ist die achte und liegt beim Lesen oft außerhalb des
- *  Sichtfelds (s. L5). */
-export function parseBacklog(text) {
+ *  Sichtfelds (s. L5). `praefix` waehlt den ID-Raum der Statusdatei (BL/OE). */
+export function parseBacklog(text, praefix = 'BL') {
   const zeilen = [];
+  const zeilenRe = new RegExp(`^\\| ${praefix}-\\d+ \\|`);
   let abschnitt = '';
   for (const l of text.split('\n')) {
     const h = /^## (.+)$/.exec(l);
@@ -146,7 +195,7 @@ export function parseBacklog(text) {
       abschnitt = h[1].trim();
       continue;
     }
-    if (!/^\| BL-\d+ \|/.test(l)) continue;
+    if (!zeilenRe.test(l)) continue;
     const c = l.split('|').map((s) => s.trim()).filter(Boolean);
     zeilen.push({ id: c[0], prio: c[1], typ: c[2], klasse: c[3], punkt: c[4], spec: c[5], beleg: c[6].replace(/`/g, ''), status: c[7], abschnitt });
   }
@@ -176,8 +225,7 @@ export function dokumentierteRegeln(backlogText) {
 function pruefe() {
   const fehler = [];
   const warnungen = [];
-  const text = fs.readFileSync(BACKLOG, 'utf8');
-  const zeilen = parseBacklog(text);
+  const zeilen = [];
 
   if (!fs.existsSync(CODE)) {
     console.log(`ÜBERSPRUNGEN: Code-Repo ${CODE} nicht erreichbar — L1/L2 nicht prüfbar.`);
@@ -185,24 +233,54 @@ function pruefe() {
   }
 
   const ids = new Set();
-  for (const z of zeilen) {
-    if (ids.has(z.id)) fehler.push(`${z.id}: doppelte ID (IDs werden nie wiederverwendet)`);
-    ids.add(z.id);
-    if (!['offen', 'gebaut'].includes(z.status)) {
-      fehler.push(`${z.id}: Status "${z.status}" — erlaubt sind nur "offen" und "gebaut" (kein „teilweise")`);
+  for (const bl of BACKLOGS) {
+    const pfad = path.join(SPEC, bl.datei);
+    if (!fs.existsSync(pfad)) {
+      fehler.push(`Statusdatei fehlt: ${bl.datei} (${bl.bereich})`);
       continue;
     }
-    let treffer;
-    try {
-      treffer = evalBeleg(z.beleg);
-    } catch (e) {
-      fehler.push(`${z.id}: ${e.message}`);
-      continue;
+    const text = fs.readFileSync(pfad, 'utf8');
+    const dateiZeilen = parseBacklog(text, bl.praefix);
+    // Eine Statusdatei mit Tabelle, aus der KEINE Zeile erkannt wird, ist der
+    // gefaehrlichste Zustand: der Prueflauf meldet „konsistent", ohne etwas geprueft zu
+    // haben. Deshalb hart, nicht als Warnung.
+    if (dateiZeilen.length === 0 && /^\| ID \| P \|/m.test(text))
+      fehler.push(`${bl.datei}: Tabelle vorhanden, aber keine ${bl.praefix}-Zeilen erkannt — falscher ID-Präfix?`);
+
+    for (const z of dateiZeilen) {
+      if (ids.has(z.id)) fehler.push(`${z.id}: doppelte ID (IDs werden nie wiederverwendet)`);
+      ids.add(z.id);
+      if (!['offen', 'gebaut'].includes(z.status)) {
+        fehler.push(`${z.id}: Status "${z.status}" — erlaubt sind nur "offen" und "gebaut" (kein „teilweise")`);
+        continue;
+      }
+      let treffer;
+      try {
+        treffer = evalBeleg(z.beleg);
+      } catch (e) {
+        fehler.push(`${z.id}: ${e.message}`);
+        continue;
+      }
+      if (z.status === 'offen' && treffer)
+        fehler.push(`L1 ${z.id} [${z.typ}] steht auf "offen", aber der Beleg trifft → vermutlich längst gebaut: ${z.punkt}`);
+      if (z.status === 'gebaut' && !treffer)
+        fehler.push(`L2 ${z.id} [${z.typ}] steht auf "gebaut", aber der Beleg trifft nicht → umbenannt/gelöscht? ${z.punkt}`);
+
+      // L8: Liegt der Beleg im Zustaendigkeitsbereich DIESER Statusdatei?
+      //
+      // Die Aufteilung „je Programm eine Statusdatei" ist nur so viel wert, wie sie
+      // eingehalten wird — und eine falsch einsortierte Zeile ist genau die Sorte Drift,
+      // gegen die dieses Skript ueberhaupt existiert. Die Grenze ist mechanisch: der
+      // Beleg-Pfad entscheidet, nicht die Themenzugehoerigkeit. Ein Vorhaben, das beide
+      // Bereiche beruehrt, wird in zwei Zeilen zerlegt (Regel 2: kein „teilweise").
+      const pfade = belegPfade(z.beleg);
+      if (pfade.length > 0 && !pfade.some(bl.gehoert))
+        fehler.push(
+          `L8 ${z.id}: Beleg zeigt auf ${pfade.slice(0, 2).join(', ')}${pfade.length > 2 ? ' …' : ''} — ` +
+            `das gehört nicht in ${bl.datei} (${bl.bereich})`,
+        );
     }
-    if (z.status === 'offen' && treffer)
-      fehler.push(`L1 ${z.id} [${z.typ}] steht auf "offen", aber der Beleg trifft → vermutlich längst gebaut: ${z.punkt}`);
-    if (z.status === 'gebaut' && !treffer)
-      fehler.push(`L2 ${z.id} [${z.typ}] steht auf "gebaut", aber der Beleg trifft nicht → umbenannt/gelöscht? ${z.punkt}`);
+    zeilen.push(...dateiZeilen);
   }
 
   // L5: Steht die Zeile im Abschnitt, der zu ihrem Status passt?
@@ -281,8 +359,11 @@ function pruefe() {
   // Die Tabelle wird NICHT gelöscht: ihre Spalten „Härte"/„Fängt" und der Absatz zur
   // Asymmetrie begründen das Design des Backlogs selbst und stehen nirgends sonst. Statt
   // sie zur Drift-Quelle zu machen, wird sie hier zum geprüften Kontrakt.
+  // Die Regel-Tabelle steht EINMAL, im Hauptbacklog — sie beschreibt den Prüfer, nicht
+  // ein Programm; eine zweite Fassung in der Editor-Statusdatei wäre genau die Dopplung,
+  // gegen die L6 existiert.
   const implementiert = implementierteRegeln(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8'));
-  const dokumentiert = dokumentierteRegeln(text);
+  const dokumentiert = dokumentierteRegeln(fs.readFileSync(path.join(SPEC, BACKLOGS[0].datei), 'utf8'));
   for (const r of [...implementiert].sort())
     if (!dokumentiert.has(r))
       fehler.push(`L6 Regel ${r} ist implementiert, fehlt aber in der Tabelle „Lint-Regeln" in 05-Backlog.md`);
@@ -383,6 +464,36 @@ function selftest() {
       `  → nur implementiert: ${nurImpl.join() || '–'} · nur dokumentiert: ${nurDoku.join() || '–'}`,
   );
   if (!l6ok) bad++;
+
+  // L8 negativ prüfen: die Bereichs-Zuordnung muss BEIDE Fehlrichtungen sehen — eine
+  // Editor-Zeile, die auf geteilten Code belegt, und eine Hauptprogramm-Zeile, die auf
+  // app-orte/ belegt. Reine Funktionen, kein Dateisystem: der Fall kann nicht durch ein
+  // späteres Feature wahr/falsch werden (die Lehre aus den drei still verrotteten Fällen
+  // oben).
+  const [blHaupt, blOrte] = BACKLOGS;
+  const l8Faelle = [
+    ['Editor-Zeile auf geteiltem Code', blOrte, 'ui/views/place/PlaceList.svelte', false],
+    ['Editor-Zeile auf app-orte/', blOrte, 'app-orte/orte-doc.ts', true],
+    ['Editor-Zeile auf tests/orte/', blOrte, 'tests/orte/dokument.test.ts', true],
+    ['Hauptzeile auf app-orte/', blHaupt, 'app-orte/orte-doc.ts', false],
+    ['Hauptzeile auf geteiltem Code', blHaupt, 'ui/shell/places-host.ts', true],
+  ];
+  let l8bad = 0;
+  for (const [name, bl, pfad, erwartet] of l8Faelle) {
+    const ist = bl.gehoert(pfad);
+    if (ist !== erwartet) l8bad++;
+    console.log(`${ist === erwartet ? '  ok  ' : ' FAIL '} L8 ${name.padEnd(38)} ${pfad} → ${ist}`);
+  }
+  bad += l8bad;
+
+  // Und der ID-Raum: parseBacklog darf die Zeilen der einen Statusdatei nicht in der
+  // anderen mitzählen — sonst prüfte der Lauf dieselbe Zeile zweimal bzw. gar nicht.
+  const praefixFall = '| OE-1 | K | feature | basis | x | [22](22-Orte-Editor-Standalone.md) | `sym:x` | offen |';
+  const alsOe = parseBacklog(praefixFall, 'OE').length;
+  const alsBl = parseBacklog(praefixFall, 'BL').length;
+  const praefixOk = alsOe === 1 && alsBl === 0;
+  if (!praefixOk) bad++;
+  console.log(`${praefixOk ? '  ok  ' : ' FAIL '} parseBacklog trennt die ID-Räume`.padEnd(50) + `  → OE:${alsOe} BL:${alsBl}`);
 
   // Und der Fall, der L6 überhaupt ausgelöst hat: findet die Ableitung im ECHTEN
   // Quelltext alle Regeln? Eine Ableitung, die still zu wenig findet, meldete Deckung,

@@ -34,8 +34,9 @@ Werkzeug- und Auslieferungskette für v9. Ziel: die Architektur-Invarianten ([02
 │   ├── /model /places /research /interop
 ├── /services               ← Anwendungsdienste (Plattform-APIs gekapselt)
 ├── /ui                     ← reaktive Schale + /islands (imperative SVG) + /shell + /views
-├── /app                    ← Einstieg, /public (statische Assets, demo.ged)
-├── /tests                  ← headless: core, ui, services, islands, /arch-boundary, /fixtures
+├── /app                    ← Einstieg Hauptprogramm, /public (statische Assets, demo.ged)
+├── /app-orte               ← Einstieg Standalone-Orte-Editor (22), eigene vite.config.ts
+├── /tests                  ← headless: core, ui, services, islands, orte, /arch-boundary, /fixtures
 └── .github/workflows/ci.yml
 ```
 
@@ -49,7 +50,8 @@ Verzeichnisschichten entsprechen [02 §7](02-Zielarchitektur-v9.md). `node_modul
 {
   "scripts": {
     "dev":        "vite",                                      // Dev-Server mit HMR
-    "build":      "vite build",                                // erzeugt dist/ für Pages
+    "dev:orte":   "vite --config app-orte/vite.config.ts",     // Dev-Server des Orte-Editors (22)
+    "build":      "…",                                         // baut BEIDE Programme: dist/ + dist/orte/
     "preview":    "vite preview",                              // dist/ lokal prüfen
     "test":       "vitest run",                                // ALLE Tests
     "test:core":  "vitest run tests/core",                     // nur Kern (build-frei, schnell)
@@ -65,6 +67,7 @@ Verzeichnisschichten entsprechen [02 §7](02-Zielarchitektur-v9.md). `node_modul
 
 - **Test-Runner:** `vitest` (nutzt Vite-Transform, kann TypeScript direkt, läuft in Node — headless, ohne Browser). Erfüllt [30 NFR-6](30-NFR-und-Persistenz.md) und [02 INV-ARCH-2](02-Zielarchitektur-v9.md): Kern-Tests brauchen **keinen** Bundle-Schritt.
 - **`check:svelte`** (ADR-v9-83) schließt die Lücke, dass `tsc --noEmit` **nur `.ts`-Dateien** prüft — Svelte-**Templates** (Props, Bindings, Markup-Ausdrücke) sah bis 2026-07-16 gar kein Gate; der erste Lauf fand vier echte, von 1663 Tests unentdeckte Fehler im Produktionscode. Nutzt eine eigene `tsconfig.check.json`, die `tests` ausnimmt: `@testing-library/svelte`s `render()` verliert die Generic-Bindung generischer Komponenten (`<script generics="T">`) — 37 Fehler ohne Produktionsrisiko. Sollen Test-Dateien später mitgeprüft werden, ist der Weg eine Harness-Komponente je generischer Komponente (Projekt-Muster, `EventsByTypeHarness.svelte`), nicht das Aufweichen dieser Konfiguration.
+- **Zwei Programme, ein Bau.** `build` erzeugt `dist/` (Hauptprogramm) **und** `dist/orte/` (Orte-Editor, [22 §2](22-Orte-Editor-Standalone.md)); `check:csp` prüft beide Einstiegsseiten. Ein Bau, der nur das Hauptprogramm erfasst, ließe den Editor unbemerkt zurückfallen — dieselbe Klasse wie ein Gate, das null Tests findet und grün meldet.
 - **`check:arch`** ist ein eigenes, abhängigkeitsfreies Node-Skript (regex-basiert: verbotene Aufwärts-Imports + verbotene Plattform-Globals im Kern), **kein** ESLint-Plugin — bewusste Vereinfachung (ADR-v9-10). Bleibt austauschbar, falls Grenzfälle es sprengen.
 
 ---
@@ -119,6 +122,7 @@ Das Skalen-Gate braucht dabei zwingend den **eigenen Aufruf** `npm run test:perf
 
 ## 5. Vite / GitHub-Pages-Konfiguration
 
+- **Zweites Programm unter `/orte/`.** Der Orte-Editor ([22](22-Orte-Editor-Standalone.md)) baut mit eigener Konfiguration nach `dist/orte/` (`emptyOutDir: false`, damit beide Programme dasselbe Auslieferungsverzeichnis füllen) und ist unter `…/stammbaum-v9/orte/` erreichbar. Seine `base` folgt derselben command-abhängigen Regel wie unten.
 - **`base`** in `vite.config.ts` auf den Repo-Pfad setzen (z. B. `/stammbaum-v9/`), sonst brechen Asset-Pfade auf Pages. Bei eigener Domain oder User-Pages entsprechend `/`. **Zwingend command-abhängig setzen** (`defineConfig(({ command }) => ({ base: command === 'build' ? '/stammbaum-v9/' : '/' }))`), NICHT als statischer Top-Level-Wert — ein statisches `base` gilt auch für den lokalen Dev-Server (`vite`/`command === 'serve'`) und verschiebt die App dort unter denselben Unterpfad; Vite selbst redirected `/` → `/stammbaum-v9/` korrekt, aber lokales Tooling, das die Wurzel `/` erwartet (Preview-/Healthcheck-Tools), sieht die App dann nie als erreichbar. **Lehre (2026-07-07):** genau dieser Fehler ist beim ersten Pages-Deploy passiert („Vorschau startet nicht") und wurde erst durch den Nutzer-Hinweis entdeckt, nicht vorab.
 - **PWA:** `vite-plugin-pwa` (oder handgeschriebener Service Worker in `/app`) für Precache + Offline-Fallback ([30 NFR-2](30-NFR-und-Persistenz.md)). Cache-Version automatisch aus dem Build-Hash — kein manuelles Bumpen, keine „alter SW liefert veraltete Shell"-Falle.
 - **Ergebnis bleibt statisch:** `dist/` ist reines HTML/JS/CSS. Lokal-First und Offline (LP-2) unverändert; kein Server im Betrieb.

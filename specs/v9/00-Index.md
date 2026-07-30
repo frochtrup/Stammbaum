@@ -22,7 +22,8 @@ Dann je nach Arbeitsschwerpunkt.
 | **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
 | **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen — **nur die bindende Entscheidung** (Pflege via Skill `decision-log`) |
 | **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — wächst mit dem Bau, wird nur bei Bedarf gelesen |
-| **05** | [Backlog](05-Backlog.md) | Meta | **Die einzige Status-Wahrheit:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L4). Specs 10–32 treffen KEINE Status-Aussage mehr |
+| **05** | [Backlog](05-Backlog.md) | Meta | **Die Status-Wahrheit des Hauptprogramms:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L8). Specs 10–32 treffen KEINE Status-Aussage mehr |
+| **05a** | [Backlog: Orte-Editor](05a-Backlog-Orte-Editor.md) | Meta | Status-Wahrheit des Standalone-Orte-Editors (ID-Raum `OE-n`). Zuständig für Belege unter `app-orte/`/`tests/orte/`; Regeln, Typen und Lint-Tabelle stehen in 05 |
 | **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
 | **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
@@ -30,6 +31,7 @@ Dann je nach Arbeitsschwerpunkt.
 | **14** | [Dateihandling](14-Dateihandling.md) | Kern/Betrieb | Arbeitskopie, ein Export-Rohr, FileService (2 Save-Tiers), OS-Sync statt App-Cloud, Medien |
 | **20** | [Funktionen](20-Funktionen.md) | App | Feature-Katalog, Formulare, Validierungsregeln, Ausgaben/Reports |
 | **21** | [UI/UX](21-UI-UX.md) | App | View-Hierarchie, View-State-/Lifecycle-Kontrakt, Responsive, Design-System, Symbolkonventionen |
+| **22** | [Orte-Editor (Standalone)](22-Orte-Editor-Standalone.md) | App | Zweites Programm für `orte.json`: `PlacesHost`-Vertrag und geteilte Views, Dokument-Modell, Kontextdatei, Auslieferung, Handbuch-Extrakt |
 | **30** | [NFR & Persistenz](30-NFR-und-Persistenz.md) | Betrieb | Performance/Skalierung, Offline/PWA, Sicherheit, Datenschutz, Barrierefreiheit, Speicher-/Sync-/Konfigurationsmodell |
 | **31** | [Dev-Umgebung & Auslieferung](31-Dev-Umgebung.md) | Betrieb | VS Code + Git/GitHub, Repo-Layout, `ci.yml`, Vite/Pages, Branch-Modell, Migration aus v8 |
 | **32** | [Testframework](32-Testframework.md) | Betrieb | Test-Ebenen (Pyramide), Werkzeuge (Vitest u. a.), Fixtures, Determinismus/Seams, Kontrakt-Matrix je Subsystem, Pre-Commit/CI |
@@ -40,13 +42,15 @@ Dann je nach Arbeitsschwerpunkt.
 01 Vision/Prinzipien ─────────────┐ (gilt für alle)
 02 Zielarchitektur ───────────────┤
 04 Entscheidungslog ──────────────┤ (protokolliert Entscheidungen zu 02/14/21/31/32 …)
-05 Backlog ───────────────────────┤ (Status ALLER Specs; 10–32 sagen selbst nichts über den Bau)
+05 Backlog ───────────────────────┤ (Status des Hauptprogramms; 10–32 sagen selbst nichts über den Bau)
+05a Backlog Orte-Editor ──────────┤ (Status des zweiten Programms, ID-Raum OE-n; Regeln/Lint aus 05)
                                   │
 Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
                           └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
                                               │
 App:   20 Funktionen ◄── 10,11,12,13,14       │
        21 UI/UX      ◄── 20, 02                │
+       22 Orte-Editor◄── 11, 14, 21, 02        │ (zweites Programm, geteilte Views)
                                               │
 Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
          14 Dateihandling  ◄── 30 (Arbeitskopie-/orte.json-Speicherschichten, Kern+Betrieb-Doppelrolle)
@@ -65,8 +69,10 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 | 05 | 🟡 in Arbeit | Backlog: [K]-Inventur vollständig (46 Zeilen, am Code verifiziert). Offen: [S]/[E]-Inventur, Status-Wörter aus 10–32 entfernen (L3), Lint-Regeln in `spec-lint` |
 | 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
 | 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
+| 05a | 🟢 angelegt | Statusdatei des Orte-Editors (`OE-n`); Zuordnung über den Beleg-Pfad, geprüft von L8 |
 | 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
 | 21 | 🟢 Entwurf vollständig | Navigation neu (Rollenmodell); Mobile Bottom-Nav + Desktop Sidebar/Multi-Pane/⌘K; Konsistenz-Befunde B1–B7 |
+| 22 | 🟢 Entwurf vollständig | Standalone-Orte-Editor: `PlacesHost`-Naht, Dokument-Modell, INV-ORTE-1…3 |
 | 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
 | 31 | 🟢 Entwurf vollständig | Claude-Desktop-App + GitHub + Actions (ADR-v9-07); Umgebung etabliert & in Betrieb |
 | 32 | 🟢 Entwurf vollständig | Vitest-basiert, Kontrakt-Matrix je Subsystem; UI-Test-Tooling: @testing-library/svelte ✅ |

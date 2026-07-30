@@ -1,9 +1,19 @@
 # 05 — Backlog
 
-**Die einzige Status-Wahrheit des Projekts.** Die Specs [10](10-Domaenenmodell.md)–[32](32-Testframework.md)
+**Die Status-Wahrheit des Hauptprogramms.** Die Specs [10](10-Domaenenmodell.md)–[32](32-Testframework.md)
 beschreiben ausschließlich den Soll-Zustand und treffen **keine** Aussage darüber, was
 gebaut ist; das [Entscheidungslog](04-Entscheidungslog.md) hält Entscheidungen fest, nicht
-Fortschritt. Wer wissen will, was offen ist, liest nur hier.
+Fortschritt. Wer wissen will, was offen ist, liest nur in einer Statusdatei.
+
+**Je Programm eine Statusdatei — es gibt genau zwei.** Der Standalone-Orte-Editor
+([22](22-Orte-Editor-Standalone.md)) führt seinen Stand in
+[05a](05a-Backlog-Orte-Editor.md) unter dem ID-Raum `OE-n`. Die Grenze wird nicht
+beurteilt, sondern gerechnet: eine Zeile gehört dorthin genau dann, wenn ihr Beleg auf
+`app-orte/` oder `tests/orte/` zeigt — jeder Beleg daneben gehört hierher, auch wenn der
+Punkt fachlich zum Editor gehört. **L8** prüft das bei jedem Lauf. Regeln, Klassen, Typen,
+Beleg-Syntax und die Lint-Tabelle stehen nur hier und gelten für beide Dateien; das
+Entscheidungslog bleibt ebenfalls ungeteilt (eine Entscheidung über geteilten Code ist
+Präzedenz für beide Programme).
 
 Stand: **[K]-Inventur vollständig** (2026-07-18) und **[S]/[E]-Inventur vollständig**
 (2026-07-21, BL-51) — jeder Punkt am Code verifiziert, nicht aus der Spec geschlossen.
@@ -96,6 +106,7 @@ bewusst vertagt.
 | Ⓕ Forschung | BL-57ᴮ (~~208 · 209 · 219 gebaut 2026-07-30~~) | `ui/views/research*`, `SourceCitationRow`, `core/research` |
 | Ⓖ Navigation & Shell | BL-07ᴮ · 94 · 213 | Shell / Navigation |
 | Ⓗ Import / Export / Dedup | ~~125 + 10 (gebaut 2026-07-30)~~ · 207 · 166⏸ | Export-Pipe, Import-Vergleich, Dedup |
+| Ⓘ Orte-Editor (Standalone) | BL-220ᴮ → 221ᴮ → 222ᴮ (Vertrag + Gates + Bau) · 223 · 224 → 225 → 226 (Handbuch) · 227⏸ | `ui/shell/places-host.ts`, `ui/views/place`+`hof`, `tools/handbuch` |
 | — Standalone / Infra | BL-83 (_EVAL, Interop) · BL-66 (a11y) · BL-180 (Kat-B-Sync) | — |
 
 **Welle 1 der Kleinlücken ist gebaut** (2026-07-29): Ⓐ komplett (BL-195/198/199/211), Ⓑ-Anzeige
@@ -125,6 +136,8 @@ Rückprojektion bereits aus (Kern ist geparst/geschrieben/verglichen, nur ohne U
 
 4. **Welle 4 — Infra / Hygiene / vertagt (opportunistisch):** 83 · ~~89 (gebaut 2026-07-30)~~ · 66 · 180 · 166⏸.
 
+**Cluster Ⓘ ist eigenständig und hat eine feste innere Reihenfolge** ([ADR-v9-161](04-Entscheidungslog.md#adr-v9-161)…[164](04-Entscheidungslog.md#adr-v9-164)). BL-220 (Vertrag) ist Voraussetzung für alles Weitere und fasst dieselben 16 Dateien an wie der spätere Anschluss der Flächen — es gibt hier **keine** parallelisierbare Dateimenge, auch wenn die Themen getrennt aussehen. BL-221/222 sind die Gates, ohne die die Trennung nur eine Vereinbarung wäre; sie gehören in denselben Zug, nicht ans Ende. Die eigentliche Bauarbeit am Editor steht in [05a](05a-Backlog-Orte-Editor.md) (`OE-n`).
+
 **Herkunft BL-195…213:** Kleinlücken-Inventur v8↔v9 (2026-07-29) — zwei Muster: (a) Modell-Feld
 vorhanden, in der UI nicht gezeigt (`nick`/`datePhrase`/`pedigree`/`dataEvents`/`externalRefs`/
 `callMedia`); (b) Listen-Zähler/Badges, die v8 proaktiv zeigte. Bereits getrackte Überschneidungen
@@ -149,6 +162,14 @@ Inseln (ADR-v9-123, BL-151/122/123/152/121/124), ⑦ Ausgaben & Reports §4 (BL-
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-220 | K | feature | blockiert | `PlacesHost`-Vertrag (12 Kommandos + `PlacesHostCaps` + `PlacesNav`) in `ui/shell/places-host.ts`; die 16 Orts-/Hof-Views nehmen ihn statt `AppState`/`ViewState` als Prop-Typ, `AppState` erfüllt ihn mit allen Fähigkeiten. Die sechs Abweichungen D1–D6 hängen an den Fähigkeiten, nicht an Kopien (INV-ORTE-1). Kein Verhaltenswechsel — Nachweis ist der unveränderte Testlauf | [22 §3](22-Orte-Editor-Standalone.md), [02 §3](02-Zielarchitektur-v9.md) | `sym:PlacesHost` | offen |
+| BL-221 | K | hygiene | blockiert | Zwei Gates gegen den Rückfall in den Monolithen: `check:arch` verbietet `ui/shell/app-state`-Importe in `ui/views/place`/`ui/views/hof`, und ein Fork-Guard verbietet in `app-orte/` Dateien, deren Basisname in diesen Verzeichnissen existiert. Beide einmal absichtlich brechen, damit der Rot-Fall belegt ist | [22 §3](22-Orte-Editor-Standalone.md), [31 §3](31-Dev-Umgebung.md) | `txt:app-orte@tests/arch-boundary/check-arch-boundary.mjs` | offen |
+| BL-222 | K | hygiene | blockiert | `npm run build`, `npm run dev:orte` und `check:csp` erfassen BEIDE Programme. Ohne diesen Punkt bliebe der Editor grün und würde nie gebaut — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon hatte | [22 §2](22-Orte-Editor-Standalone.md), [31 §3](31-Dev-Umgebung.md) | `txt:dev:orte@package.json` | offen |
+| BL-223 | S | feature | basis | `applyPlaceResolution` bekommt die Option, den Village-Seed zu überspringen — Voraussetzung dafür, dass eine Kontextdatei gelesen werden kann, ohne das Dokument des Editors zu verändern (INV-ORTE-2) | [22 §5](22-Orte-Editor-Standalone.md), [11 §4.2](11-Orte-Hoefe-Identitaet.md) | `txt:opts\.seed@services/places/apply-resolution.ts` | offen |
+| BL-224 | S | feature | basis | Handbuch: Anhang E (Einstieg + Grenzen des Editors), `data-doc`-Markierungen an den Stellen in Kap. 7/8, die nur ein Programm betreffen, Manifest und Extraktor, der daraus das eigenständige Editor-Handbuch erzeugt. Wächter: Manifest-IDs existieren, jeder interne Anker im Extrakt löst auf, jedes `data-doc="orte"`-Element liegt in einem Manifest-Abschnitt | [22 §8](22-Orte-Editor-Standalone.md) | `datei:tools/handbuch/orte-handbuch.manifest.json` | offen |
+| BL-225 | S | hygiene | basis | Handbuch-Automatisierung kennt den Editor: `APP_PATHS` matcht als git-Pathspec nur `app/`, nicht `app-orte/` — ohne Ergänzung fällt jeder Editor-Commit lautlos aus Changelog UND Textabgleich; `SECTION_MAP` braucht die Zuordnung auf Anhang E | [22 §8](22-Orte-Editor-Standalone.md) | `txt:app-orte@tools/handbuch/changes.mjs` | offen |
+| BL-226 | S | hygiene | basis | Eigener Aufnahmepfad für die Editor-Screenshots gegen `dev:orte` mit `fixtures/orte.json`; Dokument wird ohne Dateidialog geladen, indem der Aufnahmelauf `showOpenFilePicker` ausblendet und die Datei in das versteckte `input[type=file]` legt. Varianten-Regel: `<name>.orte.png` gewinnt, falls vorhanden, sonst bleibt das geteilte Bild | [22 §8](22-Orte-Editor-Standalone.md) | `datei:tools/handbuch/capture-orte.mjs` | offen |
+| BL-227 | E | hygiene | kür | Staging-Ziel: `v9-dev` veröffentlicht den Bau beider Programme zusätzlich auf eine eigene Pages-Adresse (eigenes Repo + Deploy-Key), damit der Editor auf einem echten Gerät mit HTTPS geprüft werden kann, bevor etwas nach `main` geht | [22 §7](22-Orte-Editor-Standalone.md), [31 §4](31-Dev-Umgebung.md) | `txt:staging@.github/workflows/ci.yml` | offen |
 | BL-128 | S | feature | kür | Quellen-Vorlagen (Kirchenbuch/Standesamt/Volkszählung …) füllen Kurzname/Titel/Autor/Medientyp vor — gleiche Preset+Freitext-`datalist`-Mechanik wie Aufgaben-Kategorien (INV-UI-4) | [20 §1.6](20-Funktionen.md) | `sym:SOURCE_TEMPLATES` | offen |
 | BL-166 | S | feature | kür | Dedup verlustfrei auf Passthrough-Ebene, **Phase 3: Orte/Höfe-Dedup** (ADR-v9-129, Fortsetzung BL-164/165) — **bewusst vertagt** (Weg 3, 2026-07-26): geringer Wert (un-modellierter `<placeobj>`-Passthrough real kaum vorhanden; GEDCOM hat keine Ort-Records) vs. Hürde (Orte persistieren in `orte.json` + Sync-Byte-Vergleich -> `mergedRecordIds` am Modell leckt/verfälscht Sync). Für den Bau: Carry als separate transiente `db`-Struktur (`db.placeMergeCarry`), NICHT am PlaceObject -> dann orte.json/Sync automatisch clean (04a-Chronik). `mergePlaceObjects`/`mergeHofObjects` setzen sie; GRAMPS-`<placeobj>`-Write-Back übernimmt den Verlierer-Passthrough. Gate: GRAMPS-Ort-Merge+Save `xml1===xml2`, Verlierer-placeobj-Passthrough am Gewinner | [13 §2.4](13-Interop-Roundtrip.md), [11 §9.2](11-Orte-Hoefe-Identitaet.md), [ADR-v9-129](04-Entscheidungslog.md#adr-v9-129) | `test:tests/roundtrip/merge-passthrough-places.test.ts` | offen |
 | BL-94 | S | feature | kür | Dritter Kontext-Pane auf Desktop — Inhalt zuerst spezifizieren, dann bauen (§3 nennt „Quellen zum Ereignis" als Beispiel, nicht als Anforderung) | [21 §3](21-UI-UX.md) | `sym:ContextPane` | offen |
@@ -478,7 +499,9 @@ Den Prüfer selbst prüfen: `… --selftest`.
 | L5 | Zeile steht im Abschnitt, der **nicht** zu ihrem Status passt | **Fehler** | Erledigtes, das unter „Offene Punkte“ stehen bleibt, weil beim Bau nur das Status-Wort geändert und die Zeile nicht verschoben wurde. Beim Lesen sieht man die Überschrift, nicht die achte Spalte — eine Zeile, die man nur durch Scrollen als erledigt erkennt, ist praktisch nicht erledigt (Fund 2026-07-18 an BL-01). |
 | L6 | Diese Tabelle ↔ tatsächlich implementierte Regeln | **Fehler** | Drift der Regel-Doku selbst. Die Regeln stehen an drei Stellen (Implementierung, `SKILL.md`, diese Tabelle); beim Nachrüsten von L5 wurden zwei davon sofort vergessen. Das Skript leitet seine Regeln aus dem eigenen Quelltext ab und vergleicht sie hiermit — in beide Richtungen. |
 | L7 | Zahl der [S]/[E]-Bullets in [20](20-Funktionen.md) gegen die Ratsche `SE_BULLETS` (29, Stand BL-51) | **Fehler** | Ein neues [S]/[E]-Bullet im Spec, zu dem niemand eine Backlog-Zeile angelegt hat — genau die stille Verrottung, an der die [K]-Inventur vor BL-50 scheiterte. Bewusst ein Zähler und keine Bullet↔Zeile-Zuordnung: die gibt es nirgends maschinenlesbar, sie wäre erfunden. |
+| L8 | Beleg-Pfad einer Zeile gegen den Zuständigkeitsbereich ihrer Statusdatei (`app-orte/`, `tests/orte/` → [05a](05a-Backlog-Orte-Editor.md), alles andere → hier) | **Fehler** | Eine Zeile in der falschen Statusdatei. Die Aufteilung „je Programm eine Datei" ist nur so viel wert, wie sie eingehalten wird; ohne Prüfung wäre sie eine Vereinbarung, also genau die Sorte Zusage, die dieses Dokument ersetzt hat. `spec:`/`txt:`-Belege auf Spec-Dateien und negierte `!sym:`-Belege haben keinen Code-Pfad und werden übersprungen. |
 | — | Status weder `offen` noch `gebaut` | **Fehler** | Rückkehr von „teilweise" (Regel 2). |
+| — | Statusdatei mit Tabelle, aus der **keine** Zeile erkannt wird | **Fehler** | Ein Prüflauf, der „konsistent" meldet, ohne etwas geprüft zu haben — der falsche ID-Präfix genügt dafür. |
 
 **Die Asymmetrie ist Absicht.** Status `offen` + kein Treffer ist immer in Ordnung, auch
 wenn der spätere Bau ein anderes Symbol wählt als der hier vorhergesagte Beleg — dieser

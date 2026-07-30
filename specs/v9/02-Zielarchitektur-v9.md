@@ -144,7 +144,15 @@ Kriterien für die endgültige Wahl: (1) kleines Runtime (Offline-Bundle), (2) s
   /shell           ViewState, Routing, Lifecycle (Spec 21)
 /tests           ← headless: Roundtrip, Unit, Snapshot, CSP; Skalierungs-Generator
 /app             ← Einstiegspunkt, PWA-Manifest, Service Worker
+/app-orte        ← zweiter Einstiegspunkt: Standalone-Orte-Editor (22)
 ```
+
+**Zwei Programme, ein Quellbaum.** `/app-orte` ist ein eigenständig aufrufbares Programm
+über derselben Kern- und Dienste-Schicht ([22](22-Orte-Editor-Standalone.md)). Es nutzt
+die Orts-/Hof-Views der UI-Schale unverändert und bindet sie über den Vertrag
+`PlacesHost` (`ui/shell/places-host.ts`) — dieselbe Naht wie §3, eine Ebene höher gezogen:
+Lese-Chokepoint plus Kommandos mit vollständigen Objekten, kein Zugriff auf die
+Zustandsschale des jeweils anderen Programms.
 
 **Grenze der Plattform-APIs:** `window`/`fetch`/`IndexedDB`/`navigator.share`/Graph-API leben **nur** in `/services` (und `/app`). Der Kern bekommt sie bei Bedarf als injizierte Abhängigkeit (z. B. `parseFile(text)` ist rein; das Datei-Lesen macht `/services`). Das hält den Kern headless testbar (INV-ARCH-2).
 
