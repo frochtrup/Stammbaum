@@ -73,9 +73,17 @@ Hypothesis {
   evidence: {sourceId, page}[]          // SID-Referenzen, KEIN eigener Zitatkörper
   rationale: string                     // Beweisführung (mehrzeilig)
   conclusion: string                    // Auflösungsnotiz
+  kind: 'free' | 'identity'             // Art der Behauptung (Vorgabe 'free')
+  refs: string[]                        // weitere betroffene Datensätze (@I…@/@F…@)
 }
 ```
 GEDCOM `_HYPO`-Subtree auf INDI/FAM.
+
+**`kind` + `refs` (ADR-v9-174).** Eine Hypothese hängt an *einem* Datensatz, spricht aber oft über **zwei** — „diese beiden sind dieselbe Person", „dieses Kind gehört in jene Familie". `refs` trägt die weiteren Bezüge (wiederholbar, Person↔Person, Person↔Familie, Familie↔Familie); `kind` sagt, **welcher Art** die Behauptung ist, damit ein Leser sie maschinell auswerten darf statt den Freitext zu raten.
+
+- **`kind: 'identity'`** — „die referenzierten Datensätze bezeichnen dieselbe Person". Zusammen mit dem Status trägt sie das ganze Dubletten-Urteil: `rejected` = **Dublettenausschluss** (die Suche zeigt das Paar nicht mehr), `confirmed` = dokumentierte Zusammenführungs-Begründung, `open` = in Prüfung. Der Ausschluss ist damit ein belegter Befund in der Datei und **kein app-privater Merker** ([30 §2.2](30-NFR-und-Persistenz.md), [20 §1.12](20-Funktionen.md)).
+- **INV-H3:** eine Hypothese mit `kind: 'identity'` hat mindestens einen `refs`-Eintrag und eine nicht-leere `rationale` — ein Ausschluss ohne Begründung ist eine Abweisung, kein Befund.
+- `kind: 'free'` ist die unveränderte bisherige Hypothese; sie schreibt weder `_HKIND` noch `_HREF`.
 
 **Bewusst OHNE Task-/Log-Bezug (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** anders als `LogEntry` bekommt `Hypothesis` KEINEN `taskId`/Log-Verweis — eine Hypothese verdichtet sich typischerweise aus mehreren Sucheinträgen über Zeit, ein einzelner Vorwärts-Verweis wäre irreführend bzw. würde nur den letzten Auslöser abbilden. `evidence` bleibt die einzige Verknüpfung nach außen (SID-Referenz, INV-H2).
 

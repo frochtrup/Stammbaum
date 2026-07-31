@@ -117,6 +117,8 @@ Alle `_`-Tags werden im Roundtrip **verlustfrei erhalten** (Passthrough-Prinzip,
 | `_HSTAT` | 2 | Status: `open` \| `confirmed` \| `rejected` |
 | `_HWGT` | 2 | Forscher-Konfidenz: `low` \| `medium` \| `high` |
 | `_DATE` | 2 | Anlagedatum (EIGENER Tag, wie bei `_TASK`) |
+| `_HKIND` | 2 | Art der Behauptung — nur `IDENT` (= `kind: 'identity'`); fehlt bei einer freien Hypothese. v9-Ergänzung, kein Oracle-Vorbild (ADR-v9-174) |
+| `_HREF` | 2 | **wiederholbar** — Zeiger auf einen weiteren betroffenen Datensatz (`@I…@`/`@F…@`). v9-Ergänzung (ADR-v9-174) |
 | `SOUR` | 2 | wiederholbar — ein `evidence[]`-Item pro Block (SID-Referenz, INV-H2) |
 | `PAGE` | 3 | gehört zum vorangehenden `SOUR`-Block (`evidence[].page`) |
 | `_RATIO` | 2 | Begründung (`rationale`), CONT-fähig |
