@@ -25,6 +25,15 @@ im Spec ausdrücklich „noch nicht spezifiziert" und hat damit keinen entscheid
 Fertig-Zustand (Regel 4). Die Specs 10–32 sind seit BL-50 frei von Status-Aussagen —
 L3 ist hart (Ratsche 0).
 
+**Nachtrag 2026-07-31 — die Inventur zählte Marker, nicht Bullets.** Sie erfasste die
+`[K]`/`[S]`/`[E]`-markierten Punkte, und L7 hält seither genau deren Zahl. **[20 §2
+„Bearbeitung & Formulare"](20-Funktionen.md) trägt als einziger Abschnitt gar keine
+Marker** — seine 13 Punkte waren damit nie Teil der Population und wurden von keinem
+Wächter erfragt. Nachgeholt: zehn davon sind gebaut, drei nicht (BL-232/233/234). Die
+vier markerlosen Punkte in §1 sind Ausführungen zu bereits getrackten Zeilen, keine
+eigenen Vorhaben. Damit ist §2 abgeglichen — die Zähl-Ratsche L7 deckt ihn weiterhin
+nicht ab, weil sie an den Markern hängt.
+
 **Ein Fund wird zu genau einem von drei Dingen** — sonst ist er nicht handlungsfähig:
 eine **Backlog-Zeile** (entscheidbarer Fertig-Zustand + prüfbarer Beleg), ein
 **[ADR](04-Entscheidungslog.md)** (offene Entscheidung, keine offene Arbeit — fällt sie
@@ -114,6 +123,7 @@ vollständig in [05a](05a-Backlog-Orte-Editor.md) und ist dort abgeschlossen.
 | Ⓖ Navigation & Shell | BL-07 · BL-213 · BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation |
 | Ⓗ Import / Export / Dedup | BL-207 · BL-166 (vertagt) | Import-Vergleich, Dedup, Export-Pipe |
 | Ⓘ Orte-Editor (Standalone) | BL-227 (vertagt) | CI-Workflow |
+| Ⓙ Bearbeitung & Formulare | BL-233 · BL-234 (unabhängig) · BL-232 (Persistenz nach BL-180) | `ui/views/person`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage) |
 | — ohne Cluster (je für sich baubar) | BL-180 | `services/` (`AppDataSyncService`) |
 
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang).** Die Wellen der Kleinlücken-
@@ -124,9 +134,10 @@ Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch O
 2. **Welle 2 — was auf Welle 1 aufsetzt** (die zwei Ketten): BL-83 → BL-229 (beide nach
    BL-57) · BL-128 → BL-228.
 3. **Welle 3 — eigenständige Kür:** BL-217 · BL-230 (ohne BL-180 bleibt die Ebenen-Wahl
-   sitzungslokal — kein Hindernis) · BL-231 · BL-207 · BL-213.
+   sitzungslokal — kein Hindernis) · BL-231 · BL-207 · BL-213 · BL-233 · BL-234.
 4. **Welle 4 — Infra & Hygiene (opportunistisch):** BL-180 (macht die BL-230-Wahl
-   gerätefest) · BL-94 (erst den Inhalt spezifizieren).
+   gerätefest UND trägt die Template-Persistenz) · BL-232 (danach) · BL-94 (erst den
+   Inhalt spezifizieren).
 
 **Bewusst vertagt — nicht einplanen, bis sich der Anlass ändert:** BL-166 (Orte/Höfe-Dedup,
 Weg 3 vom 2026-07-26 — geringer Wert gegen hohe Hürde) · BL-227 (Staging-Ziel; lohnt erst,
@@ -152,6 +163,9 @@ Wert bekommt, nicht nur, ob es deklariert ist.
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-232 | — | feature | kür | **Eingabe-Templates — frei konfigurierbarer Builder** ([20 §2](20-Funktionen.md), Entscheidung [ADR-v9-69](04-Entscheidungslog.md#adr-v9-69) Punkt 4: der Builder ist das Zentrum, die drei v8-Festvorlagen sind vorkonfigurierte Instanzen davon — ein Mechanismus statt zwei). Ein Template definiert Rollen (Person/Vater/Mutter/Ehepartner mit fester FAMC/FAMS-Semantik) mit je einem Feld-Set; dazu Live-Dubletten-Erkennung, Sofort-Plausibilitätsprüfung, automatische Wiederverwendung bestehender Familien, vorbelegte Werte (versteckt/gesperrt-sichtbar), JSON-Ex-/Import. **Form-Abgleich vor dem Bau (v8-Orakel `ui-quicktpl.js`, 1.252 Z.):** (a) v8 baut sich in `_qtBuildCustomSchema` ein EIGENES Feldmodell samt eigenem Feldtyp-Vokabular (`QT_FIELD_TYPES`/`QT_TARGETS`) neben dem regulären Formular — das ist Altlast §3/§5 plus INV-UI-4/INV-UI-8; v9 nimmt die vorhandenen Struktureingaben und `event-labels.ts`, kein Parallel-Formular und keine zweite Typ-Liste. (b) **Die Persistenz ist bereits vergeben:** „Quick-Templates" ist eines der fünf Kategorie-B-Bündel in [BL-180](#offene-punkte) — kein eigener Speicher, sonst entsteht der sechste. Bis BL-180 steht, sitzungslokal. (c) Die Builder-Fläche fällt unter INV-UI-11 (375px messen, nicht schätzen) | [20 §2](20-Funktionen.md), [30 §2.2](30-NFR-und-Persistenz.md) | `sym:buildTemplateSchema` | offen |
+| BL-233 | — | feature | kür | **Schnellerfassungs-Modus** ([20 §2](20-Funktionen.md), [ADR-v9-69](04-Entscheidungslog.md#adr-v9-69) Punkt 5): nach dem Speichern einer neu angelegten Person führt der Weg direkt in die nächste Neuanlage statt zurück in den Steckbrief; Quelle und Seite der zuletzt gespeicherten Zitation bleiben vorbelegt. **Form-Abgleich:** v8s Fassung („das Formular bleibt offen") lässt sich nicht übernehmen — v9 hat kein Neuanlage-Formular: `＋ Neue Person` legt den Datensatz SOFORT an und öffnet den Toggle-Editor auf der Detailseite (`PersonList.createPerson`). Die v9-Form ist deshalb „nach dem Speichern die nächste Person anlegen + Quelle/Seite mitnehmen", nicht ein wiederverwendetes Modal. Damit gilt INV-UI-10/TST-13 verschärft: ein Modus, der reihenweise Datensätze anlegt, braucht den Weg zurück für den leer gebliebenen — sonst sammeln sich unsichtbare Leichen | [20 §2](20-Funktionen.md), [21 §6h](21-UI-UX.md) | `sym:continueQuickEntry` | offen |
+| BL-234 | — | feature | kür | **Quellreferenz-Zwischenablage** ([20 §2](20-Funktionen.md), [ADR-v9-69](04-Entscheidungslog.md#adr-v9-69) Punkt 5): Quelle + Seite an einer beliebigen anderen Formularstelle wiederverwenden, ohne den Picker erneut zu durchsuchen. **Abgrenzung zur gebauten Ereignis-Ablage ([BL-212](#erledigte-punkte)):** `event-clipboard.svelte.ts` legt ein GANZES Ereignis ab (Zitate reisen darin mit) — eine Zitation allein an eine fremde Zeile zu übertragen kann sie nicht. **Form-Abgleich:** dieselbe Bauform übernehmen (Fabrik statt Modul-Singleton, transient/Kategorie A, tiefe Kopie), nicht einen zweiten Ablage-Mechanismus daneben stellen (INV-UI-4); und die Affordanz NICHT als v8-Glyphenpaar ⧉/📋 je Zitatzeile — das ist die von [ADR-v9-148](04-Entscheidungslog.md#adr-v9-148) verworfene Glyphenreihe (Altlast §10), der Einfüge-Weg hängt wie bei BL-212 an einem vorhandenen Menü ([ADR-v9-156](04-Entscheidungslog.md#adr-v9-156)) | [20 §2](20-Funktionen.md), [30 §2.2](30-NFR-und-Persistenz.md) | `sym:createCitationClipboard` | offen |
 | BL-231 | S | feature | kür | **Ast-Reifegrad im Qualitäts-Dashboard** ([ADR-v9-167](04-Entscheidungslog.md#adr-v9-167)): `ancestorBranches(db, probandId, level)` liefert je Ahnenast eine Personenmenge in **denselben** `DashboardOptions.scope`-Parameter wie ein Projekt-Scope — kein zweiter Bewertungsmechanismus, keine neue Kopfzeile (Ebenen-Umschalter in der Sektion, INV-UI-11). Kekulé-Ebene 2–5 wählbar (Vorgabe 3); Ast = transitive Elternhülle (Ahnenschwund zählt mehrfach, wird nicht aufgelöst); Restzeile für Personen außerhalb aller Äste; aktives Projekt schneidet (UND). Klick scoped die Brennpunkte | [20 §1.11g](20-Funktionen.md), [12 §5](12-Forschungsdaten.md) | `sym:ancestorBranches` | offen |
 | BL-228 | S | feature | kür | **Forschungsschritt-Vorschlag** ([ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)): `suggestResearchStep(finding, ctx)` bildet einen Validierungs-Befund auf Quellengattung + (wo ableitbar) Archiv ab und belegt darüber die Aufgabe vor, die der **vorhandene** „→ Als Aufgabe übernehmen"-Knopf anlegt (`category`/`sourceRef`, kein neues Modellfeld, kein neues Bedienelement — INV-UI-11). Gattungs-Vokabular ist **das** der Quellen-Vorlagen (BL-128), nicht eine zweite Liste — BL-128 daher zuerst | [20 §3](20-Funktionen.md), [12 §1](12-Forschungsdaten.md) | `sym:suggestResearchStep` | offen |
 | BL-229 | S | feature | kür | **Regel `EVIDENCE_CONFLICT`** ([ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)): Faktum mit ≥2 Zitaten gegenläufiger Evidenz-Achse (`direct` ↔ `negative`), ⚠ Warnung, ab Werk **an** (schlägt nur auf bewusst gesetzten Bewertungen an — anders als `MISSING_EVAL`). **Reihenfolge ist Teil der Entscheidung: BL-57 (Eingabe) → BL-83 (`_EVAL`-Wire) → diese Zeile** — vorher prüfte die Regel Daten, die das Speichern nicht überleben (gemessen: `_STYP`/`_EVID`/`_INFO` kommen in `core/interop` 0× vor) | [20 §3](20-Funktionen.md), [12 §3](12-Forschungsdaten.md) | `txt:EVIDENCE_CONFLICT@core/validate/rules.ts` | offen |
