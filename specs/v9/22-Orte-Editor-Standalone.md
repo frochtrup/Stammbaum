@@ -184,8 +184,25 @@ Invariante:
 ## 6. Bedienoberfläche
 
 Die Schale ist bewusst klein: **Kopfzeile** (Dateiname, Änderungsmarke, Öffnen, Neu,
-Speichern, Kontextdatei, Undo/Redo), **zwei Segmente** Orte | Höfe, darunter die geteilte
-Liste-↔-Detail-Fläche. Keine Bottom-Navigation, keine Linsen-Umschaltung, kein Dashboard.
+Speichern, Kontextdatei, Undo/Redo, Handbuch), **zwei Segmente** Orte | Höfe, darunter die
+geteilte Liste-/Detail-Fläche. Keine Bottom-Navigation, keine Linsen-Umschaltung, kein
+Dashboard.
+
+**Zwei Fenster ab der Layout-Grenze, eines darunter** (Spec 21 §3, dieselbe Grenze und
+derselbe Mechanismus wie im Hauptprogramm — der Formfaktor wird an genau einer Stelle
+entschieden). Oberhalb steht die Liste dauerhaft links neben dem Steckbrief; darunter
+ersetzt der Steckbrief die Liste und trägt den Rückweg „← Zur Liste".
+
+Das ist keine Layout-Vorliebe, sondern trägt zwei Dinge: Ortskuration ist
+**Vergleichsarbeit** — Schreibvarianten, Dubletten und Verwaltungsketten beurteilt man
+nebeneinander, nicht nacheinander (anders als im Hauptprogramm, wo die Liste ein Index
+zum Überfliegen ist). Und es macht die Voraussetzung wahr, unter der die geteilte
+Kopfzeile ihren Rückweg oberhalb der Grenze weglässt: dort ist die Liste sichtbar. Eine
+Fähigkeit „dieser Wirt hat keine Liste daneben" wäre die Alternative gewesen — sie hätte
+eine Aussage über den Wirt getroffen, statt sie einzulösen.
+
+Ein Werkzeug (Massen-Dedup) nimmt in beiden Formfaktoren die **ganze** Fläche: es ist
+eine eigene Arbeitsfläche, keine Detailansicht neben der Liste.
 
 Es gilt dasselbe Design-System und dasselbe Befehlsflächen-Budget wie überall
 (INV-UI-11, [21 §6h](21-UI-UX.md)) — die Kopfzeile eines Ein-Dokument-Programms ist keine
