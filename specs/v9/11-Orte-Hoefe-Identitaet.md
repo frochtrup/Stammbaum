@@ -321,3 +321,13 @@ Die **Haupt**-Orte-/Höfe-Liste ([20 §1.7/§1.8](20-Funktionen.md)) zeigt nur r
 **Bewusste Abweichung vom v8-Orakel:** v8 blendet referenzlose `placeObjects` nicht aus der Hauptliste aus, sondern zeigt sie dort mit einer „Nicht verknüpft"-Badge. v9 trennt stärker (separate Sichtbarkeit statt Badge in derselben Liste) — explizite v9-Entscheidung, keine Nachbau-Lücke (Oracle-vs-Spec-Disziplin, [32 TST-6](32-Testframework.md)).
 
 **Schnittmenge mit §9.1:** ein Objekt kann gleichzeitig plain UND referenzlos sein (z. B. Rest eines gelöschten Events oder einer rückgängig gemachten Bearbeitung) — der Hauptkandidat für eine spätere manuelle Aufräumaktion über §9.2, aber ohne eigenen Automatismus.
+
+### 9.4 Dorfwechsel eines Hofs (ADR-v9-172)
+
+`villageId` ist über den Steckbrief änderbar (Ortspicker im Bearbeiten-Modus, [20 §1.8](20-Funktionen.md)) — nötig, wo ein Hof beim Bootstrap unter dem falschen Dorf entstand oder eine Quelle sich als ungenau erweist. Der Wechsel ist **kein Feld-Setzer**: `(villageId, normalisierte Adresse)` ist die Hof-Identität (§4.4, §9.2), also ein Identitätswechsel mit drei festen Regeln.
+
+**Die Id bleibt.** `_hof_<addr>_<village>` trägt das Dorf im Namen, wird aber nirgends geparst — sie ist ein Schlüssel, kein Datum. Sie mitzuführen hieße, jede `event.hofId`-Referenz umzuhängen, ohne Gewinn; der Merge lässt die Gewinner-Id aus demselben Grund stehen. Ein Hof-Bezeichner sagt damit nach einem Umzug nichts mehr über sein Dorf aus — das ist beabsichtigt.
+
+**Adress-Kollision im Zieldorf konsolidiert automatisch.** Trägt dort bereits ein Hof dieselbe normalisierte Adresse, entstünden zwei Objekte gleicher Identität; `findByAddr` liefert bei ≥ 2 Kandidaten `null`, zuvor eindeutige Ereignisse fielen in Review-Klasse **C** (§6). Das ist dieselbe Regression, die der automatische Hof-Nachlauf nach einem Dorf-Merge verhindert (§9.2), und dieselbe Begründung trägt: der Nutzer hat mit dem Umzug bereits entschieden, dass der Hof dorthin gehört — eine zweite Bestätigung wäre die Verwechslung aus ADR-v9-40→42. Konsolidiert wird über dieselbe verlustfreie Merge-Logik, mit sichtbarem Hinweis (LP-6).
+
+**Der Dorfanker der Ereignisse zieht mit.** `event.placeId` referenzierender Ereignisse wird auf das neue Dorf gesetzt. Anzeige und Export folgen dem Umzug ohnehin von selbst (`buildPlacForGedcom` liest `hof.villageId`), aber `placeId` steuert den nächsten vollen Lade-Pass: `hofId` wird nie persistiert (§2), das Ereignis wird über seinen Dorfanker neu aufgelöst — bliebe der stehen, entstünde beim nächsten Laden ein frisch gebootstrappter Hof im alten Dorf, und der Umzug hielte nur bis zum Reload. Dieselbe Halbierungs-Gefahr wie bei der Hof-Umbenennung (§7, ADR-v9-81).
