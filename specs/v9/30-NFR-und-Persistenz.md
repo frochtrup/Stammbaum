@@ -63,22 +63,25 @@
 
 ### 2.2 App-privater Zustand (geräteweit in IndexedDB, reist NICHT mit der Genealogie-Datei)
 
-Zwei Klassen mit unterschiedlichem Sync-Bedarf — bewusst getrennt, weil nur eine davon einen geräteübergreifenden Weg braucht:
+Klassen mit unterschiedlichem Sync-Bedarf, getrennt entlang **zwei** Fragen: reist es sinnvoll auf ein anderes **Gerät** (A gegen B), und gilt es auch in einem anderen **Bestand** (B1 gegen B2)? Beide müssen beantwortet sein, bevor etwas mitreist — die zweite fehlte zunächst ([ADR-v9-173](04-Entscheidungslog.md#adr-v9-173)):
 
 **Kategorie A — gerätespezifisch** (bleibt lokal; eine Mitnahme wäre sinnlos oder falsch):
 Theme (dark/light) · FS-Handle + letzter Dateiname der Arbeitskopie ([14](14-Dateihandling.md)) · Arbeitskopie selbst (IDB) · Foto-/Medien-Cache (`img:<relPath>`, [§3](#3-medien-pfad-modell)).
 
-**Kategorie B — nutzer-erarbeiteter Zustand** (geräteweit gespeichert, aber echte Nutzerarbeit; geht heute bei Gerätewechsel verloren):
-Projekte ([12 §5](12-Forschungsdaten.md)) · Duplikat-Ignorierliste · Quick-Templates · Validierungs-Config · Export-Vorwahl (Anonymisierungs-Flag · GED-Version · Strict-Flag) · **Kartenebenen-Wahl + eigene Kachel-Adresse** ([20 §1.9](20-Funktionen.md), [ADR-v9-166](04-Entscheidungslog.md#adr-v9-166)). Diese Klasse erhält einen geräteübergreifenden Mitnahme-Weg — [§2.3](#23-geräteübergreifende-mitnahme-des-kategorie-b-zustands).
+**Kategorie B — nutzer-erarbeiteter Zustand** (geräteweit gespeichert, aber echte Nutzerarbeit; geht heute bei Gerätewechsel verloren). Zerfällt in zwei Unterklassen — **nur eine davon gilt über Bestände hinweg** ([ADR-v9-173](04-Entscheidungslog.md#adr-v9-173)):
+
+- **B1 — dateiübergreifend** (identifiziert über Schema, Regelnamen, Flags, URL — nichts davon zeigt in einen Bestand): Quick-Templates · Validierungs-Config · Export-Vorwahl (Anonymisierungs-Flag · GED-Version · Strict-Flag) · **Kartenebenen-Wahl + eigene Kachel-Adresse** ([20 §1.9](20-Funktionen.md), [ADR-v9-166](04-Entscheidungslog.md#adr-v9-166)). **Nur B1 reist über `app-data.json`** — [§2.3](#23-geräteübergreifende-mitnahme-des-dateiübergreifenden-zustands-b1).
+- **B2 — baumgebunden** (identifiziert über **datei-lokale** GEDCOM-Ids): Projekte ([12 §5](12-Forschungsdaten.md), `scope.personIds`) · Duplikat-Ignorierliste (Paar-Schlüssel aus zwei Personen-Ids). Außerhalb ihres Bestands sind diese Einträge nicht bloß nutzlos, sondern **falsch** — `@I1@` existiert in fast jeder Datei, ein dort abgehaktes Paar würde hier einen echten Dublettenfund unterdrücken. B2 braucht deshalb eine **Baum-Identität** als Schlüssel, bevor es geräteweit vereinigt oder mitgenommen wird (Skopierung BL-238, Mitnahme danach BL-239). **Ist-Zustand, kein Zielzustand:** B2 liegt gerätelokal in je einem Store **ohne** Baum-Schlüssel — zwei Dateien auf demselben Gerät teilen einen Topf.
 
 **Nicht persistiert — Proband-ID:** eine benutzerabhängige Ansichtswahl (welcher Ast gerade interessiert), weder Baum-Eigenschaft noch Geräte-Zustand. Bewusst **transienter Session-Zustand** (keine Kategorie A/B, kein Sync); Default beim Dateistart ist das Individuum mit der kleinsten ID ([ADR-v9-135](04-Entscheidungslog.md#adr-v9-135)).
 
-### 2.3 Geräteübergreifende Mitnahme des Kategorie-B-Zustands
+### 2.3 Geräteübergreifende Mitnahme des dateiübergreifenden Zustands (B1)
 
-Kategorie-B-Zustand reist über **dasselbe Muster wie `orte.json`** ([14 §6](14-Dateihandling.md), [§4](#4-multi-device-konfliktschutz-lp-9)) — kein neuer Sync-Mechanismus, kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1 unberührt):
+**B1**-Zustand reist über **dasselbe Muster wie `orte.json`** ([14 §6](14-Dateihandling.md), [§4](#4-multi-device-konfliktschutz-lp-9)) — kein neuer Sync-Mechanismus, kein Cloud-Adapter, kein Eintrag in die Genealogie-Datei (LP-1 unberührt). Die Analogie trägt genau so weit, wie sie hier steht: `orte.json` ist geräte- **und** stammbaumübergreifend (LP-4), und `app-data.json` ist es deshalb auch — baumgebundener Zustand (B2) gehört nicht hinein:
 
 - Ein geräteweiter **IDB-Spiegel** (Wahrheit zur Laufzeit) plus ein optionaler **Datei-Ein-/Ausgang** (`app-data.json`) im Sync-Ordner über dasselbe `FileService`-Adapter-Muster ([14 §4](14-Dateihandling.md)) — eigenes FS-Handle, **explizite** Export-/Import-Aktion, kein stiller Schreib-Sync pro Mutation (Tier-2-Share-Sheet-Spam).
 - Konflikterkennung/-auflösung wie bei `orte.json`: `_rev`/`_device`/`_ts`-Wrapper, Drei-Wege-Merge gegen den gemeinsamen Vorfahren, Union bei disjunkten Änderungen ([§4](#4-multi-device-konfliktschutz-lp-9)). Keine neue Plattform-Verzweigung (INV-FILE-3).
+- **Der Union-Merge ist der Grund für die Grenze:** er entscheidet je Objekt und kennt keinen Datei-Kontext. Auf B2 angewandt vereinigte er Ids aus verschiedenen Beständen — ein still falsches Ergebnis statt eines erkennbaren Konflikts. B2 kommt später als **eigener, nach Baum-Identität geschlüsselter Abschnitt derselben Datei** dazu (BL-239), nicht über einen zweiten Weg.
 
 ---
 
