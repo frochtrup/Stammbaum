@@ -103,7 +103,8 @@ Wellen ordnen danach und benennen sie einmal je Welle.
 
 Die Cluster-Buchstaben sind stabile Bezeichner; ADRs verweisen auf sie. **Ⓐ, Ⓑ und Ⓒ sind
 vollständig gebaut** (Kleinlücken-Wellen 2026-07-29/30) und stehen deshalb nicht mehr in der
-Tabelle.
+Tabelle. **Ⓘ ist bis auf das vertagte BL-227 gebaut**; der zugehörige Editor-Strang steht
+vollständig in [05a](05a-Backlog-Orte-Editor.md) und ist dort abgeschlossen.
 
 | Cluster | Offene Items (interne Reihenfolge) | Fläche / Dateien |
 |---|---|---|
@@ -112,18 +113,16 @@ Tabelle.
 | Ⓕ Forschung | BL-57 → BL-83 → BL-229 (Kette, [ADR-v9-165](04-Entscheidungslog.md#adr-v9-165)) · BL-228 (nach BL-128) · BL-231 (unabhängig, [ADR-v9-167](04-Entscheidungslog.md#adr-v9-167)) | `ui/views/research*`, `SourceCitationRow`, `core/research`, `core/validate`, `core/interop` |
 | Ⓖ Navigation & Shell | BL-07 · BL-213 · BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation |
 | Ⓗ Import / Export / Dedup | BL-207 · BL-166 (vertagt) | Import-Vergleich, Dedup, Export-Pipe |
-| Ⓘ Orte-Editor (Standalone) | BL-220 → BL-221 → BL-222 (Vertrag + Gates) · BL-223 · BL-224 → BL-225 → BL-226 (Handbuch) · BL-227 (vertagt) | `ui/shell/places-host.ts`, `ui/views/place`+`hof`, `tools/handbuch`, Build/CI |
+| Ⓘ Orte-Editor (Standalone) | BL-227 (vertagt) | CI-Workflow |
 | — ohne Cluster (je für sich baubar) | BL-66 · BL-180 | `package.json` (axe-core), `services/` (`AppDataSyncService`) |
 
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang).** Die Wellen der Kleinlücken-
 Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch Offenes.
 
-1. **Welle 1 — `blockiert`, dann `basis` ohne Vorbedingung:** Ⓘ BL-220 → BL-221 → BL-222 (der
-   `PlacesHost`-Vertrag mit seinen zwei Gates; ohne ihn steht der gesamte `OE-n`-Strang in
-   [05a](05a-Backlog-Orte-Editor.md) still) · BL-07 (History-Navigation) · BL-57
-   (Evidenz-Eingabe, Kopf der Ⓕ-Kette) · BL-223.
-2. **Welle 2 — was auf Welle 1 aufsetzt** (Rest-`basis` + die zwei Ketten): Ⓘ-Handbuch
-   BL-224 → BL-225 → BL-226 · BL-83 → BL-229 (beide nach BL-57) · BL-128 → BL-228.
+1. **Welle 1 — `basis` ohne Vorbedingung:** BL-07 (History-Navigation) · BL-57
+   (Evidenz-Eingabe, Kopf der Ⓕ-Kette). Es steht derzeit **kein** Item auf `blockiert`.
+2. **Welle 2 — was auf Welle 1 aufsetzt** (die zwei Ketten): BL-83 → BL-229 (beide nach
+   BL-57) · BL-128 → BL-228.
 3. **Welle 3 — eigenständige Kür:** BL-217 · BL-230 (ohne BL-180 bleibt die Ebenen-Wahl
    sitzungslokal — kein Hindernis) · BL-231 · BL-207 · BL-213.
 4. **Welle 4 — Infra & Hygiene (opportunistisch):** BL-180 (macht die BL-230-Wahl
@@ -132,8 +131,6 @@ Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch O
 **Bewusst vertagt — nicht einplanen, bis sich der Anlass ändert:** BL-166 (Orte/Höfe-Dedup,
 Weg 3 vom 2026-07-26 — geringer Wert gegen hohe Hürde) · BL-227 (Staging-Ziel; lohnt erst,
 wenn der Editor auf einem echten Gerät zu prüfen ist).
-
-**Cluster Ⓘ ist eigenständig und hat eine feste innere Reihenfolge** ([ADR-v9-161](04-Entscheidungslog.md#adr-v9-161)…[164](04-Entscheidungslog.md#adr-v9-164)). BL-220 (Vertrag) ist Voraussetzung für alles Weitere und fasst dieselben 16 Dateien an wie der spätere Anschluss der Flächen — es gibt hier **keine** parallelisierbare Dateimenge, auch wenn die Themen getrennt aussehen. BL-221/222 sind die Gates, ohne die die Trennung nur eine Vereinbarung wäre; sie gehören in denselben Zug, nicht ans Ende. Die eigentliche Bauarbeit am Editor steht in [05a](05a-Backlog-Orte-Editor.md) (`OE-n`) — dort seit 2026-07-31 vollständig `gebaut`. Offen bleibt hier nur BL-227 (Staging-Ziel, bewusst vertagt).
 
 **Herkunft BL-195…213:** Kleinlücken-Inventur v8↔v9 (2026-07-29) — zwei Muster: (a) Modell-Feld
 vorhanden, in der UI nicht gezeigt (`nick`/`datePhrase`/`pedigree`/`dataEvents`/`externalRefs`/
@@ -498,6 +495,7 @@ Den Prüfer selbst prüfen: `… --selftest`.
 | L7 | Zahl der [S]/[E]-Bullets in [20](20-Funktionen.md) gegen die Ratsche `SE_BULLETS` (29, Stand BL-51) | **Fehler** | Ein neues [S]/[E]-Bullet im Spec, zu dem niemand eine Backlog-Zeile angelegt hat — genau die stille Verrottung, an der die [K]-Inventur vor BL-50 scheiterte. Bewusst ein Zähler und keine Bullet↔Zeile-Zuordnung: die gibt es nirgends maschinenlesbar, sie wäre erfunden. |
 | L8 | Beleg-Pfad einer Zeile gegen den Zuständigkeitsbereich ihrer Statusdatei (`app-orte/`, `tests/orte/` → [05a](05a-Backlog-Orte-Editor.md), alles andere → hier) | **Fehler** | Eine Zeile in der falschen Statusdatei. Die Aufteilung „je Programm eine Datei" ist nur so viel wert, wie sie eingehalten wird; ohne Prüfung wäre sie eine Vereinbarung, also genau die Sorte Zusage, die dieses Dokument ersetzt hat. `spec:`/`txt:`-Belege auf Spec-Dateien und negierte `!sym:`-Belege haben keinen Code-Pfad und werden übersprungen. |
 | L9 | Kopfzeile einer Tabelle ohne Trennzeile `\|---\|` direkt darunter | **Fehler** | Eine Tabelle, die gar nicht mehr als Tabelle rendert. Am 2026-07-28 wurden zwei erledigte Zeilen ZWISCHEN Kopf- und Trennzeile eingefügt; jeder weitere Erledigt-Commit schob die Trennzeile tiefer (am Ende 23 Zeilen), und „Erledigte Punkte" erschien auf GitHub als Absatz voller Striche. Zwölf Läufe meldeten „konsistent", weil L1/L2/L5 die Zeilen per Regex lesen und die Struktur nie ansahen — dieselbe Lücke wie bei L5, eine Ebene tiefer (Fund 2026-07-31). |
+| L10 | Planungsteil der Priorisierung (Cluster-Tabelle + Wellen) ↔ Statusspalte | **Fehler** | Eine zweite Fassung derselben IDs, die sich vom Status löst — Regel 1 im Kleinen. BL-220…226 waren gebaut und korrekt einsortiert; L1/L2/L5 meldeten „konsistent", die Wellen planten sie trotzdem weiter ein (Fund 2026-07-31, vom Nutzer beim Lesen entdeckt). Geprüft wird in beide Richtungen: Gebautes darf dort nicht als Arbeit stehen, Offenes muss vorkommen. Bewusst NUR der Planungsteil — die Herkunfts-Prosa nennt legitim erledigte IDs, ein Verbot dort ließe die Begründung verschwinden statt der Drift. |
 | — | Status weder `offen` noch `gebaut` | **Fehler** | Rückkehr von „teilweise" (Regel 2). |
 | — | Statusdatei mit Tabelle, aus der **keine** Zeile erkannt wird | **Fehler** | Ein Prüflauf, der „konsistent" meldet, ohne etwas geprüft zu haben — der falsche ID-Präfix genügt dafür. |
 

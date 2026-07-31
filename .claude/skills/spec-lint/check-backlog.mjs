@@ -402,7 +402,63 @@ function pruefe() {
     if (!implementiert.has(r))
       fehler.push(`L6 Regel ${r} steht in der Tabelle „Lint-Regeln", ist aber nicht implementiert`);
 
+  // L10: Deckt sich der Planungsteil der Priorisierung mit den offenen Zeilen?
+  //
+  // WARUM DIESE REGEL EXISTIERT (Nutzer-Fund 2026-07-31): Der Abschnitt „Priorisierung &
+  // Clusterung" führt dieselben IDs ein zweites Mal — als Cluster-Tabelle und als Wellen.
+  // Genau die Sorte zweiter Fassung, gegen die Regel 1 dieses Dokuments geschrieben ist.
+  // BL-220…226 waren gebaut, ihre Zeilen korrekt unter „Erledigte Punkte" verschoben, und
+  // L1/L2/L5 meldeten „konsistent" — die Wellen planten sie trotzdem weiter ein. Aufgefallen
+  // ist es dem Nutzer beim Lesen, nicht dem Prüfer.
+  //
+  // Geprüft wird NUR der Planungsteil (Cluster-Tabellenzeilen + die nummerierte Wellen-Liste),
+  // nicht der ganze Abschnitt: dessen Prosa nennt legitim auch erledigte IDs — die Herkunft
+  // der Kleinlücken-Inventur erklärt sich über BL-206/BL-212, und ein Verbot dort würde nur
+  // dazu führen, dass die Begründung verschwindet statt der Drift.
+  const priBacklog = fs.readFileSync(path.join(SPEC, BACKLOGS[0].datei), 'utf8');
+  const planung = planungsteil(priBacklog);
+  if (planung === null) {
+    warnungen.push('L10 Abschnitt „Priorisierung & Clusterung" nicht gefunden — Überschrift umbenannt?');
+  } else {
+    const status = new Map(zeilen.map((z) => [z.id, z.status]));
+    const genannt = [...new Set(planung.match(/BL-\d+/g) || [])];
+    for (const id of genannt) {
+      if (status.get(id) === 'gebaut')
+        fehler.push(`L10 ${id} ist gebaut, wird in der Priorisierung aber weiter als Arbeit eingeplant`);
+      if (!status.has(id)) fehler.push(`L10 ${id} steht in der Priorisierung, hat aber keine Backlog-Zeile`);
+    }
+    for (const z of zeilen)
+      if (z.id.startsWith('BL-') && z.status === 'offen' && !genannt.includes(z.id))
+        fehler.push(`L10 ${z.id} ist offen, kommt in der Priorisierung aber nicht vor — ungeplant`);
+  }
+
   return { fehler, warnungen, zeilen };
+}
+
+/**
+ * Der PLANUNGSTEIL der Priorisierung: die Zeilen der Cluster-Tabelle plus die nummerierte
+ * Wellen-Liste samt ihrer eingerückten Fortsetzungszeilen. `null`, wenn der Abschnitt fehlt.
+ *
+ * Bewusst nicht der ganze Abschnitt (s. L10-Kommentar) und bewusst zeilenweise statt über
+ * eine Markdown-Bibliothek — beide Formen sind hier flach und stabil.
+ */
+export function planungsteil(text) {
+  const start = text.indexOf('## Priorisierung');
+  if (start < 0) return null;
+  const endeMarke = text.indexOf('## Offene Punkte', start);
+  const ende = endeMarke < 0 ? text.length : endeMarke;
+  const raus = [];
+  let inWelle = false;
+  for (const l of text.slice(start, ende).split('\n')) {
+    const istWellenKopf = /^\d+\. /.test(l);
+    const istFortsetzung = inWelle && /^\s{3,}\S/.test(l);
+    if (istWellenKopf) inWelle = true;
+    else if (!istFortsetzung) inWelle = false;
+    // Cluster-Tabellenzeile: beginnt mit `|`, aber keine Kopf-/Trennzeile.
+    const istClusterZeile = l.startsWith('|') && !/^\|\s*(Cluster|-+\|)/.test(l) && !/^\|---/.test(l);
+    if (istClusterZeile || istWellenKopf || istFortsetzung) raus.push(l);
+  }
+  return raus.join('\n');
 }
 
 // --- Selbsttest -------------------------------------------------------------
@@ -548,6 +604,33 @@ function selftest() {
   const praefixOk = alsOe === 1 && alsBl === 0;
   if (!praefixOk) bad++;
   console.log(`${praefixOk ? '  ok  ' : ' FAIL '} parseBacklog trennt die ID-Räume`.padEnd(50) + `  → OE:${alsOe} BL:${alsBl}`);
+
+  // L10 negativ prüfen: beide Richtungen, an einer Vorlage statt an der echten Datei —
+  // sonst hinge der Fall am jeweils aktuellen Backlog-Inhalt und würde mit der nächsten
+  // erledigten Zeile falsch (genau die Verrottung, die drei andere Selbsttest-Fälle schon
+  // einmal erwischt hat).
+  const l10Vorlage = [
+    '## Priorisierung & Clusterung der offenen Items',
+    '',
+    'Fließtext, der BL-999 aus historischen Gründen nennt — das ist erlaubt.',
+    '',
+    '| Cluster | Offene Items | Fläche |',
+    '|---|---|---|',
+    '| Ⓐ Beispiel | BL-900 · BL-901 | irgendwo |',
+    '',
+    '1. **Welle 1 — basis:** BL-900',
+    '   · BL-902 (Fortsetzungszeile)',
+    '',
+    '## Offene Punkte',
+  ].join('\n');
+  const geplant = new Set((planungsteil(l10Vorlage).match(/BL-\d+/g) || []));
+  const l10ok =
+    geplant.has('BL-900') && geplant.has('BL-901') && geplant.has('BL-902') && !geplant.has('BL-999');
+  if (!l10ok) bad++;
+  console.log(
+    `${l10ok ? '  ok  ' : ' FAIL '} L10 liest Cluster + Wellen, nicht die Prosa`.padEnd(50) +
+      `  → ${[...geplant].sort().join(',')}`,
+  );
 
   // Und der Fall, der L6 überhaupt ausgelöst hat: findet die Ableitung im ECHTEN
   // Quelltext alle Regeln? Eine Ableitung, die still zu wenig findet, meldete Deckung,
