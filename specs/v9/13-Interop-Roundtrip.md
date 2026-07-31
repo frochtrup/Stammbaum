@@ -98,7 +98,7 @@ Writer gibt 7.0 nur bei `gedVersion === '7.0'` aus. Unterschiede:
 | Datum-Freitext | — | `PHRASE` unter DATE |
 | ASSO-Rolle | `RELA` (Freitext) | `ROLE` (Enum) |
 | CONC | erlaubt | nur CONT |
-| SCHMA | — | `1 SCHMA` deklariert alle `_`-Tags |
+| SCHMA | — | `1 SCHMA` deklariert die **tatsächlich geschriebenen** `_`-Tags (abgeleitet, keine gepflegte Liste — [05 BL-242](05-Backlog.md)) |
 
 Cross-Transfer-Adapter GED7→GED5 und GED7→GRAMPS für Downgrade ohne Verlust wo möglich.
 
