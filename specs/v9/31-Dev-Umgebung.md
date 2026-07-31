@@ -60,7 +60,8 @@ Verzeichnisschichten entsprechen [02 §7](02-Zielarchitektur-v9.md). `node_modul
     "lint":       "eslint . && tsc --noEmit && npm run check:svelte",  // Stil + Typen (.ts UND Templates)
     "check:svelte": "svelte-check --tsconfig ./tsconfig.check.json --threshold error",  // Template-Typen (ADR-v9-83)
     "check:arch": "node tests/arch-boundary/check-arch-boundary.mjs",  // INV-ARCH-1 Gate
-    "check:csp":  "node tests/csp/check-csp.mjs"                // CSP-Gate (NFR-3, ADR-v9-39)
+    "check:csp":  "node tests/csp/check-csp.mjs",               // CSP-Gate (NFR-3, ADR-v9-39)
+    "check:a11y": "node tools/a11y/run-a11y.mjs"                // a11y-Gate (TST-15, ADR-v9-170)
   }
 }
 ```
@@ -94,6 +95,7 @@ jobs:
       - run: npm ci
       - run: npm run check:arch    # Import-Boundary + Kern-Reinheit (INV-ARCH-1)
       - run: npm run check:csp     # CSP-Test-Gate (NFR-3, ADR-v9-39)
+      - run: npm run check:a11y    # Barrierefreiheit (axe-core, TST-15, ADR-v9-170)
       - run: npm run lint          # ESLint + Typen (tsc --noEmit) + Svelte-Templates (check:svelte)
       - run: npm test              # Roundtrip + Unit + Component + Snapshot (LP-1)
       - run: npm run test:perf     # Skalen-Gate auf der 20k-Fixture (NFR, Spec 30 §1)
@@ -115,6 +117,8 @@ jobs:
 ```
 
 **Wirkung:** Architektur-Grenze (INV-ARCH-1), Roundtrip-Treue (LP-1), Typen und die NFR-Budgets ([30 §1](30-NFR-und-Persistenz.md)) werden zur automatischen Vorbedingung jedes Releases — die Gates laufen als getrennte Schritte, damit ein Fehlschlag sofort dem richtigen Bereich zuzuordnen ist.
+
+**`check:a11y` braucht denselben eigenen Aufruf** ([ADR-v9-170](04-Entscheidungslog.md#adr-v9-170)): der Scanner hängt sich an die vorhandenen Komponententests, sieht deren DOM aber nur mit `sequence.hooks: 'list'` — mit der Standard-Reihenfolge räumt `@testing-library` vorher auf, und er prüfte 24 statt 827 Testzustände, ohne rot zu werden. Der Wrapper meldet die erreichte Reichweite ins Log und schlägt an, wenn sie einbricht.
 
 Das Skalen-Gate braucht dabei zwingend den **eigenen Aufruf** `npm run test:perf`: die Haupt-Vitest-Config schließt `tests/perf/` aus ([32 §2](32-Testframework.md)), ein Pfad-Argument gegen sie fände null Tests und meldete grün — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon einmal hatte.
 
