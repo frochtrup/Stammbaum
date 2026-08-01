@@ -339,6 +339,29 @@ Der Hof behält sein Dorf, weil eine Hausnummer allein („Oster 82a") zwischen 
 
 ---
 
+## 6m. Commit-Zeitpunkt gehört zum Abschnitt; Sichtbarkeit ist keine Transaktion (INV-UI-16, ADR-v9-193)
+
+**INV-UI-16:** Wann eine Änderung wirksam wird, ist eine Eigenschaft des **Abschnitts**, nicht der Detailseite — und die Grenze, innerhalb derer „Abbrechen" gilt, ist **sichtbar** und deckungsgleich mit dem Formular, das sie trägt.
+
+Zwei Klassen, je an ihrer Bauform erkennbar:
+
+| Klasse | Was | Bauform | Rücknahme |
+|---|---|---|---|
+| **Sofort** | Was für sich allein eine vollständige Aussage ist: eine Namensvariante, eine Adresse, eine Zugehörigkeitszeile, eine Beziehung (Eltern/Kind/Medien-Verknüpfung), ein Prüf-Marker | Zeile mit eigenem Picker/✕, **kein** Formularrahmen, **kein** Speichern-Knopf | Undo-Stack (⌘Z, `UndoControls`) — die von [INV-UI-10](#6g-direkt-kommandos-ohne-modal-brauchen-von-anfang-an-eine-ebenso-leichte-rücknahme-inv-ui-10-adr-v9-65) verlangte ebenso leichte Rücknahme |
+| **Verzögert** | Ein Formular über Skalarfelder **einer** Entität, das eine **Parse- oder Gültigkeitsgrenze** hat (leerer Ortstitel wäre kein Name; Koordinaten sind Text, bis sie gültig sind; kommagetrennte Listen werden erst beim Speichern geparst) | Umgrenzte Formularfläche mit Speichern/Abbrechen **darin** | „Abbrechen" verwirft die Feldwerte |
+
+**Ein Bearbeiten-Schalter gated Sichtbarkeit, er eröffnet keine Transaktion.** Der Toggle aus [ADR-v9-30](04-Entscheidungslog.md#adr-v9-30) sorgt dafür, dass kein Mutations-Control ohne bewussten zusätzlichen Klick sichtbar ist ([20 §1.7](20-Funktionen.md)) — er sagt damit nichts darüber zu, ob das, was er zeigt, rücknehmbar gesammelt wird. Beides in einem Flag zu führen erzeugt ein „Abbrechen", das eine Rücknahme für Abschnitte verspricht, die es nie erreicht: auf `PlaceDetail` lagen so ein verzögertes Grunddaten-Formular, die sofort committenden Namensvarianten und ein sofort committendes Zugehörigkeits-Modal unter demselben Schalter.
+
+**Daraus zwei harte Regeln:**
+- **Kein sofort committender Abschnitt liegt innerhalb einer Speichern/Abbrechen-Fläche.** Er steht daneben, nicht darin.
+- **„Abbrechen" verlässt den Bearbeiten-Modus nicht.** Es verwirft die Feldwerte seines Formulars; den Modus verlässt derselbe Schalter, der ihn geöffnet hat. Ein „Abbrechen", das zusätzlich die Fläche schließt, liest sich als Rücknahme von allem, was seit dem Öffnen geschah.
+
+**Warum nicht einfach ein Zeitpunkt für alles:** durchgehend verzögert verlangt einen formularlokalen Schattenzustand über Listen, Kaskaden und Modale — der Richtung nach [Altlast §6](03-Altlasten.md) — und widerspräche der Sofort-Reprojektion ([ADR-v9-42](04-Entscheidungslog.md#adr-v9-42)), dem formularlosen `FamilyDetail` ([ADR-v9-63](04-Entscheidungslog.md#adr-v9-63)) und der durchgängigen Hof-Umbenennung ([ADR-v9-81](04-Entscheidungslog.md#adr-v9-81)). Durchgehend sofort kostet die Parse-/Gültigkeitsgrenze der Skalarfelder. Die Zweiteilung ist also keine Unentschiedenheit, sondern die Entscheidung — sie braucht nur eine sichtbare Grenze.
+
+**Wächter:** `tests/ui/edit-commit-timing.test.ts` — prüft die Grenze (kein Sofort-Commit-Aufruf innerhalb einer Speichern/Abbrechen-Fläche), nicht die Anzahl der Zeitpunkte.
+
+---
+
 ## 7. Symbol-Konventionen (verschlankt)
 
 **Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
