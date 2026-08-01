@@ -280,7 +280,14 @@ Drei zusammenhängende Regeln, die die volle (§2) statt gefilterte Persistenz v
 
 Beide Prädikate sind reine, headless testbare Kern-Funktionen (`core/places`), **nicht** als persistiertes Feld geführt (würde bei Mutation veralten können — LP-5 eine Ebene tiefer angewandt: „ist angereichert" ist selbst wieder deterministisch aus den vorhandenen Feldern berechenbar).
 
-**Der Grad ist dreistufig, nicht binär.** `placeEnrichmentLevel(po)` / `hofEnrichmentLevel(hof)` zählen die belegten Facetten (Typ · Namen · datierte oder zweite Zugehörigkeit · Koordinaten · Notiz · Existenzspanne · GOV) und liefern `none` · `sparse` · `rich`. `isEnrichedPlace`/`isEnrichedHof` bleiben und sind definitorisch `level !== 'none'` — EIN Maßstab in zwei Auflösungen, kein zweites Prädikat. Ein Binärwert allein trüge über eine reale Spanne von einer bis acht Facetten hinweg: er stellt einen Ort, an dem nur der Typ steht, in dieselbe Klasse wie einen vollständig recherchierten, und genau dazwischen entscheidet der Nutzer beim Dedup. Ebenfalls **nicht** persistiert, aus demselben Grund wie oben.
+**Der Grad ist dreistufig, nicht binär.** `placeEnrichmentLevel(po)` / `hofEnrichmentLevel(hof)` zählen die belegten Facetten und liefern `none` · `sparse` · `rich`. `isEnrichedPlace`/`isEnrichedHof` bleiben und sind definitorisch `level !== 'none'` — EIN Maßstab in zwei Auflösungen, kein zweites Prädikat. Ein Binärwert allein stellt einen Ort, an dem nur der Typ steht, in dieselbe Klasse wie einen vollständig recherchierten — und genau dazwischen entscheidet der Nutzer beim Dedup. Ebenfalls **nicht** persistiert, aus demselben Grund wie oben.
+
+| | Facetten | `rich` ab |
+|---|---|---|
+| **Ort** | Typ · Namen · datierte oder zweite Zugehörigkeit · Koordinaten · Notiz · Existenzspanne · GOV | **4** von 7 |
+| **Hof** | Adress-Historie · Koordinaten · Notiz · Existenzspanne · Lebenszyklus · GOV | **2** von 6 |
+
+Gezählt wird je **Merkmal**, nicht je Eintrag (zwölf Schreibvarianten sind EINE Facette). Die beiden Schwellen sind am Realbestand gemessen und bewusst verschieden — ein Hof hat weniger Felder, seine Verteilung ist anders geformt; eine gemeinsame Zahl ergäbe dort null „ausführliche" Höfe (Begründung + Histogramme: [ADR-v9-191](04-Entscheidungslog.md#adr-v9-191)).
 
 **Der Marker ist persistiert und entsteht ausschließlich durch eine ausdrückliche Handlung.** `reviewedAt` (§1) wird allein vom „geprüft"-Knopf des Steckbriefs gesetzt und ist umkehrbar; **kein** automatischer Pfad setzt ihn (Seed, GOV-Platzhalter, Hof-Bootstrap, Merge-Nachlauf), und Bearbeiten allein setzt ihn ebenfalls nicht. Er behauptet „ein Mensch hat entschieden", nicht „fertig recherchiert" — das Zweite ist bei einem Ort keine haltbare Aussage. Additives optionales Feld, in beide Richtungen abwärtskompatibel → **kein** `PLACES_SCHEMA_VERSION`-Bump; die Union-Merge-Grenze aus §1 (LP-9) gilt mit.
 
