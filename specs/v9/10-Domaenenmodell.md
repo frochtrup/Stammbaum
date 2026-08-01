@@ -144,10 +144,12 @@ Family {
 ```
 Source {
   id: SourceId
-  abbr (ABBR), title (TITL), author (AUTH), date (DATE), publisher (PUBL), text (TEXT): string
+  abbr (ABBR), title (TITL), author (AUTH), publisher (PUBL), text (TEXT): string
+  createdDate (CREA·7.0 / _DATE·5.5.1): string   // Erfassungsdatum; „Erfasst am"
   repo (REPO): RepoId | string     // @Rxx@-Referenz ODER Legacy-Freitext
-  callNumber (CALN): string        // Signatur
-  callMedia (MEDI): string
+  callNumber (CALN → GRAMPS reporef/@callno): string   // Signatur
+  callMedia (MEDI → GRAMPS reporef/@medium): string
+  agnc (DATA.AGNC): string         // verantwortliche Behörde/Stelle
   dataEvents: SourceDataEvent[]    // DATA/EVEN/DATE/PLAC — Ereignis-Abdeckung
   externalRefs (REFN): {value, type}[]
   media: MediaCitation[]              // s. §4

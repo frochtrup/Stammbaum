@@ -2195,3 +2195,63 @@ Der Bau-Plan für BL-154 (spec-only). Konkretisiert ADR-v9-126 in buildbare Teil
 - **Konsequenz:** `ui/shell/nav-history.svelte.ts` (Modell) + `ui/shell/swipe-nav.ts` (Erkennung rein, Verdrahtung als Action). Der Stack ist wie in v8 auf 50 gedeckelt. Ein neuer Weg nach dem Zurückgehen verwirft den Vorwärts-Ast (Browser-Regel). Zwei Extraktionen fielen dabei an, weil `App.svelte` und `EntityTab.svelte` die 600-Zeilen-Schwelle (BL-54) rissen: `ui/shell/entity-jump.ts` (fünf fast gleiche „öffne Datensatz"-Funktionen zu einer, INV-UI-4) und `ui/views/entity-tab-overlays.svelte.ts` (die sechs Werkzeug-Overlays).
 - **Verworfen:** (a) *Ein `→`-Knopf neben „← Zurück", nur sichtbar wenn möglich* — wäre INV-UI-11-verträglich (nicht dauerhaft sichtbar), verlangte aber die Verlaufs-Instanz durch sieben Detail-Komponenten hindurch und brächte Altlast §10 auf einer neuen Fläche in Reichweite. (b) *Verlaufs-Picker („▾", v8s `openDetailHistory`)* — ein drittes Bedienelement für den seltensten Fall; die Befehlspalette ist das v9-Werkzeug für „springe irgendwohin". (c) *Geste app-weit statt nur auf der Detail-Fläche* — kollidiert mit dem Pan der Inseln und mit waagerecht scrollenden Reihen. (d) *Verlauf in der Routen-Quelle selbst* — die Route beantwortet „welches Ziel ist offen", der Verlauf „wo war ich"; eine Zusammenlegung machte `route.setTarget` zu einer Funktion mit Nebenwirkung auf einen Stack.
 - **Refs:** [20 §1.1](20-Funktionen.md), [21 §2/§3](21-UI-UX.md), [03 Altlasten §10](03-Altlasten.md), [ADR-v9-101](#adr-v9-101), [ADR-v9-102](#adr-v9-102), [ADR-v9-153](#adr-v9-153), [05 BL-07](05-Backlog.md).
+<a id="adr-v9-178"></a>
+## ADR-v9-178 — Die Messgrundlage ist `Unsere Familie 2026.ged`; sechs Zahlen in ADR-v9-151 stammen aus der falschen Datei ✅ · 2026-08-01
+
+- **Kontext:** [ADR-v9-151](#adr-v9-151) hat die Quellenfelder „am echten Bestand gemessen (`MeineDaten_ancestris.ged`, 2795 Personen / 113 Quellen)" und daraus Umfang und Reihenfolge von BL-201/BL-217 abgeleitet. Auf Nachfrage benannte der Nutzer seine aktuelle Datei: `Testdateien/Unsere Familie 2026.ged` — Export vom **25 JUN 2026**, **3180 Personen / 987 Familien / 152 Quellen / 7 Archive**. Die herangezogene Fixture ist vom **7 MAR 2026** und dreieinhalb Monate älter.
+- **Der Befund — alle sechs Zahlen kippen:**
+
+  | Feld | ADR-v9-151 | tatsächlich |
+  |---|---|---|
+  | `SOUR.DATA.EVEN` | 0× | **7×**, jede mit `DATE FROM … TO …` **und** `PLAC` |
+  | `SOUR.DATA.AGNC` | 1× | **5×** |
+  | `SOUR.REPO.CALN` | 0× | **2×**, davon 1× mit `MEDI manuscript` |
+  | `SOUR.REFN` | 1× | 1× |
+  | `1 DATE` unter `SOUR` | 0× | 2× |
+  | `1 _DATE` unter `SOUR` | nicht betrachtet | **10×** |
+
+- **Entscheidung:**
+  1. **Maßgeblich ist `Unsere Familie 2026.ged`.** Sie liegt gitignored (`*.ged`) außerhalb des Code-Repos und ist deshalb aus keinem Repo ableitbar — das ist der Grund, warum die ältere, im Code-Repo als `tests/fixtures/…` liegende Datei kanonisch *aussah*.
+  2. **Zwei Aussagen aus ADR-v9-151 sind widerlegt und gelten nicht mehr:** „`dataEvents` … Am Realbestand 0×" (es sind 7, vollständig strukturiert) und „Der `callMedia`-Fall ist NICHT an Realdaten belegbar (0 Vorkommen) und ruht auf dem Component-Test" (`CALN` 2×, `MEDI` 1×). **ADR-v9-151 selbst wird nicht editiert** — Historie wird nicht rückwirkend geglättet; dieser Eintrag überschreibt sie.
+  3. **BL-217 steigt von `kür` auf `basis`.** Sieben kuratierte Register-Abdeckungen sind Substanz, kein Komfort; sie sind heute in der Oberfläche unsichtbar.
+  4. **Der Wächter ersetzt die Erinnerung** ([BL-246](05-Backlog.md), [32 TST-21](32-Testframework.md)): der Realdaten-Test benennt die Datei, prüft ihre Personenzahl und schlägt fehl, statt still zu skippen, wenn eine andere geladen ist.
+- **Konsequenz:** Jede „am Realbestand N×"-Aussage im Spec-Set steht unter diesem Vorbehalt, bis der Wächter steht. Die Umfangs- und Klassen-Korrekturen an BL-217 sowie die neuen Zeilen BL-243/244/245/246 folgen unmittelbar aus dieser Neuzählung.
+- **Verworfen:** (a) *Die Fixture im Code-Repo austauschen* — sie ist bewusst die committfähige, kleinere Datei; die Realdatei ist privat und gitignored (s. `tooling_test_fixtures_gitignored`). Der Fehler war nicht ihre Existenz, sondern die fehlende Gegenprüfung. (b) *Die Regel nur in `CLAUDE.md` schärfen* — sie steht dort seit ADR-v9-62/65 und hat nicht gegriffen; ein weiterer Absatz hätte denselben Wert wie der erste. (c) *ADR-v9-151 korrigieren* — verstößt gegen die Trennung aus [04a](04a-Chronik.md): eine Entscheidung wird nie umgeschrieben.
+- **Refs:** [05 BL-217/243/244/245/246](05-Backlog.md), [32 TST-21](32-Testframework.md), [ADR-v9-151](#adr-v9-151), [ADR-v9-62](#adr-v9-62), [ADR-v9-179](#adr-v9-179), [ADR-v9-180](#adr-v9-180), [04a](04a-Chronik.md#adr-v9-178).
+
+<a id="adr-v9-179"></a>
+## ADR-v9-179 — Das Quellen-Datum: drei Bedeutungen, drei Wire-Stellen; `Source.date` liest die vierte, ungültige ✅ · 2026-08-01
+
+- **Kontext:** Aus [BL-243](05-Backlog.md) („`Source.date` hängt an einem Tag, den `SOURCE_RECORD` nicht kennt") wurde die Frage, wohin das Datum stattdessen gehört. Die Auszählung des Realbestands ([ADR-v9-178](#adr-v9-178)) zeigt, dass an einer Quelle **drei verschiedene** Datumsangaben vorkommen — und `Source.date` keine davon liest:
+
+  | Wire | Anzahl | Bedeutung im Bestand |
+  |---|---|---|
+  | `PUBL` | 36× | Fundstelle/URL/Amt — laut Spec „When and where the record was created" |
+  | `DATA.EVEN.DATE` | 7× | Abdeckungszeitraum (`FROM 1874 TO 1938`) → [BL-217](05-Backlog.md) |
+  | `_DATE` | 10× | Erfassung durch den Forscher (`@S14@`: Titel „Geburtsurkunde … 1886", `_DATE 27 DEC 2005`; acht der zehn Werte liegen um Weihnachten 2005) |
+  | `DATE` | 2× | ein Dokumentjahr (`1952`) und ein Import-Datum (`24 MAY 2026`) |
+
+- **`1 DATE` unter `SOUR` ist ungültig, nicht unüblich.** 5.5.1 führt es weder im `SOURCE_RECORD` noch erlaubt es standardisierte Tags in einem anderen Kontext als in Kapitel 2 gezeigt; die einzige legale Erweiterung ist ein Tag mit führendem Unterstrich. v8 wusste das — eine Funktion über `writeSOURRecord` schreibt für Medien `2 _DATE` und unterdrückt es im Strict-Modus, während `writeSOURRecord` selbst `1 DATE ${s.date}` erzeugt. v9 hat die Stelle beim Portieren ungeprüft übernommen.
+- **Entscheidung:**
+  1. **`Source.date` wird zu `Source.createdDate`** — das Erfassungsdatum, gelesen aus **`CREA`** (7.0: Pflicht-`DATE-exact`, ausdrücklich an `record-SOUR`) **und `_DATE`** (5.5.1/Legacy), geschrieben je nach Zielformat. Kanonisierung an der Parse-Grenze, eine Modell-Repräsentation, N Ausgaben.
+  2. **Symmetrie statt neuer Mechanik:** `Person.createdDate` ↔ `1 CREA / 2 DATE` existiert bereits (`write-back-emit.ts`, `gedcom-parse.ts`); die Quelle bekommt die Geschwister-Stelle, keine zweite Bauform (INV-UI-4-Geist auf der Interop-Seite).
+  3. **`DATE` verlässt `RECOGNIZED_SOURCE`** und bleibt Passthrough — ein Fremdvorkommen überlebt byte-identisch (LP-1), geschrieben wird es nie.
+  4. **Kein Migrationspfad** (Nutzerentscheidung 2026-08-01). Die zwei Altvorkommen räumt der Nutzer von Hand auf; danach ist der Bestand frei davon. Ein Einlesen als „Erfasst am" wäre für das Dokumentjahr `1952` sachlich falsch, eine Heuristik „exaktes Datum vs. nacktes Jahr" eine selbst erfundene Regel.
+  5. **Beschriftung „Erfasst am"** statt „Datum" — der bisherige Name behauptete eine Eigenschaft des Dokuments, das Feld trägt eine des Datensatzes.
+  6. **Versions-Schalter für den `CREA`-Emit** (im selben Zug): heute harmlos, weil `createdDate` nur beim Parsen gesetzt wird; sobald v9 selbst eines vergibt, schriebe es `1 CREA` in eine 5.5.1-Datei, die den Tag nicht kennt.
+- **Konsequenz:** Zehn heute unsichtbare Erfassungsdaten werden sichtbar, und v9 hört auf, eine ungültige Zeile zu erzeugen. Das Feld konkurriert nicht mehr mit [BL-217](05-Backlog.md): Abdeckung (`DATA.EVEN.DATE`) und Erfassung (`createdDate`) sind getrennte Felder mit getrennten Wire-Stellen.
+- **Verworfen:** (a) *`Source.date` auf `DATA.EVEN.DATE` umziehen* — beschreibt den Zeitraum, den die Quelle abdeckt, nicht die Quelle; das Datum hinge zudem unter einem `EVEN`, dessen Payload die Ereignisliste ist, hätte also ohne synthetisches `EVEN` keinen legalen Platz. Der Bestand widerlegt die Gleichsetzung selbst: `@S1001@` trägt `1 DATE 1915` **und** `TEXT Sterbebuch 1.1.1881 - 31.12.1957`. (b) *Ersatzloser Wegfall* — begrübe zehn echte Werte. (c) *`_DATE` als frei erfundene Extension* — es ist keine Erfindung, sondern die Form, die im Bestand bereits steht. (d) *In `PUBL` aufgehen lassen* — `PUBL` ist im Bestand mit 36 Fundstellen belegt und meint die Entstehung des Dokuments, nicht die Erfassung durch den Forscher.
+- **Refs:** [10 §4](10-Domaenenmodell.md), [20 §1.6/§2](20-Funktionen.md), [13 §2](13-Interop-Roundtrip.md), [05 BL-243](05-Backlog.md), [ADR-v9-178](#adr-v9-178), [ADR-v9-151](#adr-v9-151).
+
+<a id="adr-v9-180"></a>
+## ADR-v9-180 — Quellen-Attribute reisen in GRAMPS als `<srcattribute>`; `callno`/`medium` gehören ans `<reporef>` ✅ · 2026-08-01
+
+- **Kontext:** [BL-217](05-Backlog.md) und [ADR-v9-179](#adr-v9-179) geben der Quelle drei neue Wire-Felder (Abdeckung, Behörde, Erfassungsdatum). Für die GRAMPS-Seite war zu klären, wo sie landen — nach der Lehre aus [ADR-v9-175](#adr-v9-175) an der öffentlichen Definition, nicht am Bestand und nicht am Orakel.
+- **Der Befund:** Die `grampsxml.dtd` deklariert `source (stitle?, sauthor?, spubinfo?, sabbrev?, noteref*, objref*, srcattribute*, reporef*, tagref*)` — **kein Datums-Element**, weder für Abdeckung noch für Erfassung; das einzige Datum ist das Pflicht-Attribut `change` (letzte Änderung, = `CHAN`). Ein Erstellungsdatum gibt es nur einmal je Datei im `<header>`. Der GRAMPS-Export des Nutzers zeigt die Folge unmittelbar: `1 DATA` → „Tag erkannt, aber nicht unterstützt", `2 AGNC …` → „Untergeordnete Zeile übersprungen", `1 _DATE …` ebenso — alle drei landen als Fließtext in einer `GEDCOM-Import`-Notiz, nicht als Daten. Umgekehrt nutzt GRAMPS `<srcattribute>` selbst: `<srcattribute type="REFN" value="…"/>` steht in derselben Datei.
+- **Entscheidung:**
+  1. **Nicht nativ abbildbare Quellenfelder reisen als `<srcattribute type/value>`** an der DTD-Position (nach `objref*`, vor `reporef*`) — dieselbe Mechanik, die [ADR-v9-175](#adr-v9-175) für die Evidenz-Achsen am `<citation>` festgelegt hat. Betroffen: `externalRefs` (heute), danach `agnc`, `dataEvents` und `createdDate`.
+  2. **`callNumber` → `reporef/@callno`, `callMedia` → `reporef/@medium`.** Beide sind native DTD-Attribute; der Realbestand nutzt `medium="Book"` an 9 `reporef`. Die Einordnung „`source.callNumber` — kein direktes `<source>`-Gegenstück" aus [13 §1](13-Interop-Roundtrip.md) war richtig gelesen und falsch geschlossen: das Gegenstück liegt nicht im `<source>`, sondern eine Ebene tiefer.
+  3. **`sourceRecord()` bekommt die Fläche zuerst** ([BL-244](05-Backlog.md)), weil `externalRefs` **schon heute** verloren geht — v9 ist an dieser Stelle schlechter als das Zielprogramm, unabhängig von jedem neuen Feld.
+- **Konsequenz:** v9 baut GRAMPS' eigenen Importverlust nicht nach. Ohne diese Entscheidung wären die sieben Abdeckungszeiträume und fünf Behörden aus BL-217 auf dem GRAMPS-Weg genau so verschwunden wie beim Import — als Notiz statt als Feld.
+- **Verworfen:** (a) *Die Felder GRAMPS-seitig weglassen, „weil GRAMPS sie ohnehin nicht kennt"* — es kennt sie als `srcattribute`, nur nicht als eigenes Element; das Argument verwechselt „kein natives Feld" mit „kein Ziel". (b) *Als `<note>` schreiben, wie GRAMPS es beim Import tut* — reproduziert eine Verlustform als Absicht; eine Notiz ist nicht durchsuchbar, nicht typisiert und käme als `NOTE` zurück. (c) *`callno`/`medium` ebenfalls als `srcattribute`* — es gibt ein natives Attribut; ein Generikum daneben wäre die schlechtere Abbildung.
+- **Refs:** [13 §1/§2](13-Interop-Roundtrip.md), [05 BL-217/244/245](05-Backlog.md), [ADR-v9-175](#adr-v9-175), [ADR-v9-178](#adr-v9-178), [ADR-v9-179](#adr-v9-179), [ADR-v9-124](#adr-v9-124).
