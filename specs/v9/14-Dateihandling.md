@@ -117,10 +117,23 @@ Dieselbe Datei ist zugleich das **Dokument des Standalone-Orte-Editors** ([22](2
 
 ## 7. Medien
 
-`media.file` = relativer Pfad bezogen auf den Datei-Ordner (den Sync-Ordner). Auflösung vereinfacht:
-- **Desktop (FS-Access):** optionaler **Directory-Handle** des Datei-Ordners → Geschwister-Medien direkt lesbar.
-- **Mobile / ohne Directory-Handle:** Medien werden **explizit importiert** und in IDB gecacht (`img:<relPath>`).
-- Kein OneDrive-`downloadUrl`-Fetch mehr. Medien sind **[S]**, nicht **[K]** — die Kern-Roundtrip-Fähigkeit hängt nicht daran.
+`media.file` ist **nicht immer ein Pfad.** Es trägt drei Dinge, die verschieden aufzulösen sind ([ADR-v9-187](04-Entscheidungslog.md#adr-v9-187)); welches davon vorliegt, entscheidet **eine** reine Kern-Klassifikation, nie die einzelne Anzeigestelle:
+
+| Art | Erkennung | Auflösung |
+|---|---|---|
+| **eingebettet** | `data:` | direkt anzeigbar, keine Auflösung nötig |
+| **Weblink** | `http(s):` | klickbares ↗ (Host als Kurztext) — **kein Fetch**, weder für Vorschau noch für Ausgaben (lokal-first LP-2, CSP; ein Galerie-Aufruf löste sonst tausende Anfragen an fremde Archive aus) |
+| **Datei** | alles Übrige | relativ zum **Medien-Ordner** (s. u.) |
+
+**Medien-Ordner.** Startpunkt für relative Pfade ist der Datei-Ordner (der Sync-Ordner), verbunden als **Verzeichnis-Handle** — bedient über die Einstellungen ([20 §1.14](20-Funktionen.md)), gespeichert in einem eigenen IDB-Store neben den anderen FS-Handles (Kategorie A, [30 §2.2](30-NFR-und-Persistenz.md)), Permission-Reprompt wie bei der Arbeitskopie ([§4](#4-fileservice-die-einzige-plattform-verzweigung)).
+
+- **Desktop/Android (FS-Access):** Ordner-Handle → Geschwister-Medien direkt lesbar. Ein **einmaliger rekursiver Index** (relPath → Handle) trägt die Auflösung; er matcht zusätzlich case-unabhängig, normalisiert `\` zu `/` und fällt zuletzt auf den **Basisnamen** zurück. Ein so gefundenes Medium wird als „nur über den Dateinamen zugeordnet" **markiert** — ein stiller Fuzzy-Treffer zeigt sonst irgendwann das falsche Foto.
+- **Ohne FS-Access (iOS/Safari):** Medien werden **explizit importiert** (Mehrfachauswahl) und unter ihrem relativen Pfad in IDB abgelegt. Kein toter „Ordner wählen"-Knopf auf Plattformen ohne die API.
+- **Cache `img:<relPath>`** hält **verkleinerte Vorschauen**, nicht die Originale — ein Kachelraster voller unkomprimierter BMP in Originalgröße ist ein realer Speicherfehler. Ein Speicher, zwei Zugangswege (Ordner-Handle und Import).
+- **Die Auflösung schreibt nie zurück.** Ein gefundener Pfad korrigiert `media.file` nicht, kein Normalisieren beim Verbinden (LP-1) — die Datei gehört dem Nutzer, nicht dem Anzeigecode.
+- **Selbst-enthaltene Ausgaben** (Story, §4-Reports) bekommen die Bytes über einen **asynchronen Vorlauf** als `data:`-Map; die Builder bleiben synchron und goldfile-testbar.
+
+Kein OneDrive-`downloadUrl`-Fetch mehr. Medien sind **[S]**, nicht **[K]** — die Kern-Roundtrip-Fähigkeit hängt nicht daran; nichts an dieser Auflösung berührt Parser oder Writer.
 
 ---
 

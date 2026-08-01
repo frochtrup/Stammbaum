@@ -63,8 +63,11 @@ const L3_RATSCHE = 0;
  *  bezifferte Statistik-Balken (BL-219, ADR-v9-157) sind jetzt eigene [E]-Bullets —
  *  vorher nur Backlog-Text ohne Spec-Vorgabe bzw. Teil von BL-208.
  *  33 → 34 (2026-07-30): §1.9 hat die historische Kartenebene als eigenen [S]-Bullet
- *  bekommen (BL-230, ADR-v9-166); zuvor stand sie nur als Zukunfts-Kandidat in 01 §4. */
-const SE_BULLETS = 34;
+ *  bekommen (BL-230, ADR-v9-166); zuvor stand sie nur als Zukunfts-Kandidat in 01 §4.
+ *  34 → 39 (2026-08-01): die Medien-Auflösung (ADR-v9-187/-188) hat §1.4 um zwei Bullets
+ *  ergänzt (Klassifikation, Bilder außerhalb der Galerie) und den neuen §1.14
+ *  Einstellungen bringt drei mit; die Backlog-Zeilen BL-256…BL-261 gab es vorher. */
+const SE_BULLETS = 39;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
