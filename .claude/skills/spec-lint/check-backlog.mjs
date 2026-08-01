@@ -66,10 +66,39 @@ const L3_RATSCHE = 0;
  *  bekommen (BL-230, ADR-v9-166); zuvor stand sie nur als Zukunfts-Kandidat in 01 §4.
  *  34 → 39 (2026-08-01): die Medien-Auflösung (ADR-v9-187/-188) hat §1.4 um zwei Bullets
  *  ergänzt (Klassifikation, Bilder außerhalb der Galerie) und den neuen §1.14
- *  Einstellungen bringt drei mit; die Backlog-Zeilen BL-256…BL-261 gab es vorher. */
-const SE_BULLETS = 39;
+ *  Einstellungen bringt drei mit; die Backlog-Zeilen BL-256…BL-261 gab es vorher.
+ *  39 → 40 (2026-08-01): der Erstnutzer-Rundgang steht jetzt als eigener [E]-Bullet in
+ *  §1.1 (BL-213, ADR-v9-190) — vorher trug ihn nur die Backlog-Zeile. */
+const SE_BULLETS = 40;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
+
+/** L11-Ratsche: Zähl-Aussagen über den Realbestand OHNE Dateinamen, Ist-Stand 2026-08-01.
+ *  Diese 14 Zeilen sind die Abarbeitungsliste (der Prüflauf nennt sie namentlich) — sie
+ *  bekommen ihren Dateinamen, sobald die jeweilige Zahl ohnehin einmal nachgemessen wird.
+ *  Rückwirkend einen Namen danebenzuschreiben, ohne die Zahl zu prüfen, wäre erfundene
+ *  Evidenz und genau der Fehler aus [ADR-v9-178](specs/v9/04-Entscheidungslog.md) — dort
+ *  STAND ein Dateiname, nur der falsche. NIE ANHEBEN. */
+const L11_RATSCHE = 14;
+
+/** Wortfeld „Aussage über den echten Datenbestand". Bewusst diese sechs Formen und nicht
+ *  das nackte Wort „Bestand": das trägt in 04/05 überwiegend andere Bedeutungen
+ *  („bleibt im Bestand", „im Bestand des Nutzers"). */
+const L11_MARKER = /Realbestand|Referenzbestand|Bestandsdatei|im Bestand|am echten Bestand|des Bestands/;
+
+/** Was als begleitender Dateiname zählt: die Formate, in denen ein Bestand vorliegt. */
+const L11_DATEI = /[\w.\-]+\.(?:ged|gramps|json)\b/;
+
+/** Referenz-Nummern und ISO-Daten, die im Fenster sonst als „Zahl" durchgingen —
+ *  `(TST-9). Am Realbestand …` ist keine Zählung, `ADR-v9-159 … am Realbestand
+ *  verifiziert` auch nicht. Ohne diesen Filter meldete die Regel 20 statt 14 Zeilen,
+ *  sechs davon rein qualitativ. Ordnungszahlen gehören dazu („bei der 2. Neuberechnung"
+ *  zählt nichts) — der Punkt muss dafür von einem Leerzeichen gefolgt sein, damit
+ *  deutsche Tausenderpunkte („1.968 Werte") eine Zählung bleiben. */
+const L11_RAUSCHEN = /\b(?:ADR-v9|BL|OE|LP|INV|TST|RT|SC)[-\s]?\d+|\d{4}-\d{2}-\d{2}|§\s?\d+|\b\d+\.(?=\s)/g;
+
+/** Eine ZÄHLUNG: „7×", „0 von 226", „888 `2 ADDR`", „85 Personen-Medien". */
+const L11_ZAHL = /\d+\s?×|\d+ von \d+|\d[\d.,]*\s+[A-Za-zÄÖÜäöü`]/;
 
 // --- Dateizugriff -----------------------------------------------------------
 
@@ -241,6 +270,32 @@ export function implementierteRegeln(quelltext) {
   return new Set(
     [...quelltext.matchAll(/(?:fehler|warnungen)\.push\(\s*`L(\d+)\b/g)].map((m) => `L${m[1]}`),
   );
+}
+
+/**
+ * L11: Zeilen mit einer ZÄHL-Aussage über den echten Datenbestand, die keine Datei nennt.
+ *
+ * Der mechanisierbare Teil der Lehre aus ADR-v9-178: die Zahl selbst kann kein Lint
+ * nachrechnen (sie steht in Prosa, die Datei ist gitignored) — prüfbar ist nur, ob neben
+ * der Behauptung überhaupt ein Dateiname steht. Genau das fehlte zweimal: ADR-v9-151
+ * maß gegen die falsche Datei (immerhin genannt), BL-217 trug „Am Realbestand:
+ * DATA.EVEN 0×" ganz ohne.
+ *
+ * Ausgelöst wird nur bei **Marker + Zählung im selben Fenster**, nicht bei „N×" allein:
+ * das nackte Muster traf 79 Zeilen, überwiegend Code-Aussagen („siebenmal dupliziert",
+ * „3–4,5× langsamer") — eine Warnung, die niemand liest, ist keine.
+ *
+ * @returns {{zeile:number, text:string}[]}
+ */
+export function bestandsBehauptungen(text) {
+  const treffer = [];
+  text.split('\n').forEach((l, idx) => {
+    const m = L11_MARKER.exec(l);
+    if (!m || L11_DATEI.test(l)) return;
+    const fenster = l.slice(Math.max(0, m.index - 70), m.index + m[0].length + 70).replace(L11_RAUSCHEN, ' ');
+    if (L11_ZAHL.test(fenster)) treffer.push({ zeile: idx + 1, text: l.slice(Math.max(0, m.index - 55), m.index + 70) });
+  });
+  return treffer;
 }
 
 /** Die im Backlog dokumentierten Regeln — die Zeilen der Tabelle „Lint-Regeln". */
@@ -434,6 +489,31 @@ function pruefe() {
       if (z.id.startsWith('BL-') && z.status === 'offen' && !genannt.includes(z.id))
         fehler.push(`L10 ${z.id} ist offen, kommt in der Priorisierung aber nicht vor — ungeplant`);
   }
+
+  // L11-Ratsche: Zähl-Aussagen über den Realbestand ohne Dateinamen.
+  //
+  // Aufbau wie L3 (Fehler oberhalb der Ratsche, sonst namentliche Warnung): die 14
+  // Altfälle sollen sichtbar bleiben und abgearbeitet werden, aber keine NEUE Behauptung
+  // darf dazukommen. Ein reiner Warnungs-Modus hätte 14 Zeilen erzeugt, die man nach dem
+  // dritten Lauf überliest — die Ratsche ist die im Projekt eingeführte Antwort darauf
+  // (L3/L7).
+  const l11 = [];
+  for (const datei of [...BACKLOGS.map((b) => b.datei), 'specs/v9/04-Entscheidungslog.md']) {
+    const pfad = path.join(SPEC, datei);
+    if (!fs.existsSync(pfad)) continue;
+    for (const t of bestandsBehauptungen(fs.readFileSync(pfad, 'utf8')))
+      l11.push(`${datei}:${t.zeile}: …${t.text.trim()}…`);
+  }
+  if (l11.length > L11_RATSCHE)
+    fehler.push(
+      `L11 ${l11.length} Zähl-Aussagen über den Realbestand ohne Dateinamen > Ratsche ${L11_RATSCHE} — ` +
+        `wer eine Zahl aus dem Bestand nennt, nennt die Datei mit (ADR-v9-178):\n    ${l11.join('\n    ')}`,
+    );
+  else if (l11.length > 0)
+    warnungen.push(
+      `L11 ${l11.length} Zähl-Aussagen über den Realbestand ohne Dateinamen (Ratsche ${L11_RATSCHE}, BL-247 Abarbeitungsliste):\n    ` +
+        l11.join('\n    '),
+    );
 
   return { fehler, warnungen, zeilen };
 }
@@ -633,6 +713,26 @@ function selftest() {
   console.log(
     `${l10ok ? '  ok  ' : ' FAIL '} L10 liest Cluster + Wellen, nicht die Prosa`.padEnd(50) +
       `  → ${[...geplant].sort().join(',')}`,
+  );
+
+  // L11 negativ prüfen: an einer Vorlage, nicht an 04/05 — die echten Dateien ändern sich
+  // mit jeder Sitzung, ein daran hängender Fall wäre in zwei Wochen still falsch (dieselbe
+  // Verrottung wie bei den vier `fixtures/`-Fällen oben). Geprüft werden beide Richtungen:
+  // die Regel muss die Behauptung SEHEN und die drei Nachbarformen in Ruhe lassen — sonst
+  // ist sie entweder blind oder Rauschen.
+  const l11Vorlage = [
+    'A Am Realbestand kommen `AGNC` 7× vor — Zählung ohne Datei, muss anschlagen.',
+    'B Am Realbestand (`Unsere Familie 2026.ged`) kommen `AGNC` 7× vor — Datei genannt, still.',
+    'C Am echten Bestand verifiziert, mit dem Beispiel `Bifang` — keine Zählung, still.',
+    'D Der Sekundär-Stil war 7× dupliziert — Aussage über den Code, nicht den Bestand, still.',
+    'E Abgewählte Mitglieder bleiben im Bestand und werden bei der 2. Neuberechnung erfasst.',
+  ].join('\n');
+  const l11Ist = bestandsBehauptungen(l11Vorlage).map((t) => t.zeile);
+  const l11ok = l11Ist.join() === '1';
+  if (!l11ok) bad++;
+  console.log(
+    `${l11ok ? '  ok  ' : ' FAIL '} L11 trifft die Zählung, nicht die Nachbarn`.padEnd(50) +
+      `  → Zeilen ${l11Ist.join(',') || 'keine'} (erwartet 1)`,
   );
 
   // Und der Fall, der L6 überhaupt ausgelöst hat: findet die Ableitung im ECHTEN

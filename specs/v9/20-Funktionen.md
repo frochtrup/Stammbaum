@@ -9,12 +9,13 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 ## 1. Feature-Katalog
 
 ### 1.1 Navigation & Views
-- **[K]** Rollenbasierte Navigation ([21 §1](21-UI-UX.md)): Entitäten · Ansichten (Lenses) · Arbeitsflächen. Mobile: Bottom-Nav **Baum · Personen · Suche · Aufgaben · Mehr** + Entitäts-Segment-Umschalter. Desktop: beschriftete Sidebar + Multi-Pane + Command-Palette (⌘K).
+- **[K]** Rollenbasierte Navigation ([21 §1](21-UI-UX.md)): Entitäten · Ansichten (Lenses) · Arbeitsflächen. Mobile: Bottom-Nav **Ansichten · Daten · Suche · Forschung · Mehr** (Rollen-Namen aus EINER Quelle, [ADR-v9-122](04-Entscheidungslog.md#adr-v9-122)) + Entitäts-Segment-Umschalter. Desktop: beschriftete Sidebar + Multi-Pane + Command-Palette (⌘K).
 - **[K]** Einheitlicher Lens-Umschalter (Baum/Karte/Zeitleiste/Statistik/Story) statt verstreuter Diagramm-Toggles ([21 §4](21-UI-UX.md)).
 - **[K]** History-Navigation (Zurück/Vorwärts, herkunftsbewusst), Swipe-Right auf Mobile.
 - **[K]** Globale Suche (erstklassiges Ziel) über Personen/Familien/Quellen/Orte/Höfe, gruppierte Ergebnisse. **Nachtrag 2026-07-04 (ADR-v9-24):** Höfe waren in der ursprünglichen Aufzählung ausgelassen, obwohl Höfe im Orte-/Höfe-Tab ([§1.8](#18-höfe-tab)) ein gleichrangiges Entitäten-Segment sind — hiermit ergänzt.
 - **[K]** **Typ-Filter der Suchtreffer** (ADR-v9-130): über den gruppierten Ergebnissen eine Segment-Chip-Reihe „Alle · Personen · Familien · Quellen · Orte · Höfe" (je Chip mit Trefferzähler); ein Tipp scopt die Ausgabe auf einen Entitätstyp, „Alle" ist Default. Leichtestes Mittel (`.stb-segment-row`, INV-UI-4), **keine** aufklappbare `FilterBar` — minimale Klicks. Chips erscheinen nur bei ≥2 getroffenen Typen; das Such-Kernmodell bleibt filterlos (Command-Palette nutzt es unverändert, [21 §3](21-UI-UX.md)).
 - **[S]** Proband (Startperson) konfigurierbar; „Zum Probanden"-Navigation.
+- **[E]** **Erstnutzer-Rundgang** ([ADR-v9-190](04-Entscheidungslog.md#adr-v9-190)): nach dem Laden der Demo vier Schritte mit freigestelltem Ziel und „Schritt X von 4" — Liste · Entitäts-Segmente · Ansichten · „Mehr → Datei". Nur mobil (auf Desktop beschriftet die Sidebar dieselben Ziele dauerhaft); die Schritt-Texte werden aus dem Ziel-Register komponiert, nicht danebengeschrieben, und jeder Anker ist am gemounteten UI abgesichert. Beendet über „Fertig", „Überspringen" oder Escape; der Merker liegt im B1-Bündel und reist mit.
 
 ### 1.2 Laden & Speichern
 - **[K]** GEDCOM lokal öffnen (iOS `accept="*/*"`, Chrome `showOpenFilePicker`).
