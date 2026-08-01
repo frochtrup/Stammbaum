@@ -97,6 +97,9 @@ GEDCOM `_HYPO`-Subtree auf INDI/FAM.
 ## 5. Forschungsprojekt (App-privat)
 
 ```
-Project { id, name, color, scope: {surnames[], places[], yearFrom, yearTo, personIds[]}, note, created }
+Project { id, name, color, scope: {surnames[], places[], yearFrom, yearTo, personRefs[]}, note, created }
+ScopePersonRef { id, name, year }
 ```
-Reist **nicht** mit der Datei (app-privat, geräteweit — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)). Ein Projekt gilt trotzdem nur **für den Bestand, in dem es entstand**: `scope.personIds` sind datei-lokale Ids (Klasse B2, [30 §2.2](30-NFR-und-Persistenz.md)). Kernstück ist die Scope-Matching-Funktion `matchesScope`: welche Personen erfüllen einen `ProjectScope` — die drei Achsen Nachname/Ort/Zeitraum **UND-verknüpft**, eine leere Achse schränkt nicht ein, eine ausdrücklich in `personIds` gelistete Person ist immer enthalten. Das aktive Projekt scoped Aufgaben/Protokoll/Hypothesen/Dashboard über einen Chip-Selektor. UI: [20 §1.11f](20-Funktionen.md), Budget-Platzierung [21 §6h](21-UI-UX.md).
+Reist **nicht** mit der Genealogie-Datei (app-privat — Persistenz siehe [30 §2](30-NFR-und-Persistenz.md)), wohl aber über `app-data.json` von Gerät zu Gerät. Ein Projekt gilt trotzdem nur **für den Bestand, in dem es entstand**: `id` in `ScopePersonRef` ist eine datei-lokale GEDCOM-Id, und `@I1@` gibt es in fast jeder Datei. Deshalb trägt jeder Bezug einen **Fingerabdruck** der gemeinten Person (Name + Geburtsjahr), der beim Auswerten am Referenten geprüft wird (`resolveScopePersonRef`): passt er nicht, wird der Bezug ignoriert — ein Scope aus einem fremden Bestand ist damit **wirkungslos statt falsch**. Die Prüfung fängt zugleich die Id-Neuvergabe im selben Baum (Fremdwerkzeug, GRAMPS→GEDCOM). Das Geburtsjahr entscheidet nur, wenn beide Seiten es kennen; ein Bezug ohne Fingerabdruck (`name = ''`, Altbestand) gilt unverändert weiter.
+
+Kernstück ist die Scope-Matching-Funktion `matchesScope`: welche Personen erfüllen einen `ProjectScope` — die drei Achsen Nachname/Ort/Zeitraum **UND-verknüpft**, eine leere Achse schränkt nicht ein, eine ausdrücklich in `personRefs` gelistete (und am Referenten bestätigte) Person ist immer enthalten. Das aktive Projekt scoped Aufgaben/Protokoll/Hypothesen/Dashboard über einen Chip-Selektor. UI: [20 §1.11f](20-Funktionen.md), Budget-Platzierung [21 §6h](21-UI-UX.md).

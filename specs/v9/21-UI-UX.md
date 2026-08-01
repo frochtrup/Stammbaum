@@ -40,7 +40,7 @@ Die vier Forschungsflächen sind — wie die Entitäten — **eigene Nav-Ziele**
 **Interaktion:**
 - Bottom-Sheets mit progressiver Offenlegung für alle Formulare (bewährt, bleibt).
 - Aktionsreihen **brechen um** statt horizontal aus dem Bild zu scrollen ([§9 B7](#9-konsistenz-befunde-v8--wie-v9-sie-löst)).
-- Swipe-Right = Zurück (herkunftsbewusst).
+- **Swipe-Right = Zurück (herkunftsbewusst), Swipe-Left = Vorwärts** — auf der Detail-Fläche, nicht auf den Diagramm-Inseln (dort gehört die waagerechte Geste dem Pan). Der Verlauf hat **keine eigene Bedienfläche**: Zurück nutzt den ohnehin vorhandenen Knopf im Detail-Kopf („← Zurück", führt zur Herkunft statt fest zur Liste), Vorwärts nur Geste und `Alt+→` — ein sichtbares ←/▾/→-Trio je Kopfzeile wäre [Altlast §10](03-Altlasten.md) und ein INV-UI-11-Bruch ([ADR-v9-177](04-Entscheidungslog.md#adr-v9-177)).
 - FAB „＋" mit Abstand zur letzten Listenzeile.
 
 **Aktiver Nav-Zustand:** deutlich (Balken/Fett/Akzentfarbe) — **nie nur Farbe** (WCAG 1.4.1, LP-8).
