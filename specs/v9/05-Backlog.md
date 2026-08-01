@@ -141,23 +141,21 @@ der Tabelle.
 | Ⓖ Navigation & Shell | BL-278 (Portal, latent) · BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation, `swipe-nav.ts`, Modal-Schalen |
 | Ⓗ Import / Export / Dedup | BL-207 · BL-166 (vertagt) | Import-Vergleich, Dedup, Export-Pipe |
 | Ⓘ Orte-Editor (Standalone) | BL-227 (vertagt) | CI-Workflow |
-| Ⓙ Bearbeitung & Formulare | BL-276 · BL-275 · BL-277 · BL-233 · BL-234 (unabhängig) · BL-232 (Persistenz hängt sich in das B1-Bündel ein) | `ui/views/person`, `ui/views/place`, `ui/views/hof`, `ui/views/media`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage) |
+| Ⓙ Bearbeitung & Formulare | BL-280 (eigene Primitive, `.stb-btn` passt nicht) · BL-276 · BL-275 · BL-277 · BL-233 · BL-234 (unabhängig) · BL-232 (Persistenz hängt sich in das B1-Bündel ein) | `ui/views/person`, `ui/views/place`, `ui/views/hof`, `ui/views/media`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage) |
 
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang).** Die Wellen der Kleinlücken-
 Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch Offenes.
 
-1. **Welle 1 — `usp`/`basis` ohne Vorbedingung:** abgearbeitet. Die drei Zeilen kamen aus
+1. **Welle 1 — `usp`/`basis` ohne Vorbedingung:** BL-280 (der Trefferflächen-Wächter steht
+   bereits, seine Ratsche ist die Abarbeitungsliste). Die drei Zeilen kamen aus
    der Design-Kritik der Bearbeitungsfunktion (2026-08-01, s. den Herkunfts-Absatz unten)
    und stehen unter „Erledigte Punkte" ([ADR-v9-193](04-Entscheidungslog.md#adr-v9-193)).
    Es steht derzeit **kein** Item auf `blockiert`.
    Messgrundlage, die beiden GRAMPS-Quellen-Defekte und der Lint zur Messgrundlage stehen
    (s. „Erledigte Punkte").
    Es steht derzeit **kein** Item auf `blockiert`.
-2. **Welle 2 — was auf Welle 1 aufsetzt:** abgearbeitet. Die Trefferflächen-Ratsche steht
-   nach der Primitiven-Umstellung bei 93 (von 116) und bleibt die Abarbeitungsliste für die
-   ikonischen Inline-Controls (`✎`/`✕` in einer Zeile), die eine eigene Primitive brauchen —
-   `.stb-btn` sprengt dort die kompakte Zeile (INV-UI-5). Das ist der nächste sinnvolle
-   Schnitt und hat noch keine Zeile.
+2. **Welle 2 — was auf Welle 1 aufsetzt:** derzeit leer. Die Trefferflächen-Ratsche steht
+   nach der Primitiven-Umstellung bei 93 (von 116); ihren Rest baut BL-280 in Welle 1 ab.
 3. **Welle 3 — eigenständige Kür:** BL-230 (die Ebenen-Wahl hängt sich in das gebaute
    B1-Bündel ein) · BL-207 · BL-233 · BL-234 · BL-275 · BL-276 · BL-277.
 4. **Welle 4 — Infra & Hygiene (opportunistisch):** BL-232 (Templates hängen sich in das
@@ -206,12 +204,13 @@ und der Defekt ist die fehlende sichtbare Transaktionsgrenze. BL-270 trägt seit
 folgenden Fertig-Zustand und ist am selben Tag gebaut. Derselbe ADR hat **BL-279 erledigt,
 indem er ihm die Grundlage entzog** — die Zeile wollte die Kurationswerkzeuge aus dem
 Editier-Modus lösen, der ADR hat das Gate bestätigt; sie steht deshalb in der
-Rückzugsliste (Regel 4), nicht auf `gebaut`.
+Rückzugsliste (Regel 4), nicht auf `gebaut`. **BL-280 ist die Fortsetzung derselben Kritik:** die Umstellung auf `.stb-btn` (BL-273) hat die beschrifteten Knöpfe erledigt und dabei sichtbar gemacht, dass die ikonischen Inline-Controls eine ANDERE Antwort brauchen — der Wächter aus BL-273 nennt diese Grenze ausdrücklich, statt so zu tun, als sei sie mit erledigt.
 
 ## Offene Punkte
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-280 | — | defekt | basis | **Trefferfläche für ikonische Inline-Bedienelemente — eine eigene Primitive** ([21 §6i](21-UI-UX.md), [21 §6a](21-UI-UX.md) INV-UI-5, [ADR-v9-155](04-Entscheidungslog.md#adr-v9-155)) — die verbliebene Hälfte der Design-Kritik: `✎` je Ereigniszeile (`.event-line__edit-btn`), `✕`-Rücknahme (`.stb-pill__remove`), `✎`/`✕` je Medien-Referenzzeile, `✕` an einer Kind-/Adresszeile. Alle mit `padding: 0` bzw. Winz-Padding, aus dem CSS gerechnet ≈ 14–20 px — unter der 44-px-Vorgabe für die Primärplattform UND unter den 24 px von WCAG 2.2 SC 2.5.8. Das `✎` der Ereigniszeile ist dabei die **meistgenutzte Bearbeiten-Fläche der App**. **`.stb-btn` ist hier ausdrücklich die falsche Antwort** (so auch im Wächter aus BL-273 benannt): sein Rahmen, sein Padding und `font-weight: 600` sprengen die kompakte Zeile, die INV-UI-5 gerade verlangt — das Problem dieser Elemente ist die TREFFERFLÄCHE, nicht die Optik. Gesucht ist eine Primitive, die die Fläche vergrößert, ohne den Fluss zu verändern (unsichtbar erweiterte Trefferzone statt sichtbarer Knopf); die Zeilenhöhe darf dabei nicht wachsen — nachzumessen bei 375 px, nicht zu schätzen. Fertig-Zustand: EINE geteilte Klasse in `design-system.css` (INV-UI-4), alle vier Fundstellen darauf umgestellt, und die Ratsche aus BL-272 fällt entsprechend (Stand nach BL-273/274: **93**) | [21 §6i](21-UI-UX.md), [21 §6a](21-UI-UX.md), [32 TST-15](32-Testframework.md) | `txt:stb-icon-btn@ui/shell/design-system.css` | offen |
 | BL-275 | — | defekt | kür | **„＋ Neu" + „Abbrechen" hinterlässt keinen leeren Datensatz** ([20 §2](20-Funktionen.md), [21 §6g](21-UI-UX.md) INV-UI-10) — `EntityTab.createPerson`/`createSource`/`createRepository` bekommen die Entität von der Liste bereits per `savePerson`/`saveSource`/`saveRepository` angelegt und öffnen dann über `startInEdit` den Editor. „Abbrechen" schließt nur den Editor; der leere Datensatz bleibt bestehen. INV-UI-10 verlangt für eine Sofort-Anlage eine ebenso leichte Rücknahme, solange nichts Recherchiertes daran hängt — genau dieser Fall. Fertig-Zustand: „Abbrechen" auf einer frisch angelegten, noch unbefüllten Entität entfernt sie wieder (Leer-Prüfung analog `isEventEmpty`), auf einer bestehenden nicht | [20 §2](20-Funktionen.md), [21 §6g](21-UI-UX.md) | `test:tests/ui/entity-create-cancel.test.ts` | offen |
 | BL-276 | — | feature | kür | **Tastatur in den Entitäts-Formularen** ([21 §6i](21-UI-UX.md) „Tastatur-first überall") — `TaskForm`/`LogForm`/`HypothesisForm` sind `<form onsubmit>`, Enter speichert. Die sechs Entitäts-Formulare (`PersonForm`, `SourceForm`, `RepositoryForm`, `PlaceEditForm`, `HofEditForm`, das Medien-Formular in `MediaDetail`) sind `<div>` mit `type="button"`: Enter tut nichts, Escape tut nichts (0 Vorkommen `onsubmit`). Escape gibt es nur in den beiden Modalen. Dieselbe App, zwei Klassen von Formularen — §6i macht keinen Unterschied und gilt ausdrücklich mobil wie auf Desktop. Fertig-Zustand: `<form onsubmit>` plus Escape-Abbruch in allen sechs, Wächter über die Quellen | [21 §6i](21-UI-UX.md), [32 TST-15](32-Testframework.md) | `test:tests/ui/entity-form-keyboard.test.ts` | offen |
 | BL-277 | — | defekt | kür | **Löschen überall abgesetzt, nie neben „Speichern"** ([20 §2](20-Funktionen.md), [21 §6](21-UI-UX.md)) — zwei gegensätzliche Sicherheitsmodelle: Person/Familie/Quelle/Archiv/Medium nutzen `DeleteEntityButton` (eigene Danger-Zone mit Trennlinie, unten, nur in der Leseansicht); Ort/Hof setzen „Ort löschen"/„Hof löschen" in DIESELBE Knopfreihe wie Speichern/Abbrechen (`PlaceEditForm.svelte`, `HofEditForm.svelte`) — destruktiv unmittelbar neben der Primäraktion, und nur über den Editor erreichbar. Fertig-Zustand: `PlaceDetail`/`HofDetail` nutzen `DeleteEntityButton` wie die übrigen fünf, die Lösch-Knöpfe verschwinden aus den Formular-Aktionsreihen | [20 §2](20-Funktionen.md), [21 §6](21-UI-UX.md) | `txt:DeleteEntityButton@ui/views/place/PlaceDetail.svelte` | offen |
