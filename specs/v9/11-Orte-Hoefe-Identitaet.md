@@ -52,6 +52,18 @@ HofObject {
 
 `DatedName`/`DatedRef`/`DatedAddress` = `{ value, from, to }` (Wert mit optionalem Gültigkeitszeitraum).
 
+**Drei Datierungs-Zustände, nicht zwei ([ADR-v9-181](04-Entscheidungslog.md#adr-v9-181)).** `null` heißt „offen", und offen ist **richtungsabhängig**:
+
+| `from` | `to` | Bedeutung | Sortiert |
+|---|---|---|---|
+| gesetzt | beliebig | ab `from` (bis `to` bzw. bis heute) | nach `from` |
+| `null` | **gesetzt** | **seit jeher bis `to`** — nach unten offen | **vor** allem Datierten |
+| `null` | `null` | undatiert, jederzeit gültig | ans Ende |
+
+Die mittlere Zeile ist die Normalform für „gehörte bis 1806 zum Fürstbistum Münster", wo der Anfang vor der Überlieferung liegt — sie ist ein **Zeitraum**, kein fehlender Anfang. Jede Auswertung, jede **Anzeige** und jede **Sortierung** muss die drei Zustände unterscheiden, statt „kein `from`" pauschal als „undatiert" zu lesen.
+
+**Die Falle, die BL-249 verursachte:** `from ?? -Infinity` ist als Sentinel richtig, taugt aber **nicht als Startwert derselben Suche**. `enclosureWinnerAsOf` und `resolveAsOf` (§5) verglichen `f > bestFrom` gegen ein initiales `bestFrom = -Infinity` — ein nach unten offener Eintrag war damit nie „größer" und konnte **nie gewinnen**: der Ort galt für seine ganze frühe Periode als ohne Zugehörigkeit und trug dort seinen heutigen `title` statt seines historischen Namens. Beide Vergleiche prüfen deshalb zusätzlich, ob überhaupt schon etwas gewählt wurde (`bestId == null || …`). Die Vorrangregel „spätestes `from` gewinnt" ist davon unberührt.
+
 **GOV-Anreicherung (BL-131, [ADR-v9-154](04-Entscheidungslog.md#adr-v9-154)).** `govId`/`govTypes` werden aus der eingefügten GOV-Textzusammenfassung gefüllt (`core/places/gov.ts`, Bedienung [20 §1.7](20-Funktionen.md)). Die Zuordnung folgt den v9-Achsen, nicht der v8-Form: deutsche GOV-Namen → `pnames` (Zeitachse), fremdsprachige → `translations` (Sprachachse), Typwörter roh → `govTypes`, der aktuelle Typ (offen endender Eintrag mit dem spätesten `ab`) → `type`, die `gehört-zu`-Zeilen → `enclosedBy`. **`pnames` bekommt dabei KEINE synthetischen Typ-Namen** („Königreich Preußen") — es ist Match-Kriterium der Auflösung (§4.2), ein erfundener Name veränderte die Ereignis-Zuordnung. **`type` wird nie `Farm`/`Building`** (Höfe sind eigene Entität); ein solcher GOV-Typ bleibt allein in `govTypes`.
 
 **GOV-Platzhalter** entstehen für Elternorte, deren eigene GOV-Zusammenfassung noch fehlt: ein PlaceObject, dessen `title` seine GOV-Kennung IST. Das ist ein **abgeleitetes** Prädikat (`isUnresolvedGovPlaceholder`), kein persistiertes Feld — kein `PLACES_SCHEMA_VERSION`-Bump, nichts, was beim Union-Merge veralten kann, und die Semantik stimmt von selbst: wer dem Ort einen Namen gibt, hat ihn aufgelöst. Die Id ist deterministisch (`_gov_<slug>`), damit zwei Geräte denselben Platzhalter als EINEN Ort erkennen ([30 §4](30-NFR-und-Persistenz.md)).
