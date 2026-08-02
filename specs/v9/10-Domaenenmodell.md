@@ -38,6 +38,8 @@ Person {
   prefix (NPFX), suffix (NSFX), nick (NICK): string
   sex: 'M' | 'F' | 'U'
   sexSeen: bool                     // stand `1 SEX` in der Quelle? (Fidelity, s. INV-P1)
+  givenSeen, surnameSeen,
+  suffixSeen: bool                  // standen GIVN/SURN/NSFX in der Quelle? (Fidelity, s. §2 Namenszerlegung)
   title (TITL): string
   nameType (NAME.TYPE): string      // birth | married | aka … am HAUPTnamen (die weiteren tragen ihn je Form, s. „Namen")
   restriction (RESN): string        // confidential | locked | privacy
@@ -104,7 +106,8 @@ Jede weitere `1 NAME`-Zeile wird als `PersonName` gelesen und geschrieben — be
 - **Beim Einlesen** füllt der Parser `given`/`surname`/`suffix` **feldweise** aus `name`, soweit die Untertags `GIVN`/`SURN`/`NSFX` fehlen. Ein vorhandenes Untertag wird nie überschrieben (eine Quelle darf `GIVN Anna` bewusst enger setzen als `Anna Maria /Decker/`).
 - Zerlegt wird **nur bei genau einem wohlgeformten Schrägstrichpaar**. `Anna Maria` ohne Schrägstriche bleibt unzerlegt: „alles ist Vorname" wäre eine Aussage, die die Quelle nicht macht — und die der Writer bei der nächsten Bearbeitung als `GIVN`-Zeile in die Datei schriebe.
 - **Beim Schreiben in Modell oder Datei** wird `name` aus den Teilen neu gebildet, damit die Schrägstrich-Form erhalten bleibt. Die eine Stelle für beide Richtungen: `core/model/name-parts.ts` (`splitGedcomName` / `composeGedcomName`).
-- `GIVN`/`SURN` erscheinen in der Ausgabe nur bei **editierten** Records — unberührte Records passieren den Writer unverändert ([13 §2.1](13-Interop-Roundtrip.md)), die Zerlegung bleibt dort modell-intern.
+- **Die Herkunft steht im Modell:** `givenSeen`/`surnameSeen`/`suffixSeen` halten fest, ob der Untertag in der QUELLE stand — gefragt am Knoten, nicht am Wert (ein `2 GIVN` ohne Wert ist vorhanden). Ohne diese Auskunft kann der Writer einen eingelesenen Wert nicht von einem zerlegten unterscheiden ([ADR-v9-210](04-Entscheidungslog.md#adr-v9-210)). Dieselbe Rolle wie `sexSeen` (INV-P1) und `Event.seen` (INV-P5); bewusst **kein Tristate an `given`/`surname` selbst** — die Zusage „ab Import gefüllt" darf eine reine Writer-Frage nicht zurücknehmen.
+- **Beim Schreiben in die Datei** erscheint ein Untertag aus genau zwei Gründen: **die Quelle hatte ihn**, oder **sein Wert lässt sich aus dem `NAME`-Wert nicht ableiten** (Name ohne Schrägstrichpaar; ein enger gesetztes `GIVN Johann` bei `NAME Johann Wilhelm /von der Heide/`). Sonst nicht — er wäre reine Wiederholung, und die Zerlegung holt ihn beim nächsten Laden identisch zurück. Ein Namens-Edit landet damit im `NAME`-Wert (über `composeGedcomName`), statt eine zweite Fundstelle daneben zu erzeugen; unberührte Records passieren den Writer ohnehin unverändert ([13 §2.1](13-Interop-Roundtrip.md)).
 
 **NameTranslation (nameTrans, GED7 `NAME`/`TRAN`):** `{ lang: string, value: string }` — mehrsprachige Namensform, GED7-Feature. Kein eigenes UI-Bullet in [20](20-Funktionen.md): derselbe Mechanismus wie die Orts-Übersetzung ([11 §1](11-Orte-Hoefe-Identitaet.md), Sprachkürzel+Text, INV-UI-4) — Personen-UI dafür ist noch nicht spezifiziert, verwendet bei Bedarf dieselbe Komponente wie Orts-Übersetzungen.
 

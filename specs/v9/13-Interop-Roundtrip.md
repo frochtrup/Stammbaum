@@ -62,7 +62,15 @@ Jedes Datei-Konstrukt, das der Parser nicht strukturiert modelliert, wird **verb
 Zwei Randbedingungen, ohne die der Halt schadet:
 
 - **Die Probe braucht den Ausgangszustand, nicht den aktuellen.** Wird sie mit dem bereits editierten Seiten-Stand gespeist (`db.media`), hält sie einen Nutzer-Edit für eine Modell-Normalisierung und schreibt ihn zurück. Sie wird deshalb mit dem Medienstand der DATEI gebaut.
-- **`CONC`/`CONT` machen den Wert zum Fragment.** Der volle Text steht erst mit den Fortsetzungs-Kindern da, und die baut der Emitter neu. Den Wert allein zurückzusetzen schneidet den Rest ab — mehrzeilige Werte bleiben deshalb außen vor (ihr Umbruch ist [BL-305](05-Backlog.md)).
+- **`CONC`/`CONT` machen den Wert zum Fragment.** Der volle Text steht erst mit den Fortsetzungs-Kindern da, und die baut der Emitter neu. Den Wert allein zurückzusetzen schneidet den Rest ab — mehrzeilige Werte bleiben deshalb außen vor (ihr Umbruch ist eine eigene Frage, s. unten).
+
+**Der Zeilenumbruch ist eine Format-Frage, keine Modell-Frage** ([ADR-v9-211](04-Entscheidungslog.md#adr-v9-211)). GEDCOM 5.5.1 begrenzt eine physische Zeile auf **255 Bytes** und setzt den Rest mit `CONC` fort (`CONT` ist der echte Zeilenumbruch, ein anderer Tag für eine andere Sache); GEDCOM 7 kennt weder Grenze noch `CONC`. Deshalb sitzt der Umbruch in der **Serialisierung**, hinter jedem Modell-Vergleich — dort kann er Überschuss, Wert-Halt und Knoten-Paarung nicht beeinflussen, die Fortsetzungen ohnehin als Sonderfall behandeln. Drei Regeln:
+
+- Gerechnet wird in **UTF-8-Bytes**, nicht in Zeichen, und ein Zeichen wird nie zerrissen (ein Umlaut zählt 2, ein Surrogatpaar 4).
+- Die Fortsetzung eines `2 CONT` ist ein `2 CONC`, kein `3 CONC` — beide sind Geschwister unter demselben Elternknoten.
+- **Die Naht liegt nie an einem Leerzeichen.** `CONC` fügt beim Zusammensetzen nichts ein, ein Leerzeichen an der Naht ist also inhaltlich korrekt — steht dann aber führend oder nachlaufend im Zeilenwert, und jeder trimmende Leser verliert es (`assembleLines`, das net_delta-Maß, eingeschlossen). Die Naht rückt deshalb nach links, bis kein Leerzeichen an ihr liegt. Die LESE-Richtung bleibt tolerant: fremde Schreiber schneiden hart, und der Parser trennt den Wert hinter genau einem Trennzeichen ab.
+
+Der Umbruch ist **keine Wert-Änderung** — `assembleLines` faltet ihn zurück, `net_delta` bleibt 0. Deshalb wird auch eine überlange Passthrough-Zeile umbrochen (bewusst, benannt in [ADR-v9-211](04-Entscheidungslog.md#adr-v9-211)); eine konforme Zeile bleibt byte-identisch.
 
 **Was der Halt NICHT leistet:** er rettet die Datei, nicht die Anzeige. Ein Wert, den das Modell nicht kennt, wird weiterhin normalisiert GELESEN — eine Aufgabe mit `_TSTAT erledigt` steht in der App auf „offen". Wo die Deutung zählt, braucht es weiterhin den Einzelfall (`_RESULT`, `_DONE`); der allgemeine Halt deckt die Bewahrung.
 
@@ -115,7 +123,7 @@ Writer gibt 7.0 nur bei `gedVersion === '7.0'` aus. Unterschiede:
 | Übersetzungen | `_TRAN` | `TRAN` |
 | Datum-Freitext | — | `PHRASE` unter DATE |
 | ASSO-Rolle | `RELA` (Freitext) | `ROLE` (Enum) |
-| CONC | erlaubt | nur CONT |
+| CONC | erlaubt (255-Byte-Grenze) | abgeschafft — vorhandene `CONC` werden in den fortgesetzten Wert gefaltet |
 | SCHMA | — | `1 SCHMA` deklariert die **tatsächlich geschriebenen** `_`-Tags (abgeleitet, keine gepflegte Liste — [05 BL-242](05-Backlog.md)) |
 
 Cross-Transfer-Adapter GED7→GED5 und GED7→GRAMPS für Downgrade ohne Verlust wo möglich.
