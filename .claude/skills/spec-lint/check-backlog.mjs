@@ -606,6 +606,50 @@ function pruefe() {
         l12.join('\n    '),
     );
 
+  // L13: jede benannte Invariante hat eine Zeile in der Mutations-Tabelle (BL-287).
+  //
+  // WARUM. TST-2 verlangt zu jeder `INV-…`/`LP-…` einen Test. Die erste Messung nach
+  // ADR-v9-196 zeigte, dass das zu wenig ist: LP-1 — die teuerste Zusicherung des ganzen
+  // Projekts — wurde von GENAU EINEM der 3756 Testfälle verteidigt. „Es gibt einen Test"
+  // und „ein Bruch fällt auf" sind zwei verschiedene Aussagen.
+  //
+  // Diese Regel prüft nicht die ZAHL (das tut `npm run test:mutation` im Code-Repo),
+  // sondern die VOLLSTÄNDIGKEIT der Liste: eine neue Invariante im Spec muss dort eine
+  // Zeile bekommen — als Mutation, als Verweis auf ein anderes Gate oder ausdrücklich als
+  // offen. Ohne diesen Zwang wächst das Spec-Set weiter und die Messung bleibt stehen, wo
+  // sie einmal angelegt wurde (dieselbe Denkfigur wie ADR-v9-83: Zwang schlägt Erinnerung).
+  const mutTabelle = path.join(CODE, 'tools/mutation/mutationen.mjs');
+  if (fs.existsSync(mutTabelle)) {
+    const tabelle = fs.readFileSync(mutTabelle, 'utf8');
+    // Nur die Kürzel, die in den Specs auch DEFINIERT sind — ein Verweis allein macht noch
+    // keine Invariante. Definiert = kommt in einer der Spec-Dateien 10–32 oder 01/02 vor.
+    const roh = new Set();
+    for (const datei of fs.readdirSync(path.join(SPEC, 'specs/v9'))) {
+      if (!datei.endsWith('.md')) continue;
+      const txt = fs.readFileSync(path.join(SPEC, 'specs/v9', datei), 'utf8');
+      for (const m of txt.matchAll(/\b(INV-[A-Z]+(?:-?\d+)*|LP-\d+)\b/g)) roh.add(m[1]);
+    }
+    // Familien-Namen ohne Nummer sind Prosa („die INV-UI-Familie"), keine Invarianten:
+    // ein Kürzel, zu dem ein nummerierter Geschwister existiert, ist selbst keins.
+    const benannt = [...roh].filter(
+      (t) => ![...roh].some((u) => u !== t && (u.startsWith(`${t}-`) || new RegExp(`^${t}\\d`).test(u))),
+    );
+    const fehlend = benannt
+      .filter((inv) => !new RegExp(`inv: '${inv}'`).test(tabelle))
+      .sort();
+    if (fehlend.length)
+      fehler.push(
+        `L13 ${fehlend.length} benannte Invariante(n) ohne Zeile in tools/mutation/mutationen.mjs — ` +
+          `jede braucht eine: Mutation, anderes Gate oder ausdrücklich „offen" (BL-287):\n    ` +
+          fehlend.join(' · '),
+      );
+  } else {
+    warnungen.push(
+      `L13 übersprungen: ${mutTabelle} nicht gefunden — ohne das Code-Repo ist die ` +
+        `Vollständigkeit der Mutations-Tabelle nicht prüfbar.`,
+    );
+  }
+
   return { fehler, warnungen, zeilen };
 }
 
