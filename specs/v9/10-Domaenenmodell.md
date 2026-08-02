@@ -184,6 +184,7 @@ Media {                             // Top-Level-Datensatz EINES Mediums, in db.
   form: string                      // FORM / <file mime> — Dateiformat, KANONISIERT als MIME (Narrow Waist)
   formWire: string                  // der GEDCOM-FORM-Wert, wie er in der Quelle stand (JPEG/BMP/FILE/URL) — Fidelity, s. u.; GRAMPS lässt ihn leer
   type: string                      // MEDI — Medientyp (Standard-Enum unter FORM); GRAMPS/Import oft leer
+  typeWire: string                  // `type`, wie er in der Quelle stand — der Vergleichswert für „hat jemand ihn angefasst?", s. u.
   title: string                     // GLOBALE Beschriftung: GED7-Record-TITL / GRAMPS <file description>; leer bei 5.5.1-Inline
   wireOrigin: 'record' | 'inline'   // Wire-Herkunft — der Writer erhält sie unverändert (LP-1): Record→Record+Zeiger, Inline→inline
   lastChanged: string
@@ -195,6 +196,7 @@ MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Med
   date: string                      // _DATE — Aufnahmedatum in diesem Kontext
   note: string                      // NOTE
   primary: bool                     // _PRIM — Hauptfoto/-dokument für DIESEN Datensatz
+  formSeen, typeSeen: bool          // trug DIESE Fundstelle die globalen Zeilen FORM bzw. FORM→MEDI? (Default true: eine neu angelegte ist die volle Form)
   extra: GedNode[]                  // unbekannte Referenz-Kinder (5.5.1-`_SCBK`, GED7-`CROP`, GRAMPS-`region`/`attribute`) verbatim (INV-PT)
 }
 ```
@@ -207,6 +209,13 @@ MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Med
 **`form` ist kanonisiert, `formWire` ist die Wahrheit.** `form` hält einheitlich das MIME (Standard in 7.0 und GRAMPS, [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126)); die Kanonisierung an der Parse-Grenze ist aber **nicht umkehrbar** — `JPEG`→`image/jpeg`→`jpg`, und `FILE`/`URL` bezeichnen überhaupt kein Format. Ohne einen zweiten Platz schrieb jedes Speichern die Schreibweise um, eine byte-verändernde Projektion ohne Anlass ([ADR-v9-197](04-Entscheidungslog.md#adr-v9-197), [ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)). `formWire` trägt den Rohwert, **eine** Stelle entscheidet über den ausgegebenen `FORM`-Wert, und sie gilt nur, solange der Rohwert noch dasselbe Format bezeichnet wie `form` — ein Nutzer-Edit an Format oder Dateiname setzt ihn damit von selbst außer Kraft, statt ihn einzufrieren. **Nur GEDCOM:** GRAMPS hat kein `FORM`, sein `<file mime>` IST das kanonische MIME und wird aus `form` geschrieben.
 
 **Ein inline-Medium wird an seiner definierenden Fundstelle geändert.** Es hat keinen eigenen Record; seine globalen Felder stehen im `OBJE` des verweisenden Records, und die Datei IST seine Identität. Dieselbe Datei darf mehrfach mit **abweichenden** Untertags dastehen — dann definiert das erste Vorkommen in Dokumentordnung den Datensatz (dieselbe Regel, mit der er gelesen wird), und nur dort schlägt ein globaler Edit durch. Die übrigen Fundstellen bleiben unangetastet: sie zu „korrigieren" hieße, eine Änderung zu schreiben, die niemand gemacht hat ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)).
+
+**Ein geteiltes inline-Medium: globale Werte, referenz-spezifische Zeilen** ([ADR-v9-212](04-Entscheidungslog.md#adr-v9-212)). Die 5.5.1-Inline-Form hat keinen eigenen Record: `FORM`/`MEDI` beschreiben die DATEI, stehen physisch aber am `OBJE` **jeder** verweisenden Stelle — und die Stellen dürfen einander widersprechen. `Media` ist nach Dateipfad geschlüsselt und hält deshalb genau eine Fassung (erstes Vorkommen gewinnt, dieselbe Regel für Sammeln und Dirty-Frage). Damit der Writer sie nicht an Fundstellen zurückschreibt, die sie nie trugen, hält `MediaCitation` die referenz-spezifische Auskunft `formSeen`/`typeSeen`, und die Zeile erscheint aus **genau zwei Gründen** — dieselbe Form wie bei den Namens-Untertags (§2 „Namenszerlegung", [ADR-v9-210](04-Entscheidungslog.md#adr-v9-210)):
+
+- **diese Fundstelle trug sie**, oder
+- **der globale Wert weicht vom Dateistand ab** (`type` ≠ `typeWire`, bzw. der `FORM`-Wert ≠ `formWire`) — ein Nutzer-Edit käme sonst nirgends an.
+
+Die Frage ist **pro Fundstelle** zu stellen, nicht pro Record: am Realbestand tragen 291 Records zugleich die definierende und eine weitere Fundstelle desselben Mediums.
 
 **Wire-Formen (öffentliche Spec).** GEDCOM: **Pointer** `n OBJE @M1@`→`0 @M1@ OBJE` (5.5.1 optional, **7.0 einzige Form**) und **Inline** `n OBJE`→`FILE`→`FORM`→`MEDI` (nur 5.5.1). GRAMPS: `<object handle id><file src mime description/></object>` + `<objref hlink>`. Alle drei projizieren auf dieselbe `Media`/`MediaCitation`-Struktur; der Writer erhält die Wire-Herkunft je Medium (`wireOrigin`) — **kein** Umschreiben Inline↔Record (bräche LP-1). Medientyp = Standard-`MEDI`, nicht das v8-interne `_TYPE`.
 
