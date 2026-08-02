@@ -37,6 +37,7 @@ Person {
   name, given, surname: string
   prefix (NPFX), suffix (NSFX), nick (NICK): string
   sex: 'M' | 'F' | 'U'
+  sexSeen: bool                     // stand `1 SEX` in der Quelle? (Fidelity, s. INV-P1)
   title (TITL): string
   nameType (NAME.TYPE): string      // birth | married | aka … am HAUPTnamen (die weiteren tragen ihn je Form, s. „Namen")
   restriction (RESN): string        // confidential | locked | privacy
@@ -271,7 +272,7 @@ Ein einheitlicher Zitatkörper gilt in **allen** Kontexten (birth/chr/death/buri
 Citation {
   sourceId: SourceId
   page (PAGE): string
-  quay (QUAY): 0 | 1 | 2 | 3         // Zuverlässigkeit
+  quay (QUAY): 0 | 1 | 2 | 3 | null  // Zuverlässigkeit; null = kein QUAY-Tag, s. u.
   note: string
   media: MediaCitation[]              // OBJE unter SOUR (strukturiert), s. §4
   eval: EvidenceEval | null           // 3-Achsen-Evidenzmodell (siehe 12 §3)
@@ -281,6 +282,7 @@ Citation {
 
 - **INV-C1:** Ein Zitat referenziert genau eine Quelle-ID; Mehrfachzitate derselben Quelle mit unterschiedlicher Seite erlaubt, dedupliziert dargestellt.
 - **INV-C2:** `quay` bleibt unabhängig editierbar; `eval` kann einen `quay`-Vorschlag ableiten, überschreibt ihn nicht automatisch.
+- **`quay` ist ein Tristate** ([ADR-v9-208](04-Entscheidungslog.md#adr-v9-208)). `0` heißt in GEDCOM „unzuverlässig" und ist damit eine AUSSAGE — solange `0` zugleich der Default war, fiel sie mit „gar keine Bewertung" zusammen und der Writer ließ die Zeile weg. `null` = kein `QUAY`-Tag. Der Editor führt beides getrennt (`QUAY —`), anzeigende Leser nehmen `quay ?? 0`.
 
 > **Neuaufsatz-Hinweis:** v8 streut Zitate über viele parallele Maps + gespaltenes `topSources`/`nameCitations` — Altlast ([03 §2/§3](03-Altlasten.md)). v9 modelliert **ein** `Citation[]`-Array je Kontext.
 
@@ -288,7 +290,7 @@ Citation {
 
 ## 6. Modell-Invarianten
 
-- **INV-P1:** `sex ∈ {M, F, U}`; unbekannt/leer → `U`.
+- **INV-P1:** `sex ∈ {M, F, U}`; unbekannt/leer → `U`. **Von der Wire-Frage unberührt:** weil `U` zugleich der Default jedes Records OHNE `SEX`-Zeile ist, unterdrückte der Writer ein ausdrückliches `1 SEX U`. Das löst `sexSeen` (Vorbild `Event.seen`/INV-P5, [ADR-v9-208](04-Entscheidungslog.md#adr-v9-208)) — bewusst KEIN Tristate an `sex` selbst: INV-P1 sagt jedem Leser einen gültigen Wert zu, und diese Zusage darf eine reine Writer-Frage nicht brechen.
 - **INV-P2:** Jede referenzierte ID (in `children`/`husband`/`wife`/`associations`/`aliases`/`citations.sourceId` …) existiert oder wird beim Laden als verwaiste Referenz **gemeldet** (nicht still ignoriert).
 - **INV-P3:** INDI-Seite (`childOf`/`parentIn`) und FAM-Seite (`children`/`husband`/`wife`) sind wechselseitig konsistent; die App hält beide Seiten synchron.
 - **INV-P4:** Kind-Beziehungstyp wird ausschließlich INDI-seitig geschrieben.
