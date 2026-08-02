@@ -57,7 +57,14 @@ Jedes Datei-Konstrukt, das der Parser nicht strukturiert modelliert, wird **verb
 - **Ein Slot, mehrere Wire-Zeilen** (zweites `NOTE`/`TEXT`, `1 NAME` ohne Wert) → der **Überschuss**, allgemein und ohne Tag-Namen: der Emitter wird zusätzlich auf die Projektion des UNVERÄNDERTEN Originals angewandt; erzeugt er für einen Tag weniger Knoten, als das Original trägt, liegt das am Modell, und die überzähligen Knoten bleiben erhalten. Löscht dagegen der Nutzer, steht der Wert in dieser Probe weiterhin — kein Überschuss, die Löschung wirkt. Verglichen wird nur die **Anzahl je Tag**, nie die Struktur: der Emitter ordnet Kinder kanonisch um.
 - **Wertraum enger als der Draht** (`QUAY 0` fällt mit dem Default 0 zusammen, `SEX U` mit dem Default U) → der dritte Zustand am Feld (`quay: … | null`, `sexSeen`). Der Überschuss allein genügt hier NICHT: er hält zwar die Bytes, zieht aber die alte Zeile zusätzlich wieder ein, sobald der Nutzer den Wert ändert — die Ausgabe trüge `QUAY 0` **und** `QUAY 2`.
 
-**Was der Überschuss nicht leistet:** er ist zähl-basiert und fängt keine **Wert-Umschreibung** (dort stimmt die Anzahl). Ein Enum-Wert, den das Modell nicht kennt, muss deshalb weiterhin je Fall verlustfrei durchgereicht werden — belegt an `_RESULT not-found` (v8s Schreibweise) und `_DONE`. Die allgemeine Form liefert [BL-303](05-Backlog.md) nach.
+**Die zweite Hälfte: der Wert-Halt** ([ADR-v9-209](04-Entscheidungslog.md#adr-v9-209)). Der Überschuss ist zähl-basiert und fängt keine **Wert-Umschreibung** — dort stimmt die Anzahl. Dieselbe Probe beantwortet auch diese Frage, nur auf den Wert statt die Menge: weicht der Original-Wert von der Probe ab, kann das Modell ihn nicht halten; stimmt die Probe zugleich mit der frischen Emission überein, hat der Nutzer nichts geändert — dann gilt die Quelle. Andernfalls gewinnt der Nutzer. Damit überlebt ein Enum-Wert, den das Modell nicht kennt (`_TSTAT erledigt`, `_HWGT 7`), **ohne dass sein Tag namentlich bekannt sein muss**.
+
+Zwei Randbedingungen, ohne die der Halt schadet:
+
+- **Die Probe braucht den Ausgangszustand, nicht den aktuellen.** Wird sie mit dem bereits editierten Seiten-Stand gespeist (`db.media`), hält sie einen Nutzer-Edit für eine Modell-Normalisierung und schreibt ihn zurück. Sie wird deshalb mit dem Medienstand der DATEI gebaut.
+- **`CONC`/`CONT` machen den Wert zum Fragment.** Der volle Text steht erst mit den Fortsetzungs-Kindern da, und die baut der Emitter neu. Den Wert allein zurückzusetzen schneidet den Rest ab — mehrzeilige Werte bleiben deshalb außen vor (ihr Umbruch ist [BL-305](05-Backlog.md)).
+
+**Was der Halt NICHT leistet:** er rettet die Datei, nicht die Anzeige. Ein Wert, den das Modell nicht kennt, wird weiterhin normalisiert GELESEN — eine Aufgabe mit `_TSTAT erledigt` steht in der App auf „offen". Wo die Deutung zählt, braucht es weiterhin den Einzelfall (`_RESULT`, `_DONE`); der allgemeine Halt deckt die Bewahrung.
 
 ### 2.1 Anforderung an die v9-Umsetzung
 
