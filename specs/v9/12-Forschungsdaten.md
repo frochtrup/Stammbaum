@@ -20,7 +20,7 @@ ResearchTask {
   sourceRef: SourceId | ''              // optionaler Quellen-Bezug (v8-Parität, s. Nachtrag)
 }
 ```
-GEDCOM: `_TASK`/`_CAT`/`_TSTAT`/`_DONE`/`_ID` + optional `SOUR @Sxx@` (Standard-Tag, kein neuer `_`-Tag) für `sourceRef`. Pro Person/Familie + globale Liste (Filter Alle/Offen/Erledigt) + Markdown-Export. UI: [20 §1.11](20-Funktionen.md).
+GEDCOM: `_TASK`/`_CAT`/`_TSTAT`/`_ID` + optional `SOUR @Sxx@` (Standard-Tag, kein neuer `_`-Tag) für `sourceRef`. **`_DONE` wird gelesen, aber nicht geschrieben** ([ADR-v9-213](04-Entscheidungslog.md#adr-v9-213)): v8 führte den Erledigt-Haken neben dem später dazugekommenen `_TSTAT`, also zwei Zeilen für eine Aussage — eine fremde Datei kann sie widersprüchlich mitbringen, und der Wert-Halt ([13 §2](13-Interop-Roundtrip.md)) würde den Widerspruch konservieren. `_TSTAT` trägt sie allein; `_DONE` bleibt der Rückfall beim Lesen, für Aufgaben von vor v8 sw v307. Pro Person/Familie + globale Liste (Filter Alle/Offen/Erledigt) + Markdown-Export. UI: [20 §1.11](20-Funktionen.md).
 
 **Nachtrag (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** `sourceRef` war im v8-Oracle vorhanden (`ui-views-tasks.js` `t.sid`, per Quellen-Dropdown im Aufgabe-Modal setzbar, gegen den echten v8-Code verifiziert) und ist beim v9-Neuaufsatz zunächst ohne bewusste Entscheidung entfallen — hiermit wiederhergestellt.
 
