@@ -149,9 +149,22 @@ function walk(dir, out = []) {
 }
 
 /** Liest einen Pfad; sucht erst im Code-, dann im Spec-Repo. */
+/**
+ * Liest eine Beleg-Datei. Ohne Präfix wird erst im Code-, dann im Spec-Repo gesucht —
+ * bequem, solange ein Pfad nur in EINEM der beiden existiert.
+ *
+ * `code:`/`spec:` erzwingen das Repo. Nötig geworden bei BL-296: der Beleg
+ * `txt:Testdateien/@.gitignore` meinte die `.gitignore` des SPEC-Repos, las aber die des
+ * Code-Repos — die gibt es auch, sie kam zuerst, und der Beleg meldete stumm „trifft
+ * nicht". Ein gleichnamiger Pfad in beiden Repos ist derselbe Fehlschluss wie die
+ * verwechselten Realdaten-Dateien (TST-21): das Werkzeug antwortet zuverlässig auf eine
+ * andere Frage als die gestellte.
+ */
 function readAny(p) {
-  for (const root of [CODE, SPEC]) {
-    const f = path.join(root, p);
+  const roots = p.startsWith('spec:') ? [SPEC] : p.startsWith('code:') ? [CODE] : [CODE, SPEC];
+  const rein = p.replace(/^(spec|code):/, '');
+  for (const root of roots) {
+    const f = path.join(root, rein);
     if (fs.existsSync(f) && fs.statSync(f).isFile()) return fs.readFileSync(f, 'utf8');
   }
   return null;
