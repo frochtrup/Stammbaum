@@ -14,7 +14,7 @@ v8 hat drei Dinge vermischt, die getrennt gehören:
 2. **Dateihandling** = zwei Verben: **Bytes rein** (Import), **Bytes raus** (Export/Save).
 3. **Geräte-Sync** = separates Thema → in v9 Sache des **Betriebssystems**, nicht der App (§5).
 
-> **Unvermeidbare Wahrheit:** Keine Browser-API schreibt auf *allen* Plattformen still in dieselbe Datei zurück. Desktop Chrome/Edge + Android: ja (File System Access API). Safari + iOS: nein — jeder „echte" Datei-Save ist eine Nutzer-Geste (Share-Sheet). Das wird an **genau einer** Stelle gekapselt ([§4](#4-fileservice-die-einzige-plattform-verzweigung)), nicht durch den Code gestreut.
+> **Unvermeidbare Wahrheit:** Keine Browser-API schreibt auf *allen* Plattformen still in dieselbe Datei zurück. Desktop Chrome/Edge: ja (File System Access API). Safari + iOS + Android: nein — dort ist jeder „echte" Datei-Save eine Nutzer-Geste. **Welche** Geste, ist plattformabhängig und nicht austauschbar: auf iOS/Android das Share-Sheet („In Dateien sichern"), auf dem Desktop ein Datei-Dialog bzw. ein Download. Das wird an **genau einer** Stelle gekapselt ([§4](#4-fileservice-die-einzige-plattform-verzweigung)), nicht durch den Code gestreut.
 
 ---
 
@@ -25,8 +25,10 @@ v8 hat drei Dinge vermischt, die getrennt gehören:
 | `<input type="file">` / Drag-Drop | Import (Bytes rein) | **überall identisch** |
 | `parse` / `serialize` | Roundtrip | Kern ([13](13-Interop-Roundtrip.md)) |
 | **Arbeitskopie** (Dateitext in IndexedDB) | Auto-Load, Absturz-Recovery, Offline | **überall identisch** |
-| Export-Tier 1: FS-Access-Handle | still in-place speichern | Desktop Chrome/Edge, Android |
-| Export-Tier 2: `navigator.share` / `<a download>` | „In Dateien sichern" | Safari/iOS, Firefox |
+| Export-Tier 1a: FS-Access-Handle | still in-place speichern | Desktop Chrome/Edge |
+| Export-Tier 1b: `showSaveFilePicker()` | „Speichern unter"-Dialog; **liefert das Handle für 1a** | Desktop Chrome/Edge |
+| Export-Tier 2a: `navigator.share({files})` | „In Dateien sichern" | **nur Touch-Plattformen**: iOS/iPadOS, Android |
+| Export-Tier 2b: `<a download>` | Download-Ordner | Safari/Firefox (Desktop) |
 
 **Nicht notwendig** (aus v8 entfernt): OneDrive-OAuth/Token, `od_base_path`, ETag/If-Match, Ordner-Picker, `filemap`, automatische Timestamp-Backups bei jedem Save, mehrfache Storage-Caches. Siehe [03 §9](03-Altlasten.md).
 
@@ -72,16 +74,21 @@ FileService {
   pickAndImport():        Promise<{ text, name, handle? }>   // <input>/Picker, universal
   loadWorkingCopy():      Promise<{ text, name } | null>     // Auto-Load, universal
   saveWorkingCopy(text):  Promise<void>                       // still, jederzeit (IDB)
-  exportToFile(bytes, name): Promise<SaveResult>
-     ├ Tier 1: handle.createWritable()      (in-place — Desktop Chrome/Edge, Android)
-     └ Tier 2: navigator.share({files}) | <a download>   (iOS/Safari, Firefox)
+  exportToFile(bytes, name): Promise<SaveResult>   // SaveResult trägt das ggf. NEU erworbene Handle
+     ├ Tier 1a: handle.createWritable()     (in-place, still — Handle liegt vor)
+     ├ Tier 1b: showSaveFilePicker()        („Speichern unter"-Dialog — Plattform kann es, Handle fehlt)
+     ├ Tier 2a: navigator.share({files})    (nur Touch-Plattformen — iOS/iPadOS, Android)
+     └ Tier 2b: <a download>                (Rest — Safari/Firefox Desktop)
 }
 ```
 
 - Der Kern kennt nur `parse(text)` / `serialize(model, format)` — **kein** DOM, kein Picker (INV-ARCH-1, [02](02-Zielarchitektur-v9.md)).
-- **INV-FILE-3:** Die Tier-1/Tier-2-Verzweigung ist die **einzige** `if (Plattform)`-Stelle des Dateihandlings.
+- **INV-FILE-3:** Die Tier-Verzweigung ist die **einzige** `if (Plattform)`-Stelle des Dateihandlings.
+- **Ein Tier ist nur dann ein Speicherweg, wenn die Plattform ihn tatsächlich zu Ende führt.** `navigator.canShare({files})` meldet auf macOS `true`, aber das macOS-Share-Sheet bietet — anders als das auf iOS — **kein „In Dateien sichern"**: der Nutzer landet in einer Sackgasse. Tier 2a gilt deshalb nur auf **Touch-Plattformen**; die Fähigkeitsprüfung eines Adapters beantwortet „ist das hier ein tauglicher Speicherweg", nicht „existiert die API" ([ADR-v9-194](04-Entscheidungslog.md#adr-v9-194)).
+- **Tier 1b ist das Gegenstück zum Import-Picker** ([§2](#2-das-notwendige-minimum)): wo `showOpenFilePicker` den Öffnen-Dialog stellt, stellt `showSaveFilePicker` den Speichern-Dialog. Das dabei erworbene Handle wird in die Arbeitskopie übernommen — **jeder weitere Save derselben Datei läuft danach still über Tier 1a**.
+- **Nutzerabbruch ist kein Fehlschlag und löst keinen Ausweich-Tier aus** (`ok:false`) — weder bei Tier 1b noch bei Tier 2a. Ein Download nach abgebrochenem Dialog wäre eine zweite Verzweigung entgegen INV-FILE-3 und obendrein gegen die Absicht des Nutzers.
 - FS-Handle wird in IDB behalten; bei Reload Permission neu anfragen (`queryPermission`/`requestPermission`).
-- Anonymisierter/Strict/GED7-Export: nie in-place (Suffix am Dateinamen, z. B. `_strict`/`_anon`), Original unberührt.
+- Anonymisierter/Strict/GED7-Export: nie in-place (Suffix am Dateinamen, z. B. `_strict`/`_anon`), Original unberührt. Diese Exporte gehen **direkt auf Tier 2b** — sie erwerben kein Handle, weil sie keine fortzuschreibende Datei sind, sondern eine Ausgabe.
 
 ---
 
