@@ -146,23 +146,30 @@ der Tabelle.
 **Empfohlene Reihenfolge (Wellen — Priorität, nicht Zwang).** Die Wellen der Kleinlücken-
 Inventur sind abgeschlossen; diese Zählung setzt neu an und enthält nur noch Offenes.
 
-1. **Welle 1 — `usp`/`basis` ohne Vorbedingung:** BL-282 (Wächter vor Konsument — er zählt
-   heute an den geteilten Primitiven vorbei, also ist jede Zahl darüber vorläufig) · BL-280. Die drei Zeilen kamen aus
-   der Design-Kritik der Bearbeitungsfunktion (2026-08-01, s. den Herkunfts-Absatz unten)
-   und stehen unter „Erledigte Punkte" ([ADR-v9-193](04-Entscheidungslog.md#adr-v9-193)).
-   Es steht derzeit **kein** Item auf `blockiert`.
-   Messgrundlage, die beiden GRAMPS-Quellen-Defekte und der Lint zur Messgrundlage stehen
-   (s. „Erledigte Punkte").
-   Es steht derzeit **kein** Item auf `blockiert`.
+1. **Welle 1 — `basis` ohne Vorbedingung:** BL-282 (Wächter vor Konsument — er zählt heute
+   an den geteilten Primitiven vorbei, also ist jede Zahl darüber vorläufig) · BL-280. Beide
+   stammen aus der Design-Kritik der Bearbeitungsfunktion (2026-08-01, s. den
+   Herkunfts-Absatz unten, [ADR-v9-193](04-Entscheidungslog.md#adr-v9-193)). Es steht derzeit
+   **kein** Item auf `blockiert`.
 2. **Welle 2 — was auf Welle 1 aufsetzt:** BL-281 (braucht den erweiterten Suchraum aus
    BL-282, sonst ist die Anhebung nur behauptet — und die ~34px Höhenkosten wollen vorher
    bestätigt sein). Die Ratsche steht nach der Primitiven-Umstellung bei 93 (von 116);
    sie ist erst nach BL-282 vollständig.
-3. **Welle 3 — eigenständige Kür:** BL-230 (die Ebenen-Wahl hängt sich in das gebaute
+3. **Welle 3 — der Wire-Wert-Komplex (Modell, Spec 10):** BL-290 · BL-292 · BL-289. Die drei
+   gehören zusammen und in DIESER Reihenfolge: alle drei sind dieselbe Lücke — das Modell
+   hält den Wire-Wert nicht, deshalb geht er beim Neubau eines Records verloren oder wird
+   umgeschrieben. BL-290 ist die kleinste (ein Feld neben `wireOrigin` für `FORM`) und
+   liefert das Muster; BL-292 wendet es auf die zwei gemessenen Klassen an (mehrere
+   Namensformen, strukturierte Adresse); BL-289 (`RELI` als Ereignis) setzt auf dem dann
+   erweiterten Modell auf. Umgekehrt gebaut, erfindet jede Zeile ihr eigenes Muster.
+4. **Welle 4 — eigenständige Kür:** BL-230 (die Ebenen-Wahl hängt sich in das gebaute
    B1-Bündel ein) · BL-207 · BL-233 · BL-234 · BL-275 · BL-276 · BL-277.
-4. **Welle 4 — Infra & Hygiene (opportunistisch):** BL-232 (Templates hängen sich in das
-   gebaute B1-Bündel ein) · BL-278 (latent, wird erst durch eine sticky Toolbar akut) ·
-   BL-94 (erst den Inhalt spezifizieren).
+5. **Welle 5 — Infra & Hygiene (opportunistisch):** BL-293 (klein, und erstmals *messbar*:
+   `npm run test:mutation --nur INV-VS` sagt vor und nach dem Bau, ob es wirkt) · BL-295
+   (der Rückbau — nach BL-293, weil beide dasselbe Instrument benutzen und der Rückbau die
+   Schwellen bewegt) · BL-232 (Templates hängen sich in das gebaute B1-Bündel ein) ·
+   BL-278 (latent, wird erst durch eine sticky Toolbar akut) · BL-94 (erst den Inhalt
+   spezifizieren).
 
 **Bewusst vertagt — nicht einplanen, bis sich der Anlass ändert:** BL-166 (Orte/Höfe-Dedup,
 Weg 3 vom 2026-07-26 — geringer Wert gegen hohe Hürde) · BL-227 (Staging-Ziel; lohnt erst,
@@ -622,7 +629,7 @@ Den Prüfer selbst prüfen: `… --selftest`.
 | L7 | Zahl der [S]/[E]-Bullets in [20](20-Funktionen.md) gegen die Ratsche `SE_BULLETS` (29, Stand BL-51) | **Fehler** | Ein neues [S]/[E]-Bullet im Spec, zu dem niemand eine Backlog-Zeile angelegt hat — genau die stille Verrottung, an der die [K]-Inventur vor BL-50 scheiterte. Bewusst ein Zähler und keine Bullet↔Zeile-Zuordnung: die gibt es nirgends maschinenlesbar, sie wäre erfunden. |
 | L8 | Beleg-Pfad einer Zeile gegen den Zuständigkeitsbereich ihrer Statusdatei (`app-orte/`, `tests/orte/` → [05a](05a-Backlog-Orte-Editor.md), alles andere → hier) | **Fehler** | Eine Zeile in der falschen Statusdatei. Die Aufteilung „je Programm eine Datei" ist nur so viel wert, wie sie eingehalten wird; ohne Prüfung wäre sie eine Vereinbarung, also genau die Sorte Zusage, die dieses Dokument ersetzt hat. `spec:`/`txt:`-Belege auf Spec-Dateien und negierte `!sym:`-Belege haben keinen Code-Pfad und werden übersprungen. |
 | L9 | Kopfzeile einer Tabelle ohne Trennzeile `\|---\|` direkt darunter | **Fehler** | Eine Tabelle, die gar nicht mehr als Tabelle rendert. Am 2026-07-28 wurden zwei erledigte Zeilen ZWISCHEN Kopf- und Trennzeile eingefügt; jeder weitere Erledigt-Commit schob die Trennzeile tiefer (am Ende 23 Zeilen), und „Erledigte Punkte" erschien auf GitHub als Absatz voller Striche. Zwölf Läufe meldeten „konsistent", weil L1/L2/L5 die Zeilen per Regex lesen und die Struktur nie ansahen — dieselbe Lücke wie bei L5, eine Ebene tiefer (Fund 2026-07-31). |
-| L10 | Planungsteil der Priorisierung (Cluster-Tabelle + Wellen) ↔ Statusspalte | **Fehler** | Eine zweite Fassung derselben IDs, die sich vom Status löst — Regel 1 im Kleinen. BL-220…226 waren gebaut und korrekt einsortiert; L1/L2/L5 meldeten „konsistent", die Wellen planten sie trotzdem weiter ein (Fund 2026-07-31, vom Nutzer beim Lesen entdeckt). Geprüft wird in beide Richtungen: Gebautes darf dort nicht als Arbeit stehen, Offenes muss vorkommen. Bewusst NUR der Planungsteil — die Herkunfts-Prosa nennt legitim erledigte IDs, ein Verbot dort ließe die Begründung verschwinden statt der Drift. |
+| L10 | Planungsteil der Priorisierung ↔ Statusspalte, und jede offene Zeile in Cluster **und** Welle (oder ausdrücklich vertagt) | **Fehler** | Eine zweite Fassung derselben IDs, die sich vom Status löst — Regel 1 im Kleinen. BL-220…226 waren gebaut und korrekt einsortiert; L1/L2/L5 meldeten „konsistent", die Wellen planten sie trotzdem weiter ein (Fund 2026-07-31, vom Nutzer beim Lesen entdeckt). **Verschärft 2026-08-02:** eine Erwähnung genügte — fünf neu angelegte Zeilen (BL-289/290/292/293/295) standen in der Cluster-Tabelle und damit „in der Priorisierung", kamen aber in keiner Welle vor; der Lint war grün, die Reihenfolge unvollständig, aufgefallen ist es dem Nutzer. Die Cluster-Tabelle sagt WOHIN, die Wellen sagen WANN. Drei zulässige Zustände statt zwei: in einer Welle, oder unter „Bewusst vertagt" (BL-166/BL-227 stehen genau deshalb in keiner Welle — „noch nicht eingeplant" und „bewusst nicht eingeplant" sehen im Dokument gleich aus und sind das Gegenteil voneinander). Geprüft wird in beide Richtungen: Gebautes darf dort nicht als Arbeit stehen, Offenes muss vorkommen. Bewusst NUR der Planungsteil — die Herkunfts-Prosa nennt legitim erledigte IDs, ein Verbot dort ließe die Begründung verschwinden statt der Drift. |
 | L11 | Zähl-Aussage über den Realbestand (`Realbestand`, `im Bestand`, `am echten Bestand` … **plus eine Zahl im selben Fenster**) ohne begleitenden Dateinamen, Ratsche `L11_RATSCHE` (14, Stand BL-247) | Warnung, **Fehler** über der Ratsche | Eine Zahl aus dem Bestand ohne die Datei, an der sie gemessen wurde — [ADR-v9-178](04-Entscheidungslog.md#adr-v9-178): ADR-v9-151 nannte die Datei und maß trotzdem die falsche, BL-217 nannte gar keine. Bewusst **Marker + Zahl**, nicht `N×` allein: das nackte Muster traf 79 Zeilen, überwiegend Aussagen über den Code ("siebenmal dupliziert"). Die 14 Altfälle nennt der Prüflauf namentlich — sie sind die Abarbeitungsliste, nicht ein geduldeter Sockel. |
 | L12 | ADR-**Absatz** in 04/04a, der einen Rest ankündigt (`Offener Folgepunkt`, `Offen geblieben`, `nicht Teil dieses Fixes`, `nicht entschieden`, `bleibt offen` …), ohne eine `BL-`Nummer im selben Absatz, Ratsche `L12_RATSCHE` (5, Stand 2026-08-02) | Warnung, **Fehler** über der Ratsche | Eine Ankündigung ohne Zeile ist schlechter als gar keine Notiz — sie erzeugt den Eindruck, der Punkt sei erfasst, und taucht in keiner Priorisierung auf ([ADR-v9-196](04-Entscheidungslog.md#adr-v9-196)). Beleg: [ADR-v9-74](04-Entscheidungslog.md#adr-v9-74) beschrieb den hängenden `event.placeId` exakt und blieb sieben Wochen liegen, bis der Nutzer den Defekt meldete ([ADR-v9-195](04-Entscheidungslog.md#adr-v9-195)). Geprüft wird der ABSATZ, nicht das ADR (fast jedes ADR nennt irgendwo eine BL-Nummer) — und wer die Ankündigung liest, soll dort erfahren, wo sie weiterlebt. **Zitate** sind ausgenommen: ein späteres ADR, das den Satz eines früheren wiedergibt, berichtet, statt anzukündigen. |
 | L13 | Jede in `specs/v9/` benannte `INV-…`/`LP-…` hat eine Zeile in `tools/mutation/mutationen.mjs` (Mutation, anderes Gate oder ausdrücklich offen) | **Fehler** | Eine neue Invariante, deren Absicherung nie gemessen wird. TST-2 fragt, OB ein Test existiert — die Mutations-Tabelle, ob er ANSCHLÄGT ([32 TST-22](32-Testframework.md), [ADR-v9-199](04-Entscheidungslog.md#adr-v9-199)). Ohne den Zwang wächst das Spec-Set weiter und die Messung bleibt stehen, wo sie angelegt wurde. Ohne Code-Repo: Warnung statt Fehler. |

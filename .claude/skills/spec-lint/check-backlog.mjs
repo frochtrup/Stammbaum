@@ -564,9 +564,32 @@ function pruefe() {
         fehler.push(`L10 ${id} ist gebaut, wird in der Priorisierung aber weiter als Arbeit eingeplant`);
       if (!status.has(id)) fehler.push(`L10 ${id} steht in der Priorisierung, hat aber keine Backlog-Zeile`);
     }
-    for (const z of zeilen)
-      if (z.id.startsWith('BL-') && z.status === 'offen' && !genannt.includes(z.id))
+    // Eine Erwähnung genügte bis 2026-08-02 — und genau daran ist die Regel vorbeigelaufen:
+    // fünf neu angelegte Zeilen (BL-289/290/292/293/295) standen in der Cluster-Tabelle und
+    // damit „in der Priorisierung", kamen aber in keiner Welle vor. Der Lint war grün, die
+    // Reihenfolge trotzdem unvollständig; aufgefallen ist es dem Nutzer, nicht der Regel.
+    // Die Cluster-Tabelle sagt, WOHIN eine Zeile gehört, die Wellen sagen, WANN — beides ist
+    // Planung, und eine Zeile ohne WANN ist nicht eingeplant, sondern nur einsortiert.
+    // DREI zulässige Zustände, nicht zwei: in einer Welle (WANN steht fest), oder
+    // ausdrücklich vertagt (WANN ist bewusst offen — „nicht einplanen, bis sich der Anlass
+    // ändert"). Die erste Fassung dieser Verschärfung kannte nur den ersten und meldete
+    // prompt BL-166/BL-227, die genau deshalb in keiner Welle stehen. Der Unterschied ist
+    // der Punkt: „noch nicht eingeplant" und „bewusst nicht eingeplant" sehen im Dokument
+    // gleich aus und sind das Gegenteil voneinander.
+    const wellen = planung.split('\n').filter((l) => /^\d+\. |^\s{3,}\S/.test(l)).join('\n');
+    const inWellen = new Set(wellen.match(/BL-\d+/g) || []);
+    const vertagtAbsatz = /\*\*Bewusst vertagt[^*]*\*\*([\s\S]*?)(?:\n\n|$)/.exec(priBacklog);
+    const vertagt = new Set(vertagtAbsatz ? vertagtAbsatz[1].match(/BL-\d+/g) || [] : []);
+    for (const z of zeilen) {
+      if (!z.id.startsWith('BL-') || z.status !== 'offen') continue;
+      if (!genannt.includes(z.id))
         fehler.push(`L10 ${z.id} ist offen, kommt in der Priorisierung aber nicht vor — ungeplant`);
+      else if (!inWellen.has(z.id) && !vertagt.has(z.id))
+        fehler.push(
+          `L10 ${z.id} ist offen und einsortiert (Cluster), steht aber in keiner Welle und ` +
+            `nicht unter „Bewusst vertagt" — die Reihenfolge sagt nicht, WANN`,
+        );
+    }
   }
 
   // L11-Ratsche: Zähl-Aussagen über den Realbestand ohne Dateinamen.
