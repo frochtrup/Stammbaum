@@ -98,6 +98,39 @@ const L11_DATEI = /[\w.\-]+\.(?:ged|gramps|json)\b/;
 const L11_RAUSCHEN = /\b(?:ADR-v9|BL|OE|LP|INV|TST|RT|SC)[-\s]?\d+|\d{4}-\d{2}-\d{2}|§\s?\d+|\b\d+\.(?=\s)/g;
 
 /** Eine ZÄHLUNG: „7×", „0 von 226", „888 `2 ADDR`", „85 Personen-Medien". */
+/** L12-Ratsche: ADR-Absätze, die einen unerledigten Rest ANKÜNDIGEN, ohne ihn zu
+ *  terminieren — Ist-Stand 2026-08-02 (ADR-v9-196).
+ *
+ *  WARUM ES DIESE REGEL GIBT. ADR-v9-74 beschrieb den hängenden `event.placeId` nach
+ *  einem Orts-Merge exakt — als „Offener Folgepunkt (beim Bau entdeckt, nicht Teil
+ *  dieses Fixes)". Es wurde keine Backlog-Zeile daraus. Sieben Wochen später meldete der
+ *  Nutzer genau diesen Defekt (ADR-v9-195). Eine Ankündigung ohne Zeile ist schlechter
+ *  als gar keine Notiz: sie erzeugt den Eindruck, der Punkt sei erfasst, und taucht in
+ *  keiner Priorisierung auf. Das Backlog prüft seit jeher, dass OFFENE ZEILEN eingeplant
+ *  sind (L10) — nicht, dass ANKÜNDIGUNGEN Zeilen haben. Genau diese Lücke schließt L12.
+ *
+ *  Die verbleibenden Fälle sind die Abarbeitungsliste (der Prüflauf nennt sie
+ *  namentlich). Sie bekommen ihre Zeile, sobald inhaltlich entschieden ist, OB der Punkt
+ *  gebaut wird — rückwirkend eine BL-Nummer danebenzuschreiben, ohne dass die Zeile
+ *  existiert, wäre dieselbe Scheinerledigung, gegen die die Regel sich richtet.
+ *  NIE ANHEBEN. */
+const L12_RATSCHE = 5;
+
+/** Formulierungen, die einen Rest ankündigen. Bewusst eng: „später"/„vorerst"/„noch
+ *  nicht" tragen in 04/04a überwiegend erklärende Prosa („später zeigte sich") — sie
+ *  hätten die Regel in Rauschen ertränkt, und eine Warnung, die niemand liest, ist keine
+ *  (dieselbe Kalibrierung wie L11). */
+const L12_MARKER =
+  /Offener Folgepunkt|Offen geblieben|nicht Teil dieses (?:Fixes|ADR)|nicht\*{0,2} entschieden|bleibt offen(?:e Folgearbeit)?|offene (?:Spec-)?Frage|nicht weiter verfolgt|noch zu klären|wäre zu prüfen/;
+
+/** Ein ZITAT ist keine Ankündigung: ein späteres ADR, das den Satz eines früheren
+ *  wiedergibt („ADR-v9-74 hatte sie als „Offener Folgepunkt" notiert"), kündigt nichts
+ *  an — es berichtet. Ohne diesen Ausschluss meldete die Regel die AUFARBEITUNG des
+ *  Problems als neues Problem, und zwar dauerhaft: der Bericht über einen geschlossenen
+ *  Fall bleibt ja stehen. Erkannt am öffnenden Anführungszeichen unmittelbar vor dem
+ *  Marker (Auszeichnungs-Sternchen dazwischen erlaubt). */
+const L12_ZITAT = /[„“‚'"]\**$/;
+
 const L11_ZAHL = /\d+\s?×|\d+ von \d+|\d[\d.,]*\s+[A-Za-zÄÖÜäöü`]/;
 
 // --- Dateizugriff -----------------------------------------------------------
@@ -295,6 +328,39 @@ export function bestandsBehauptungen(text) {
     const fenster = l.slice(Math.max(0, m.index - 70), m.index + m[0].length + 70).replace(L11_RAUSCHEN, ' ');
     if (L11_ZAHL.test(fenster)) treffer.push({ zeile: idx + 1, text: l.slice(Math.max(0, m.index - 55), m.index + 70) });
   });
+  return treffer;
+}
+
+/**
+ * L12: ADR-Absätze, die einen unerledigten Rest ankündigen, ohne eine BL-Zeile zu nennen.
+ *
+ * Geprüft wird der ABSATZ, nicht das ganze ADR: fast jedes ADR nennt irgendwo eine
+ * BL-Nummer („Umsetzung als BL-xxx"), auf ADR-Ebene fände die Regel deshalb nichts. Der
+ * Absatz ist zugleich die richtige Einheit für den Leser — wer die Ankündigung liest,
+ * soll dort erfahren, wo sie weiterlebt, und nicht drei Absätze tiefer suchen.
+ *
+ * @returns {{zeile:number, adr:string, marker:string, text:string}[]}
+ */
+export function unterminierteAnkuendigungen(text) {
+  const treffer = [];
+  let pos = 0;
+  for (const para of text.split(/\n(?=- \*\*)/)) {
+    const start = text.indexOf(para, pos);
+    pos = start + para.length;
+    const m = L12_MARKER.exec(para);
+    if (!m) continue;
+    // Zitat? → berichtet, kündigt nicht an.
+    if (L12_ZITAT.test(para.slice(0, m.index))) continue;
+    if (/BL-\d+/.test(para)) continue;
+    const davor = text.slice(0, start);
+    const adr = [...davor.matchAll(/<a id="(adr-v9-\d+)"><\/a>/g)].pop();
+    treffer.push({
+      zeile: davor.split('\n').length,
+      adr: adr ? adr[1] : '?',
+      marker: m[0],
+      text: para.replace(/\s+/g, ' ').trim().slice(0, 90),
+    });
+  }
   return treffer;
 }
 
@@ -513,6 +579,31 @@ function pruefe() {
     warnungen.push(
       `L11 ${l11.length} Zähl-Aussagen über den Realbestand ohne Dateinamen (Ratsche ${L11_RATSCHE}, BL-247 Abarbeitungsliste):\n    ` +
         l11.join('\n    '),
+    );
+
+  // L12-Ratsche: Ankündigungen ohne Backlog-Zeile (ADR-v9-196).
+  //
+  // Gleicher Aufbau wie L3/L7/L11 (Fehler oberhalb der Ratsche, sonst namentliche
+  // Warnung). Die Regel ist die mechanische Hälfte der Lehre aus ADR-v9-74 → ADR-v9-195:
+  // dass ein Punkt WICHTIG ist, kann kein Lint beurteilen — dass er eine Adresse hat,
+  // schon.
+  const l12 = [];
+  for (const datei of ['specs/v9/04-Entscheidungslog.md', 'specs/v9/04a-Chronik.md']) {
+    const pfad = path.join(SPEC, datei);
+    if (!fs.existsSync(pfad)) continue;
+    for (const t of unterminierteAnkuendigungen(fs.readFileSync(pfad, 'utf8')))
+      l12.push(`${datei}:${t.zeile} [${t.adr}] „${t.marker}“ — ${t.text}…`);
+  }
+  if (l12.length > L12_RATSCHE)
+    fehler.push(
+      `L12 ${l12.length} Ankündigungen ohne Backlog-Zeile > Ratsche ${L12_RATSCHE} — wer einen Rest ` +
+        `benennt, gibt ihm eine Zeile (ADR-v9-196; ADR-v9-74 war sieben Wochen lang notiert und trotzdem ` +
+        `unerledigt):\n    ${l12.join('\n    ')}`,
+    );
+  else if (l12.length > 0)
+    warnungen.push(
+      `L12 ${l12.length} Ankündigungen ohne Backlog-Zeile (Ratsche ${L12_RATSCHE}, Abarbeitungsliste):\n    ` +
+        l12.join('\n    '),
     );
 
   return { fehler, warnungen, zeilen };
