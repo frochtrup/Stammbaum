@@ -48,6 +48,10 @@ Die RT-4-Metrik ist die reine Funktion **`modelEquiv(a, b): Diff[]`** (`core/int
 
 Jedes Datei-Konstrukt, das der Parser nicht strukturiert modelliert, wird **verbatim** erfasst und bei der Ausgabe exakt reproduziert. Kein unbekannter Tag geht verloren (LP-1).
 
+**Die Grenze des Passthroughs liegt beim MODELLIERTEN Elternknoten** ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)). Ein Teilbaum überlebt, sobald sein Elternknoten wieder geschrieben wird — schreibt der Writer den Elternknoten NICHT, fällt der ganze Teilbaum mit. Deshalb braucht jedes modellierte Feld, dessen Tag auch **ohne Wert** vorkommen kann, einen dritten Zustand; sonst fällt „Tag fehlt" mit „Tag da, aber leer" zusammen und die Ausgabe lässt die Zeile weg. Konkret: `ADDR` ohne Wert, aber mit `ADR1`/`CITY`/`POST` darunter (→ Tristate, [10 §5.1](10-Domaenenmodell.md)). Umgekehrt gilt für **kanonisierte** Felder dasselbe eine Ebene höher: wo der Parser einen Wert an der Formatgrenze normalisiert (`FORM`→MIME), ist der Rohwert nicht rekonstruierbar und braucht einen eigenen Platz im Modell (`Media.formWire`) — sonst schreibt jedes Speichern ihn um. **Beides ist derselbe Satz: der Writer darf nur ändern, was jemand geändert hat.**
+
+**Ein Modell-Slot je Wire-Konstrukt, das mehrfach vorkommen darf.** Kommt ein Tag im Bestand mehrfach am selben Träger vor, ist ein Skalarfeld die falsche Form — die zweite Zeile hat keinen Platz und geht beim Neubau verloren. Gelöst für mehrere `1 NAME`-Zeilen (`extraNames`) und für `1 RELI` (Ereignis statt Skalar). **Ausdrücklich offen und mit Zahlen benannt** (s. [05 BL-292](05-Backlog.md)): ein zweites `NOTE`/`TEXT`/`_RESULT` am selben Träger, `QUAY 0` (nicht von „kein QUAY" unterscheidbar), `SEX U`. Diese Grenzen sind **dokumentiert und mit Wächter-Tests festgehalten**, nicht stillschweigend.
+
 ### 2.1 Anforderung an die v9-Umsetzung
 
 > **Neuaufsatz-Hinweis:** v8 kennt **10 Ad-hoc-Passthrough-Kontexte** (verbatim lv=0-Records, INDI/FAM/SOUR-Subtrees, Event-Sub-Tags, ADDR-Sub-Tags, SOUR-Ref-Sub-Tags, OBJE-Blöcke, CHIL-SOUR …) — Altlast ([03 §4](03-Altlasten.md)). v9 entwirft **einen einheitlichen, generischen Passthrough-Baum**:

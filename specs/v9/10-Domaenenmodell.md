@@ -38,13 +38,13 @@ Person {
   prefix (NPFX), suffix (NSFX), nick (NICK): string
   sex: 'M' | 'F' | 'U'
   title (TITL): string
-  religion (RELI): string
+  nameType (NAME.TYPE): string      // birth | married | aka … am HAUPTnamen (die weiteren tragen ihn je Form, s. „Namen")
   restriction (RESN): string        // confidential | locked | privacy
   email (EMAIL), www (WWW): string
   uid (_UID): string                // externe UUID
 
   // Hauptereignisse (Sonderstatus, siehe §5): birth, chr, death (+cause), buri
-  events: Event[]                   // OCCU, RESI, EDUC, EMIG, IMMI, NATU, EVEN,
+  events: Event[]                   // OCCU, RESI, EDUC, EMIG, IMMI, NATU, EVEN, RELI,
                                     //   GRAD, ADOP, MILI, FACT, CENS, PROP …
 
   // Namen
@@ -95,6 +95,8 @@ ChildLink {
 ```
 
 **PersonName (extraNames):** `{ nameRaw, given, surname, prefix, suffix, type, citations: Citation[] }`
+
+Jede weitere `1 NAME`-Zeile wird als `PersonName` gelesen und geschrieben — beidseitig in beiden Formaten (GEDCOM: die zweite+ NAME-Zeile; GRAMPS: das zweite+ `<name>`, dort mit `alt`-Kennung); die Tag↔Typ-Zuordnung liegt einmal in der Enum-Tabelle, unbekannte Werte reisen verlustfrei durch. **Bewusst ohne die Untertag-Ergänzung aus dem NAME-Wert**, die der Hauptname macht ([ADR-v9-112](04-Entscheidungslog.md#adr-v9-112)): die ist eine Anzeige-Bequemlichkeit und erzeugte hier `GIVN`/`SURN`-Zeilen, die in der Quelle nicht standen — eine Ergänzung ohne Anlass ([ADR-v9-197](04-Entscheidungslog.md#adr-v9-197)). Eine Namensform reist so, wie sie kam. Der `TYPE` des HAUPTnamens hat seinen eigenen Platz (`Person.nameType`); ohne ihn wäre er modelliert-aber-heimatlos und ginge beim Neubau verloren ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)).
 
 **Namenszerlegung (`name` ↔ `given`/`surname`/`suffix`).** `name` ist der **rohe** GEDCOM-NAME-Wert mit dem Nachnamen zwischen Schrägstrichen (`Anna /Decker/`); `given`/`surname`/`suffix` sind die zerlegte Form. Beide sind Hälften derselben Sache und werden nie einzeln geschrieben.
 
@@ -160,7 +162,7 @@ Repository {
   id: RepoId
   name (NAME): string
   type (_RTYPE / GRAMPS <type>): string       // Archivtyp (Enum REPO_TYPES)
-  address (ADDR + Sub-Tags): string
+  address (ADDR): string | null     // TRISTATE wie Event.addr — die Sub-Tags bleiben Passthrough
   phone (PHON), www (WWW), email (EMAIL): string
   findingAid (_FAURL / GRAMPS url): string     // Findbuch/Online-Katalog
   lastChanged: string
@@ -175,7 +177,8 @@ Note { id, type: 'NOTE' | 'SNOTE', text }
 Media {                             // Top-Level-Datensatz EINES Mediums, in db.media
   id: MediaId                       // GEDCOM: @M@-Xref (Record) bzw. FILE-Pfad (Inline-Altform); GRAMPS: id (O0000). App-intern, NICHT serialisiert
   file: string                      // FILE / <file src> — relativer Pfad, einzige Wahrheitsquelle ([14 §7](14-Dateihandling.md))
-  form: string                      // FORM / <file mime> — Dateiformat/MIME
+  form: string                      // FORM / <file mime> — Dateiformat, KANONISIERT als MIME (Narrow Waist)
+  formWire: string                  // der GEDCOM-FORM-Wert, wie er in der Quelle stand (JPEG/BMP/FILE/URL) — Fidelity, s. u.; GRAMPS lässt ihn leer
   type: string                      // MEDI — Medientyp (Standard-Enum unter FORM); GRAMPS/Import oft leer
   title: string                     // GLOBALE Beschriftung: GED7-Record-TITL / GRAMPS <file description>; leer bei 5.5.1-Inline
   wireOrigin: 'record' | 'inline'   // Wire-Herkunft — der Writer erhält sie unverändert (LP-1): Record→Record+Zeiger, Inline→inline
@@ -196,6 +199,10 @@ MediaCitation {                     // Referenz-spezifische Verknüpfung EIN Med
 **Titel: global + Override.** Der Titel liegt global auf `Media` (so führen ihn GED7 und GRAMPS). `MediaCitation.title` ist ein optionaler Per-Ref-Override (nur die 5.5.1-Inline-Form trägt den Titel von Haus aus je Referenz); leer ⇒ der globale `Media.title` gilt. Die UI zeigt/ediert beide Ebenen getrennt ([20 §1.4](20-Funktionen.md) „globale vs. referenz-spezifische Felder").
 
 **Änderungserkennung an der natürlichen Stelle.** Weil `Media` Top-Level ist, wird eine Änderung an den globalen Feldern (Datei/Format/Typ/Titel) **am `Media`-Record** erkannt und zurückgeschrieben (record-basierte Medien: eigener Dirty-Check + Emit wie `Source`), NICHT durch Abscannen jeder referenzierenden Entität. Am Owner wird nur noch die **Verweis-Menge** (welches Medium, Per-Ref-Felder) verglichen. Die 5.5.1-Inline-Altform (`wireOrigin='inline'`, kein Record) trägt ihre Daten weiterhin am Verweis; dort greift die Owner-seitige Erkennung.
+
+**`form` ist kanonisiert, `formWire` ist die Wahrheit.** `form` hält einheitlich das MIME (Standard in 7.0 und GRAMPS, [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126)); die Kanonisierung an der Parse-Grenze ist aber **nicht umkehrbar** — `JPEG`→`image/jpeg`→`jpg`, und `FILE`/`URL` bezeichnen überhaupt kein Format. Ohne einen zweiten Platz schrieb jedes Speichern die Schreibweise um, eine byte-verändernde Projektion ohne Anlass ([ADR-v9-197](04-Entscheidungslog.md#adr-v9-197), [ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)). `formWire` trägt den Rohwert, **eine** Stelle entscheidet über den ausgegebenen `FORM`-Wert, und sie gilt nur, solange der Rohwert noch dasselbe Format bezeichnet wie `form` — ein Nutzer-Edit an Format oder Dateiname setzt ihn damit von selbst außer Kraft, statt ihn einzufrieren. **Nur GEDCOM:** GRAMPS hat kein `FORM`, sein `<file mime>` IST das kanonische MIME und wird aus `form` geschrieben.
+
+**Ein inline-Medium wird an seiner definierenden Fundstelle geändert.** Es hat keinen eigenen Record; seine globalen Felder stehen im `OBJE` des verweisenden Records, und die Datei IST seine Identität. Dieselbe Datei darf mehrfach mit **abweichenden** Untertags dastehen — dann definiert das erste Vorkommen in Dokumentordnung den Datensatz (dieselbe Regel, mit der er gelesen wird), und nur dort schlägt ein globaler Edit durch. Die übrigen Fundstellen bleiben unangetastet: sie zu „korrigieren" hieße, eine Änderung zu schreiben, die niemand gemacht hat ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)).
 
 **Wire-Formen (öffentliche Spec).** GEDCOM: **Pointer** `n OBJE @M1@`→`0 @M1@ OBJE` (5.5.1 optional, **7.0 einzige Form**) und **Inline** `n OBJE`→`FILE`→`FORM`→`MEDI` (nur 5.5.1). GRAMPS: `<object handle id><file src mime description/></object>` + `<objref hlink>`. Alle drei projizieren auf dieselbe `Media`/`MediaCitation`-Struktur; der Writer erhält die Wire-Herkunft je Medium (`wireOrigin`) — **kein** Umschreiben Inline↔Record (bräche LP-1). Medientyp = Standard-`MEDI`, nicht das v8-interne `_TYPE`.
 
@@ -220,7 +227,7 @@ Event {
   placeId: PlaceId | null   // FK auf Dorf-PlaceObject (Wahrheit für Ort)
   hofId: HofId | null       // FK auf Hof (orthogonal, optional)
   lati, long: number        // Render-Fallback (single source: placeObject/hofObject)
-  addr: string              // ADDR — Wire-Adresse (bei RESI etc.)
+  addr: string | null       // ADDR — Wire-Adresse (bei RESI etc.); TRISTATE wie date/place, s. u.
 
   note: string
   citations: Citation[]
@@ -230,7 +237,9 @@ Event {
 
 **Sonder-Ereignisse:** `birth`, `chr`, `death` (+`cause`), `buri` auf der Person sowie `marriage`, `engagement` auf der Familie sind eigene benannte Felder (nicht im `events[]`-Array) — feste UI-Position + Sondersemantik. v9 *darf* sie modellintern vereinheitlichen, muss aber Sonderdarstellung im UI und feste Position im Writer beibehalten. **UI-Konsequenz (ADR-v9-30):** progressive Offenlegung darf sie zur Reduktion der Standard-Sichtbarkeit je hinter einem eigenen Schnellauswahl-Pill verstecken (`isEventPresent`-gesteuert, [20 §2](20-Funktionen.md)), aber NICHT mit `events[]` zu einer generischen Hinzufügen/Entfernen-Liste verschmelzen — jedes bleibt eine eigene benannte Sektion. Ein nie aktivierter Pill wird gar nicht gerendert; sein `seen`-Flag (INV-P5, [§6](#6-modell-invarianten)) bleibt dadurch beim Speichern unangetastet.
 
-**Event-Feld-Tristate:** `date`/`place` unterscheiden `null` (Tag nicht vorhanden), `''` (Tag vorhanden, leer), `Wert` (belegt). Roundtrip-relevant. **UI-Konsequenz (ADR-v9-30):** ein Bearbeitungsformular darf diese Unterscheidung nicht durch bloßes Auswerten leerer Eingabefelder einebnen — rührt der Nutzer ein Datums-/Ort-Feld nicht an, muss der ursprüngliche Rohwert (inkl. `''`) unverändert erhalten bleiben (Dirty-Tracking statt Feld-Auswertung, [20 §2](20-Funktionen.md)).
+**Event-Feld-Tristate:** `date`/`place`/`addr` unterscheiden `null` (Tag nicht vorhanden), `''` (Tag vorhanden, leer), `Wert` (belegt). Roundtrip-relevant. **UI-Konsequenz (ADR-v9-30):** ein Bearbeitungsformular darf diese Unterscheidung nicht durch bloßes Auswerten leerer Eingabefelder einebnen — rührt der Nutzer ein Datums-/Ort-Feld nicht an, muss der ursprüngliche Rohwert (inkl. `''`) unverändert erhalten bleiben (Dirty-Tracking statt Feld-Auswertung, [20 §2](20-Funktionen.md)).
+
+**Warum `addr` dazugehört ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)):** eine `ADDR`-Zeile OHNE Wert, aber MIT `ADR1`/`ADR2`/`CITY`/`POST`/`CTRY` darunter, ist der Regelfall der strukturierten Adresse. Solange `''` „kein ADDR" hieß, schrieb der Writer die Zeile nicht — und mit ihr fiel der gesamte un-modellierte Teilbaum weg, den der Tiefen-Passthrough sonst rettet. Die Untertags selbst bleiben **bewusst un-modelliert**: sie überleben als Passthrough (INV-PT), sobald ihr Elternknoten wieder geschrieben wird; nötig war nur der dritte Zustand am Elternknoten, nicht fünf neue Felder. Dasselbe gilt für `Repository.address`. **UI-Konsequenz:** ein leeres Adressfeld heißt nicht „kein ADDR" — war die Zeile schon vorher leer, bleibt sie; erst das Löschen eines VORHANDENEN Werts entfernt sie.
 
 ### 5.2 Datumsmodell
 

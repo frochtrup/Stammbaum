@@ -67,9 +67,12 @@ const L3_RATSCHE = 0;
  *  34 → 39 (2026-08-01): die Medien-Auflösung (ADR-v9-187/-188) hat §1.4 um zwei Bullets
  *  ergänzt (Klassifikation, Bilder außerhalb der Galerie) und den neuen §1.14
  *  Einstellungen bringt drei mit; die Backlog-Zeilen BL-256…BL-261 gab es vorher.
- *  39 → 40 (2026-08-01): der Erstnutzer-Rundgang steht jetzt als eigener [E]-Bullet in
- *  §1.1 (BL-213, ADR-v9-190) — vorher trug ihn nur die Backlog-Zeile. */
-const SE_BULLETS = 40;
+ *  39 -> 40 (2026-08-01): der Erstnutzer-Rundgang steht jetzt als eigener [E]-Bullet in
+ *  §1.1 (BL-213, ADR-v9-190) — vorher trug ihn nur die Backlog-Zeile.
+ *  40 -> 41 (2026-08-02): die Konfession ist ein Ereignis geworden und hat damit einen
+ *  eigenen [S]-Bullet in §2 (BL-289, ADR-v9-207); vorher steckte sie als Halbsatz im
+ *  Eingabekomfort-Bullet, der sie ausdrücklich NICHT als Ereignis führte. */
+const SE_BULLETS = 41;
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
