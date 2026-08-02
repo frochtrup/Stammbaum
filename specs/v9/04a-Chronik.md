@@ -616,5 +616,29 @@ Sechs Punkte (BL-135/109/65/56/61/58) in EINER Session, selbst gebaut (Dateien i
 *Entscheidungen: → [ADR-v9-211](04-Entscheidungslog.md#adr-v9-211) · [ADR-v9-213](04-Entscheidungslog.md#adr-v9-213)*
 
 - **Das Pflichtfeld „Berührte Prinzipien" wurde nachgetragen, nicht mitgeschrieben** (2026-08-03, auf Nutzer-Hinweis). Der Auslöser griff bei beiden eindeutig — ADR-v9-213 schafft einen Mechanismus ab, ADR-v9-211 rührt an INV-PT —, das Feld fehlte trotzdem. Die Antworten haben die Entscheidungen NICHT verändert (beide Gegenkräfte waren im Fließtext bereits abgewogen); geändert hat sich, dass sie jetzt **benannt** sind. Wäre eine Antwort anders ausgefallen, wäre das ein neuer ADR gewesen, kein Nachtrag.
-- **Der Befund dahinter ist größer als die zwei Einträge:** das Feld steht in **0 von 212** ADRs. Eingeführt wurde es am 2026-08-02 um 15:43 als Konsequenz aus [ADR-v9-198](04-Entscheidungslog.md#adr-v9-198) — seither sind 16 ADRs entstanden, keiner trägt es. Vier davon (210–213) habe ich selbst geschrieben, und zwar **per Hand direkt an die Datei**, ohne den `decision-log`-Skill je aufzurufen. Genau dieser Umgehungsweg ist im Skill für Schritt 3a schon einmal aufgefallen und dort mit „Gilt auch beim direkten Hand-Edit" plus einem mechanischen Prüfer (`check-adr-split.mjs`) geschlossen worden. Für 4a gibt es beides noch nicht.
+- **Der Befund dahinter ist größer als die zwei Einträge:** das Feld steht in **0 von 212** ADRs. Eingeführt wurde es am 2026-08-02 um 15:43 als Konsequenz aus [ADR-v9-198](04-Entscheidungslog.md#adr-v9-198) — seither sind **15** ADRs entstanden (199–213, per Commit-Zeit ermittelt; die zuerst genannte „16" war um eins daneben), keiner trägt es. Vier davon (210–213) habe ich selbst geschrieben, und zwar **per Hand direkt an die Datei**, ohne den `decision-log`-Skill je aufzurufen. Genau dieser Umgehungsweg ist im Skill für Schritt 3a schon einmal aufgefallen und dort mit „Gilt auch beim direkten Hand-Edit" plus einem mechanischen Prüfer (`check-adr-split.mjs`) geschlossen worden. Für 4a gibt es beides noch nicht.
 - **Und ein Fehler in meinem eigenen Vorschlag, vom Nutzer aufgedeckt:** in der Tagesbilanz hatte ich als Konsequenz einen Gate vorgeschlagen, der prüft, ob ein ADR ein Prinzip ZITIERT. Das ist die **Bestätigungs**-Form — und der Grundsatz, den der Skill seit dem 2026-08-02 trägt, verwirft sie ausdrücklich: gesucht ist nicht der stützende LP („der ist schnell gefunden"), sondern die **Gegenkraft**. Der Nutzer erinnerte an genau diesen Satz („nicht die Bestätigung sondern kein Widerspruch"). Ich hatte einen bestehenden, tags zuvor geschriebenen Grundsatz nicht gesucht und ihn dann in der falschen Richtung neu erfunden — das ist der CLAUDE.md-Bullet „vor jeder neuen Einschränkung erst prüfen, ob eine bereits getroffene Entscheidung die Frage strukturell schon beantwortet", ein weiteres Mal.
+
+
+## ADR-v9-199 bis 213 — Prüfung des Auslösers (Nachtrag 2026-08-03)
+
+*Auf Nutzer-Auftrag: greift der Auslöser aus `decision-log` Schritt 4a („ändert eine `INV-…` / schafft einen Mechanismus ab") bei den übrigen ADRs seit seiner Einführung?*
+
+Geprüft wurden alle 15 (199–213), gelesen wurden die Entscheidungs-Bullets — nicht nur die Tag-Vorkommen. **Ergebnis: 6 von 15 hätten das Feld tragen müssen.**
+
+| ADR | Auslöser | Begründung |
+|---|---|---|
+| 199 | nein | löscht eine Testdatei, aber der Mechanismus war schon von ADR-v9-197/198 abgeschafft. **Nennt LP-1/LP-5 ohnehin und MISST sie** — der Sache nach der einzige, der den Geist des Feldes schon erfüllt. |
+| 200 | **grenzwertig, nicht nachgetragen** | „ein Zeiger auf den eigenen Datensatz entfällt" ist ersatzlos, und die Folge ist real (verliert die Hypothese ihren letzten Bezug, ist sie nach INV-H3 kein Identitäts-Ausschluss mehr). Aber der Selbstbezug war nie ein GEBAUTER Mechanismus, sondern ein Merge-Artefakt; der ADR stellt INV-P2 wieder her, statt sie zu ändern. Eine Gegenkraft nachträglich hineinzuschreiben hieße, sie zu erfinden — deshalb hier benannt statt dort behauptet. |
+| 201, 204 | nein | erweitern die Reichweite eines Wächters bzw. verschieben eine bestehende Höhe. Nichts abgeschafft. |
+| 202, 205, 206 | nein | fügen eine Primitive/eine Zone/einen Ausweg HINZU. 203 prüft INV-VS und INV-UI-11 sogar ausdrücklich auf Unberührtheit — das ist die richtige Bewegung, nur ohne das Feld. |
+| 203 | nein | s. o. |
+| **207** | **ja** | schafft mit `Person.religion` ein Modellfeld ab und lässt vier Verlust-Klassen offen. Klarster Fall der ganzen Reihe. |
+| **208** | **ja** | schafft die Default-Unterdrückung im Writer ab; die INV-P1-Abwägung stand bereits im Text, nur nicht im Feld. |
+| 209 | nein | fügt `haltWert` hinzu, schafft nichts ab. |
+| **210, 212, 213** | **ja** | jeweils eine bedingungslose Emission abgeschafft — dieselbe Familie. |
+| **211** | **ja** | rührt an INV-PT (Bytes einer Passthrough-Zeile). |
+
+**Nachgetragen: 207, 208, 210, 211, 212, 213.** Inhaltlich stammt jede Antwort aus dem, was der jeweilige ADR schon sagt — keine Entscheidung hat sich dadurch geändert. Bei 210 war die erste Antwort zu flach („LP-1 stützt doch nur"); erst der zweite Anlauf fand die echte Gegenkraft (ein fremder Leser, der nur `GIVN`/`SURN` auswertet). Genau davor warnt die Regel mit ihrem Satz „findet sich keine, ist die Frage vermutlich zu flach gestellt" — und sie hatte recht.
+
+**Was die Prüfung über den Auslöser selbst ergibt (→ [BL-308](05-Backlog.md)):** er trifft **6 von 15**, ist also weder selten noch rauschend — aber die Zuordnung war in 3 Fällen (200, 208, 212) ein Urteil, kein Merkmal. Ein Skript kann „schafft einen Mechanismus ab" nicht entscheiden. Das stützt den Fertig-Zustand von BL-308: gesucht ist eine STRUKTURELLE Prüfung auf das VORHANDENSEIN des Feldes bei einem konservativ gewählten Auslöser — plus die Bereitschaft, die Zeile mit einem Negativbefund zu schließen, statt einen Auslöser zu erfinden, der 6 von 15 Fällen nur zufällig trifft.
