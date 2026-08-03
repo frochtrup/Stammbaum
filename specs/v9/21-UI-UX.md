@@ -319,7 +319,7 @@ Ziel: verschlankte, konsistente Oberfläche (verstärkt INV-UI-5) mit EINEM kano
 
 **Aufräumen ist Teil des Mechanismus.** Svelte entfernt beim Unmount nur Knoten, die es selbst im Baum hält; ein portalierter Knoten muss von der Action entfernt werden — sonst bleibt bei jedem Öffnen ein unsichtbarer, klickfangender Backdrop über dem Dokument liegen.
 
-**Konsequenz für Tests:** eine auf den Render-Container eingegrenzte Abfrage (`within(container)`) erreicht Overlay-Inhalte nicht mehr — das ist kein Fehler, sondern der Nachweis, dass der Vorfahre verlassen wurde. Overlay-Inhalte über `screen`/`document` abfragen. **Test:** `tests/ui/overlay-portal.test.ts` (Platzierungs-Rechnung, Umhängen, Aufräumen — und dass die Komponenten den Mechanismus auch benutzen).
+**Konsequenz für Tests:** eine auf den Render-Container eingegrenzte Abfrage (`within(container)`) erreicht Overlay-Inhalte nicht mehr — das ist kein Fehler, sondern der Nachweis, dass der Vorfahre verlassen wurde. Overlay-Inhalte über `screen`/`document` abfragen. **Test:** `tests/ui/overlay-portal.test.ts` (Platzierungs-Rechnung, Umhängen, Aufräumen — und dass die Komponenten den Mechanismus auch benutzen). Für die Modal-Backdrops **rechnet** er seine Population aus dem Markup (jede Datei, die einen `.stb-modal-backdrop` rendert), statt Namen zu führen: die vier, die diese Aufzählung zuletzt verletzt haben, waren nicht falsch gebaut, sondern nacheinander dazugekommen (BL-278).
 
 ---
 
