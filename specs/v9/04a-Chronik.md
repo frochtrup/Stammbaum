@@ -642,3 +642,14 @@ Geprüft wurden alle 15 (199–213), gelesen wurden die Entscheidungs-Bullets �
 **Nachgetragen: 207, 208, 210, 211, 212, 213.** Inhaltlich stammt jede Antwort aus dem, was der jeweilige ADR schon sagt — keine Entscheidung hat sich dadurch geändert. Bei 210 war die erste Antwort zu flach („LP-1 stützt doch nur"); erst der zweite Anlauf fand die echte Gegenkraft (ein fremder Leser, der nur `GIVN`/`SURN` auswertet). Genau davor warnt die Regel mit ihrem Satz „findet sich keine, ist die Frage vermutlich zu flach gestellt" — und sie hatte recht.
 
 **Was die Prüfung über den Auslöser selbst ergibt (→ [BL-308](05-Backlog.md)):** er trifft **6 von 15**, ist also weder selten noch rauschend — aber die Zuordnung war in 3 Fällen (200, 208, 212) ein Urteil, kein Merkmal. Ein Skript kann „schafft einen Mechanismus ab" nicht entscheiden. Das stützt den Fertig-Zustand von BL-308: gesucht ist eine STRUKTURELLE Prüfung auf das VORHANDENSEIN des Feldes bei einem konservativ gewählten Auslöser — plus die Bereitschaft, die Zeile mit einem Negativbefund zu schließen, statt einen Auslöser zu erfinden, der 6 von 15 Fällen nur zufällig trifft.
+
+<a id="adr-v9-216"></a>
+## ADR-v9-216 — Chronik & Lehren
+
+**Nachtrag 2026-08-03 — die Extraktion wurde nachgemessen und verworfen.** Der ADR nennt als Antwort auf den F2-Befund „eine geteilte Zusicherung — das ist Extraktion, nicht Rückbau". Auf Nachfrage des Nutzers („was wäre das Ergebnis der Extraktion") ausgezählt, bevor daraus eine Backlog-Zeile wurde:
+
+- **Als Deduplizierung: 13 entbehrliche Kopien, 83 von 56 674 Testzeilen — 0,15 %.** Fall-Zahl, Mutations-Zahlen und Laufzeit ändern sich um null; es sind dieselben Zusicherungen in anderer Schreibweise.
+- **Der Teil mit Substanz war ein anderer als vermutet:** `roundtrip-helpers.ts` teilt bereits `calcNetDelta` (6 Nutzer) — das ist die SCHWÄCHERE Fassung (eine Zahl). Die schärfere, die Zeilen-Multimengen vergleicht und die fehlende/erfundene Zeile benennt, liegt fünfmal von Hand vor, mit vier verschiedenen Ausnahmelisten (`media-shared-inline` und `name-subtags`: `_UID`; `line-length-conc`: + `ABBR`; `wire-loss-classes`: + eine wörtliche `NAME`-Zeile; `wire-loss-rest`: + `_DONE`). Jede Ausnahme ist ein handgepflegtes Loch in LP-1, und niemand sieht sie zusammen.
+- **Die Idempotenz-Zusicherung trägt das Argument NICHT:** die 21 Fassungen wurden durchgesehen und sind sachlich identisch und korrekt — dort gäbe es nur Schreibweise zu vereinheitlichen.
+
+**Nutzer-Entscheidung: „das scheint es nicht wert zu sein."** Keine Backlog-Zeile. Der Satz im ADR bleibt stehen, wie er gefallen ist; diese Messung ist seine Einschränkung. Wer ihn später wieder aufgreift, findet hier die Zahl statt der Vermutung — und den einzigen Teil, der eine Prüfung überhaupt bestanden hätte (die fünf Bilanz-Ausnahmelisten, nicht die 83 Zeilen).
