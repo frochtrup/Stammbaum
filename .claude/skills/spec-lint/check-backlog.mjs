@@ -77,12 +77,17 @@ const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
 /** L11-Ratsche: Zähl-Aussagen über den Realbestand OHNE Dateinamen, Ist-Stand 2026-08-01.
- *  Diese 14 Zeilen sind die Abarbeitungsliste (der Prüflauf nennt sie namentlich) — sie
+ *  Diese Zeilen sind die Abarbeitungsliste (der Prüflauf nennt sie namentlich) — sie
  *  bekommen ihren Dateinamen, sobald die jeweilige Zahl ohnehin einmal nachgemessen wird.
  *  Rückwirkend einen Namen danebenzuschreiben, ohne die Zahl zu prüfen, wäre erfundene
  *  Evidenz und genau der Fehler aus [ADR-v9-178](specs/v9/04-Entscheidungslog.md) — dort
- *  STAND ein Dateiname, nur der falsche. NIE ANHEBEN. */
-const L11_RATSCHE = 14;
+ *  STAND ein Dateiname, nur der falsche. NIE ANHEBEN.
+ *
+ *  14 → 7 am 2026-08-04: die Backlog-Konsolidierung hat die erledigten Zeilen auf ihren
+ *  Titel plus ADR-Zeiger gekürzt, und die halbe Zähl-Prosa saß in genau diesen Zellen.
+ *  Die verbliebenen 7 stehen alle in 04. Die Ratsche wird nachgezogen, weil eine, die 14
+ *  zulässt, wo nur 7 sind, sieben neue erlaubt statt sie zu verhindern. */
+const L11_RATSCHE = 7;
 
 /** Wortfeld „Aussage über den echten Datenbestand". Bewusst diese sechs Formen und nicht
  *  das nackte Wort „Bestand": das trägt in 04/05 überwiegend andere Bedeutungen
