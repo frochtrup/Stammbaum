@@ -61,6 +61,17 @@
 
 > Es wird der **Datei-Text** gecacht (Arbeitskopie), nicht das In-Memory-Modell (Sets/Referenzen nicht trivial serialisierbar; die Datei ist ohnehin die Wahrheit). Vollständiges Dateihandling: [14](14-Dateihandling.md).
 
+**Ein Schreibweg für alle Object-Stores.** Jeder Schreibzugriff auf IndexedDB läuft über
+`idbPut` (`services/idb-schema.ts`) — dieselbe Begründung wie beim EINEN Schema-Öffner
+daneben, eine Ebene tiefer. Der Grund ist nicht die eingesparte Boilerplate, sondern der
+Fehlerfall: lehnt der Browser einen Wert als nicht klonbar ab, nennt seine Meldung weder
+den Speicher noch das Feld, und jede Fassung lautet anders (WebKit: „The object can not be
+cloned.", Chromium: „… could not be cloned."). `idbPut` misst im Fehlerfall nach, welcher
+Pfad das Klonen verhindert, und stellt Speichername und Feld in die Meldung. Dasselbe gilt
+für den Kern-Chokepoint jeder Bearbeitung (`core/model/draft.ts::thaw`). Ein Store, der
+selbst `objectStore(…).put(…)` aufruft, ist ein Testfehler, kein Stilfehler
+([32](32-Testframework.md), `tests/services/idb-schema.test.ts`).
+
 ### 2.2 App-privater Zustand (geräteweit in IndexedDB, reist NICHT mit der Genealogie-Datei)
 
 Klassen mit unterschiedlichem Sync-Bedarf, getrennt entlang **zwei** Fragen: reist es sinnvoll auf ein anderes **Gerät** (A gegen B), und gilt es auch in einem anderen **Bestand** (B1 gegen B2)? Beide müssen beantwortet sein, bevor etwas mitreist — die zweite fehlte zunächst ([ADR-v9-173](04-Entscheidungslog.md#adr-v9-173)):

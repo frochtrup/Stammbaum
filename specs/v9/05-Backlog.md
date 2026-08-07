@@ -156,7 +156,7 @@ der Tabelle.
 |---|---|---|
 | Ⓔ Orte, Karte & Geo | BL-230 (Ebenen-Wahl hängt sich in das gebaute B1-Bündel ein) | Karten-Insel, `MapLensView` |
 | Ⓖ Navigation & Shell | BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation, `swipe-nav.ts`, Modal-Schalen |
-| Ⓗ Import / Export / Dedup | BL-207 · BL-313 (Randfall der Autoritätsregel, unabhängig) · BL-166 (vertagt) | Write-Back, Import-Vergleich, Dedup, Export-Pipe |
+| Ⓗ Import / Export / Dedup | BL-315 (offener Defekt, wartet auf die eigene Diagnose) · BL-207 · BL-313 (Randfall der Autoritätsregel, unabhängig) · BL-166 (vertagt) | Write-Back, Import-Vergleich, Dedup, Export-Pipe |
 | Ⓘ Orte-Editor (Standalone) | BL-227 (vertagt) | CI-Workflow |
 | Ⓙ Bearbeitung & Formulare | BL-233 · BL-234 (unabhängig) · BL-232 (Persistenz hängt sich in das B1-Bündel ein) | `ui/views/person`, `ui/views/place`, `ui/views/hof`, `ui/views/media`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage), `tests/ui/touch-target.test.ts` |
 | Ⓜ Skalierung & Reaktionszeit | BL-312 (erst das Budget, dann die Optimierung) · BL-311 (dieselbe Reihenfolge, eine Ebene höher) | `tests/perf/`, `ui/shell/pagination.ts`, `ui/shell/app-state.svelte.ts`, die sechs `*List.svelte` |
@@ -175,7 +175,13 @@ Was der Neubau aller Records an `Unsere Familie 2026.ged` jetzt noch ADDIERT, si
 5 `_TSTAT`, die BL-302 bewusst schreibt — ein eigener Tag der App ist keine Treuefrage.
 Welle 1a ist deshalb entfallen; die folgenden Wellen behalten ihre Bezeichnung.
 
-1. **Welle 4 — die Befunde der Stand-Bewertung (2026-08-04):** BL-312 · BL-311 · BL-313
+1. **Welle 5 — der offene Safari-Defekt:** BL-315. Steht vorn, weil es die einzige
+   `basis`-Zeile ist und ein Nutzer sie heute trifft; sie lässt sich aber erst schließen,
+   wenn der nächste Fehlversuch die Stelle benennt — die Diagnose dafür ist gebaut
+   ([ADR-v9-227](04-Entscheidungslog.md#adr-v9-227)). Bis dahin ist die Zeile eingeplant,
+   nicht bearbeitbar: eine Ursache, die in Chromium nicht auftritt, lässt sich hier nicht
+   erraten, nur messen.
+2. **Welle 4 — die Befunde der Stand-Bewertung (2026-08-04):** BL-312 · BL-311 · BL-313
    (Letzteres nachgetragen am 2026-08-05 aus ADR-v9-225 — heute folgenlos, deshalb hinten).
    Die `basis`-Zeile dieser Welle ist am selben Tag gebaut und steht deshalb nicht mehr
    hier. Die beiden verbliebenen sind bewusst als **Messung vor Optimierung** geschnitten
@@ -185,11 +191,11 @@ Welle 1a ist deshalb entfallen; die folgenden Wellen behalten ihre Bezeichnung.
    **Herkunft:** eigene Verifikation am laufenden Programm mit `Unsere Familie 2026.ged`,
    nicht aus dem Spec geschlossen; keiner der Punkte wurde von einem Gate gefangen, weil
    kein Gate an dieser Stelle misst.
-2. **Welle 2 — eigenständige Kür:** BL-230 (die Ebenen-Wahl hängt sich in das gebaute
+3. **Welle 2 — eigenständige Kür:** BL-230 (die Ebenen-Wahl hängt sich in das gebaute
    B1-Bündel ein) · BL-207 · BL-233 · BL-234. **Drei Zeilen dieser Welle sind am 2026-08-03 gebaut**
    ([ADR-v9-217](04-Entscheidungslog.md#adr-v9-217)…[ADR-v9-219](04-Entscheidungslog.md#adr-v9-219): Löschen abgesetzt,
    Tastatur in den Formularen, Rücknahme der Sofort-Anlage) und stehen deshalb nicht mehr hier.
-3. **Welle 3 — Infra & Hygiene (opportunistisch):**
+4. **Welle 3 — Infra & Hygiene (opportunistisch):**
    BL-232 (Templates hängen sich in das gebaute B1-Bündel ein).
 
 **Bewusst vertagt — nicht einplanen, bis sich der Anlass ändert:** BL-166 (Orte/Höfe-Dedup,
@@ -245,6 +251,7 @@ Rückzugsliste (Regel 4), nicht auf `gebaut`. **BL-280 ist die Fortsetzung derse
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-315 | — | defekt | basis | **Der Ortsdatei-Import scheitert in Safari mit `DataCloneError`** — Nutzer-Meldung 2026-08-07 (Safari, macOS 26): „Import fehlgeschlagen: The object can not be cloned." Die Ursache ist **nicht gefunden**; [ADR-v9-227](04-Entscheidungslog.md#adr-v9-227) hält fest, was gemessen und ausgeschlossen wurde: in Chromium läuft derselbe Pfad mit denselben echten Dateien sauber durch (alle drei IndexedDB-Schreibvorgänge instrumentiert, alle klonbar, keine Proxies — `db` ist `$state.raw`); das FS-Access-Handle scheidet aus, weil Safari `showOpenFilePicker` in keiner Version kennt. Es kippt also in einer Engine, die hier nicht automatisierbar ist. **Die Diagnose ist gebaut** ([BL-316](#erledigte-punkte)) — der nächste Fehlversuch nennt Speicher, Pfad und Feld selbst, statt nur die Browser-Meldung durchzureichen. **Fertig-Zustand:** der benannte Bestandteil ist entweder klonbar gemacht oder gar nicht erst im Schreibwert; ein Test hält die Stelle | [30 §2.1](30-NFR-und-Persistenz.md), [14 §6](14-Dateihandling.md), [ADR-v9-227](04-Entscheidungslog.md#adr-v9-227) | `test:tests/services/places-import-safari.test.ts` | offen |
 | BL-313 | — | hygiene | kür | **`type` allein macht einen Ort zur Autorität über seinen Dateitext** — offener Punkt aus [ADR-v9-225](04-Entscheidungslog.md#adr-v9-225). Seit [ADR-v9-224](04-Entscheidungslog.md#adr-v9-224) entscheidet „kuratiert“ (§9.1: geprüft ODER angereichert) darüber, ob `event.place` der Projektion folgt. `PlaceObject.type` zählt als Anreicherungs-Facette, beeinflusst die Projektion aber NIE — er steht in keinem `PLAC`. Ein Ort, dessen einzige Angabe der Typ ist, ist damit formal Autorität, ohne etwas zu wissen. **Gemessen an `orte.v9.json` (2026-08-05): 2 Objekte** („Alt Kosser“ Town, „Lindhorststr. 12“ Farm) — beide schreiben denselben Text, den sie ohnehin hätten, der Fehler ist heute also folgenlos. **Erst handeln, wenn es mehr werden:** die saubere Lösung wäre ein zweites, engeres Prädikat nur für die Autoritätsfrage (Namensvarianten, datierte/mehrfache Zugehörigkeit, Prüf-Marker) — und genau das führte die Doppeldeutigkeit wieder ein, die ADR-v9-224 abgeschafft hat. **Fertig-Zustand:** entweder ein Wächter, der die Zahl misst und bei Überschreiten anschlägt, oder die bewusste Entscheidung für zwei Prädikate mit ADR | [11 §3](11-Orte-Hoefe-Identitaet.md), [11 §9.1](11-Orte-Hoefe-Identitaet.md) | `test:tests/core/autoritaet-nur-typ.test.ts` | offen |
 | BL-311 | — | feature | kür | **Die sechs Haupt-Entitätslisten rendern flach — weder virtuelles Scrollen noch Paginierung** ([30 §1](30-NFR-und-Persistenz.md) NFR-1: „Virtuelles Scrollen für lange Listen (O(log n)-Positionsbestimmung)"). Gemessen am 2026-08-04 im Browser mit `Unsere Familie 2026.ged` (3180 Personen): 3175 Zeilen in einem `{#each}`, 22 613 DOM-Knoten, 64 MB Heap. **Kein Widerspruch zu [21 §10 b](21-UI-UX.md)** („Keine Virtualisierung, Einfachheit vor Performance-Feinschliff") — jene Entscheidung gilt den DETAIL-Unterlisten bei „realistischer Referenzzahl"; `pageSlice` ist dort auch verdrahtet (`EventsByType`, `PersonDedupView`, `ImportCompareView`). Die Haupt-Listen haben WEDER das eine NOCH das andere, und für sie lautet die Zusicherung 20 000 Personen, nicht „realistische Referenzzahl". Das ist der Geschwister-Stellen-Fall aus `CLAUDE.md`: die Regel wurde an drei Orten gebaut und an sechs nicht. **Fertig-Zustand als Wächter, nicht als Lösung** (Regel 6, Vorbild [BL-47](#erledigte-punkte)): ein Skalen-Test rendert die Personenliste bei 20 000 Personen und hält Knotenzahl plus erste Darstellung gegen ein Budget — ob die Lösung Windowing, `pageSlice` oder etwas Drittes wird, entscheidet der Bau, nicht diese Zeile. **Klasse `kür`, nicht `basis`:** beim heutigen Bestand ist nichts spürbar; die Zeile bewacht die Zusicherung, nicht den Alltag | [30 §1](30-NFR-und-Persistenz.md), [21 §10](21-UI-UX.md), [32 §2](32-Testframework.md) | `test:tests/perf/list-render.perf.test.ts` | offen |
 | BL-312 | — | hygiene | kür | **Das Perf-Gate misst den Bearbeitungs-Pfad nicht** ([30 §1](30-NFR-und-Persistenz.md) NFR-1, [14 §3.1](14-Dateihandling.md)). Die Budget-Tabelle kennt Parse, Orts-Auflösung und ersten Sort — also das LADEN. Jedes mutierende Kommando löst daneben ein stilles Auto-Save aus, und das serialisiert das GANZE Dokument synchron auf dem Hauptthread (`persistWorkingCopyIfLoaded` → `serializeInternal`, `ui/shell/app-state.svelte.ts`; die IndexedDB-Schreibung danach ist fire-and-forget, die Serialisierung nicht). Gemessen am 2026-08-04: **27–33 ms** bei `Unsere Familie 2026.ged` (3180 Personen, 2,2 MiB) und **72–80 ms** bei der 20k-Skalen-Fixture (8,5 MiB); die Fixture ist pro Person leichter als der Realbestand, ein realdichtes 20k-Dokument liegt also darüber. Auf dem primären Zielgerät (iPad, [30 §1](30-NFR-und-Persistenz.md) NFR-2) ist das ein Vielfaches davon — je Bearbeitung. **Kein Defekt-Nachweis, und deshalb hygiene:** es gibt heute kein Budget, gegen das die Zahl verstoßen könnte — genau das ist die Lücke. **Fertig-Zustand:** eine Zeile „Auto-Save nach einer Bearbeitung" in der NFR-1-Budget-Tabelle plus ein Messpunkt in der Skalen-Ebene, der sie hält (Vorbild [BL-48](#erledigte-punkte): das Gate zuerst, die Optimierung erst, wenn es rot wird). Erst wenn es rot wird, stellt sich die Folgefrage — Worker, Debounce oder inkrementelle Serialisierung — und die gehört dann in eine eigene Zeile | [30 §1](30-NFR-und-Persistenz.md), [14 §3.1](14-Dateihandling.md), [32 §2](32-Testframework.md) | `test:tests/perf/autosave.perf.test.ts` | offen |
@@ -264,6 +271,8 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-316 | — | hygiene | basis | **Ein Schreibweg für alle IndexedDB-Stores (`idbPut`) mit Klon-Diagnose im Fehlerfall** → [ADR-v9-227](04-Entscheidungslog.md#adr-v9-227) | [30 §2.1](30-NFR-und-Persistenz.md), [ADR-v9-227](04-Entscheidungslog.md#adr-v9-227) | `sym:idbPut` | gebaut |
+| BL-314 | — | feature | basis | **Befüllte Ereignisse waren nicht löschbar — der Umweg „im Editor leeren" scheitert an `lati`/`long`/`media`** → [ADR-v9-226](04-Entscheidungslog.md#adr-v9-226) | [20 §2](20-Funktionen.md), [ADR-v9-226](04-Entscheidungslog.md#adr-v9-226) | `txt:function handleDelete@ui/shell/EventLine.svelte` | gebaut |
 | BL-310 | — | defekt | basis | **Die Karte-Lens benennt ihre Leere nicht** → [ADR-v9-221](04-Entscheidungslog.md#adr-v9-221) | [20 §1.9](20-Funktionen.md), [21 §5](21-UI-UX.md) | `sym:mapEmptyReason` | gebaut |
 | BL-309 | — | defekt | basis | **Die mobile Detailansicht ließ sich nicht scrollen** → [ADR-v9-220](04-Entscheidungslog.md#adr-v9-220) | [21 §2](21-UI-UX.md), [ADR-v9-220](04-Entscheidungslog.md#adr-v9-220) | `txt:entity-tab__swipe@ui/views/EntityTab.svelte` | gebaut |
 | BL-278 | — | hygiene | kür | **Modal-Backdrops portalieren** → [ADR-v9-99](04-Entscheidungslog.md#adr-v9-99) | [21 §6k](21-UI-UX.md) | `txt:use:portal@ui/shell/EventEditModal.svelte` | gebaut |
