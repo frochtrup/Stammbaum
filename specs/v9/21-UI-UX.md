@@ -120,6 +120,8 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 
 ## 6. Design-System
 
+**Texteingaben tragen keine Autokorrektur** ([ADR-v9-231](04-Entscheidungslog.md#adr-v9-231)). Genealogische Eingaben bestehen aus Wörtern, die kein Wörterbuch kennt — eine selbsttätige Ersetzung ist dort ein Datenfehler, der plausibel aussieht. Die Werte stehen an EINER Stelle (`ui/shell/plain-input.ts`) und werden je Feld als Spread gesetzt, weil `autocorrect` **nicht** von einem Vorfahren erbt (nur innerhalb eines `<form>`): strukturierte Einzeiler (Namen, Orte, Adressen, Signaturen, Suchfelder) auch ohne Rechtschreibprüfung, mehrzeilige Prosafelder (Notizen, Begründungen) mit ihr. `autocapitalize` bleibt unberührt. Ein Wächter hält jede Fundstelle fest ([32 TST-12](32-Testframework.md)-Muster).
+
 Warme Dunkelbraun-Palette (Pergament-Ästhetik) + Gold als Primärfarbe. Dark/Light umschaltbar. (Bleibt aus v8 — konsistent, kein Umbau.)
 
 ```
