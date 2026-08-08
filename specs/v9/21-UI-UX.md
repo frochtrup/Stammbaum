@@ -114,7 +114,7 @@ Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle
 
 **PWA-Lifecycle:** ein zentraler Ort für `visibilitychange` (>60s → dirty), `pageshow` (BFCache-Guard), `pagehide` (Flush). Ein Dirty-Bit steuert Re-Render. Der zentrale Invalidierungspfad ([02 §3.2](02-Zielarchitektur-v9.md)) ersetzt das v8-`markChanged(); renderTab()`-Muster.
 
-**Detail-Zustand:** per-Entität-Scroll-State (Desktop: Wechsel Person→Familie→Person stellt Scroll-Position wieder her).
+**Detail-Zustand:** per-Entität-Scroll-State (Desktop: Wechsel Person→Familie→Person stellt Scroll-Position wieder her). **Auf einer virtuell gescrollten Index-Fläche ist diese Position ein Offset, kein DOM-Zustand** ([ADR-v9-235](04-Entscheidungslog.md#adr-v9-235)): der Browser kann sie nicht selbst halten, weil die Zeilen beim Verlassen gar nicht existieren — sie gehört deshalb in den Halter der Fläche (Heimat ③ oben) und wird beim Aufbau wiederhergestellt.
 
 ---
 

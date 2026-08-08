@@ -8,7 +8,11 @@
 
 **NFR-1 Performance & Skalierung:**
 - Parsing großer Dateien im Hintergrund (Worker), Fortschrittsanzeige.
-- Virtuelles Scrollen für lange Listen (O(log n)-Positionsbestimmung).
+- **Virtuelles Scrollen für die Index-Flächen** — welche das sind, entscheidet das Kriterium in [21 §10b](21-UI-UX.md) ([ADR-v9-234](04-Entscheidungslog.md#adr-v9-234)); die FORM steht in [ADR-v9-235](04-Entscheidungslog.md#adr-v9-235):
+  - **Ein Fenster je Gruppe**, wo mehrere Listen einen Scroll-Container teilen (Suchtreffer) — die Gruppenstruktur bleibt erhalten, statt für ein gemeinsames Fenster flachgelegt zu werden.
+  - **Positionsbestimmung O(1) über EINE zur Laufzeit gemessene Zeilenhöhe je Gruppe** (zwei Höhen, wo Kopfzeilen zwischen den Zeilen stehen). Das ersetzt die frühere Vorgabe „O(log n)-Positionsbestimmung" (Höhen-Präfixsumme + binäre Suche): sie löst ungleiche Zeilenhöhen, die diese Flächen nicht haben. Eine dritte Höhe wäre der Anlass, sie nachzuholen.
+  - **Platzhalter tragen die nicht gerenderten Zeilen** — `Platzhalter + Fenster = Gesamthöhe` an JEDER Scroll-Position, damit Scrollbalken und Position wahr bleiben.
+  - **Ohne gemessene Höhe rendert die Fläche alles**, nicht nichts (kurz teuer statt still leer).
 - Sortier-Cache mit gezielter Invalidierung.
 - **v9-Zusicherung: 20.000 Personen** (ADR-v9-89). Budgets bei dieser Größe:
 

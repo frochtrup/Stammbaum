@@ -43,6 +43,21 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
 
 - **TST-23 — Eine Zusicherung gehört auf eine eingecheckte Fixture; der Realbestand ist Finder, nicht Zeuge.** Der Realbestand zeigt, was VORKOMMT, nie was vorkommen KANN — und er fehlt in CI. Eine Zahl aus ihm (`ADDR −82`) ist eine Aussage über einen Export, kein Kontrakt. Richtig ist die Arbeitsteilung: am Realbestand die KLASSE finden („strukturierte Adressen haben im Modell keine Felder"), sie dann auf einer kleinen, eingecheckten Fixture festnageln, die das Konstrukt trägt. Wo die Zusicherung eine Menge betrifft, wird sie gegen die Tabelle geprüft, die die Regel selbst benutzt, statt gegen eine Stichprobe: `tests/roundtrip/passthrough-matrix.test.ts` legt unter JEDEN Eintrag von `MODELLIERTE_KINDER` ein un-modelliertes Kind und bewacht zugleich, dass die Fixture die Tabelle vollständig abdeckt. Das ist die konstruktive Kehrseite von TST-20.
 
+- **TST-24 — Eine Test-Naht, die eine MESSUNG stellt, beweist die Messung nicht: layout-abhängige Mechanismen brauchen einen Browser-Beleg.**
+  happy-dom hat kein Layout (`clientHeight`/`offsetHeight`/`getBoundingClientRect` liefern 0).
+  Ein Mechanismus, dessen Kern eine Layout-Messung ist — virtuelles Scrollen, sticky-Verhalten,
+  Größen-abhängige Umbrüche — lässt sich im Emulator nur mit gestellten Werten prüfen. Genau
+  diese Naht überbrückt dann den Teil, der schiefgehen kann. **Belegt (2026-08-09, BL-311,
+  [ADR-v9-235](04-Entscheidungslog.md#adr-v9-235)):** vier Komponententests waren grün, während
+  die Suchfläche im Browser ab ~150.000px Scroll-Position leere Bereiche zeigte — die Tests
+  setzten die Gruppen-Positionen, deren Ermittlung defekt war. **Folge:** Die Naht bleibt
+  (ohne sie wäre die Arithmetik ungeprüft), sie ist aber als solche zu benennen, und der
+  Fertig-Zustand einer solchen Zeile verlangt zusätzlich einen Browser-Lauf, der die Kette in
+  EINEM Zug geht (Daten laden → Eingabe → scrollen → hinsehen). Zwei Fallen dabei, beide real
+  aufgetreten: ein wiederverwendeter Dev-Server liefert HMR-Leichen, und eine Seite ohne
+  Reload zeigt alten Code — die verräterische Spur ist ein Messwert, der über ALLE Eingaben
+  hinweg identisch bleibt.
+
 ---
 
 ## 2. Test-Ebenen
