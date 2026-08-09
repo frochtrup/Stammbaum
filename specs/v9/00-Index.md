@@ -21,8 +21,8 @@ Dann je nach Arbeitsschwerpunkt.
 | **02** | [Zielarchitektur v9](02-Zielarchitektur-v9.md) | Meta | Schichtenmodell (Ansatz C), Kern-↔-Schale-Grenze, imperative Diagramm-Inseln, Framework-Wahl, Verzeichnis-Layout |
 | **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
 | **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen — **nur die bindende Entscheidung** (Pflege via Skill `decision-log`) |
-| **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — wächst mit dem Bau, wird nur bei Bedarf gelesen |
-| **05** | [Backlog](05-Backlog.md) | Meta | **Die Status-Wahrheit des Hauptprogramms:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L8). Specs 10–32 treffen KEINE Status-Aussage mehr |
+| **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — dazu die Vorgeschichte der Basis-Specs (Befunde hinter den Invarianten, Lehren hinter den Test-Kontrakten). Wächst mit dem Bau, wird nur bei Bedarf gelesen |
+| **05** | [Backlog](05-Backlog.md) | Meta | **Die Status-Wahrheit des Hauptprogramms:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L14). Specs 10–32 treffen KEINE Status-Aussage mehr |
 | **05a** | [Backlog: Orte-Editor](05a-Backlog-Orte-Editor.md) | Meta | Status-Wahrheit des Standalone-Orte-Editors (ID-Raum `OE-n`). Zuständig für Belege unter `app-orte/`/`tests/orte/`; Regeln, Typen und Lint-Tabelle stehen in 05 |
 | **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |

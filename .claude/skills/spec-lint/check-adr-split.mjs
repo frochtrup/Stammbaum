@@ -50,10 +50,35 @@ const LOG = path.join(ROOT, 'specs/v9/04-Entscheidungslog.md');
 // Reservierte Nachtrag-Leitwörter — EXPLIZIT gelistet (kein `…korrektur`-Sammelmuster, s. Kopf).
 // Längere vor kürzeren Varianten, damit die Alternation den ganzen Begriff greift.
 const KW = '(?:Nachträge|Nachtrag|Bau-Stand|Bau-Status|Statuskorrektur|Zahl-Korrektur|Korrektur)';
+
+// Zweite Wortliste, 2026-08-09 ergänzt: der VERIFIKATIONSBEFUND. Schritt 3a nennt ihn seit
+// jeher gleichrangig neben Bau-Status und Testzahlen („Jeder Nachtrag — Bau-Status, Commit,
+// Testzahlen, Verifikationsbefund, Lehre — gehört nach 04a"), erzwungen war davon aber nur
+// die Nachtrag-Form. Folge, am Bestand gemessen: **20 solcher Bullets** standen in `04`,
+// darunter fünf allein in ADR-207/208 („Rot-Proben", „Eingecheckte Fixture", „Verifikation").
+// Sie sind der Grund, warum 04 sich in zwei Wochen von 537 auf 1.078 KB verdoppelt hat, ohne
+// dass ein einziger Prüfer anschlug — dieselbe Lücke wie beim Backlog vor L14: die Regel stand
+// da, der Zwang fehlte.
+//
+// BEWUSST NUR DAS LEIT-LABEL, und bewusst eng: gesucht ist das Bullet, das einen BERICHT
+// anführt („- **Verifikation:** frischer Server, …"), nicht die Entscheidungsklausel, die
+// ihre Messung nennt — die verlangt ADR-v9-237 ausdrücklich, und sie steht mitten im Satz.
+// Deshalb kein `Verifiziert…`-Sammelmuster: „**Verifizierter Spec-Gap gegenüber dem
+// v8-Oracle**" (ADR-36) ist Kontext-Substanz und wäre falsch gemeldet worden — geprüft, nicht
+// vermutet. Aus demselben Grund fehlen „Befund"/„Messung"/„Bilanz": sie führen in 04 überwiegend
+// Analyse an, die die Entscheidung TRÄGT.
+const KW_VERIF =
+  '(?:Verifikation|Verifikations-Befund|Rot-Probe|Rot-Proben|Negativ geprüft|Negativ verifiziert|' +
+  'Browser-Beleg|Browser-Verifikation|Eingecheckte Fixture|Am laufenden System belegt|' +
+  'Beim Bau dazugelernt|Beim Bau aufgefallen)';
 // Anführer = Überschrift ODER Listenpunkt/Blockzitat mit fettem Leit-Label.
 // Ein optionaler Qualifizierer (ein Wort) darf vor dem Leitwort stehen: „Weiterer Nachtrag".
 const HEAD = new RegExp('^#{1,6}\\s+(?:[\\wäöüÄÖÜ]+\\s+)?' + KW + '\\b', 'i');
 const BULLET = new RegExp('^\\s*(?:[-*]|\\d+\\.|>)\\s*\\*\\*\\s*(?:[\\wäöüÄÖÜ]+\\s+)?' + KW + '\\b', 'i');
+// Verifikations-Bullets: OHNE den freien Qualifizierer davor — „Zweite Verifikation" wäre noch
+// ein Bericht, „Die Verifikation, die die Entscheidung trägt" schon eine Klausel. Das Leitwort
+// steht am Anfang des Labels oder gar nicht.
+const BULLET_VERIF = new RegExp('^\\s*(?:[-*]|\\d+\\.|>)\\s*\\*\\*\\s*' + KW_VERIF + '\\b', 'i');
 
 /** Findet alle Nachtrag-Anführer im gegebenen Text. Liefert [{line, text}]. */
 export function findAddendumLeads(text) {
@@ -64,7 +89,7 @@ export function findAddendumLeads(text) {
     const l = lines[i];
     if (/^\s*```/.test(l)) { inFence = !inFence; continue; }
     if (inFence) continue;
-    if (HEAD.test(l) || BULLET.test(l)) hits.push({ line: i + 1, text: l.trim() });
+    if (HEAD.test(l) || BULLET.test(l) || BULLET_VERIF.test(l)) hits.push({ line: i + 1, text: l.trim() });
   }
   return hits;
 }
@@ -99,6 +124,16 @@ function selftest() {
     ['echte Korrektur schlägt an', '- **Korrektur:** die Zahl war falsch …', true],
     ['Refs', '- **Refs:** [20 §1.4](20-Funktionen.md), ADR-v9-30.', false],
     ['Chronik-Verweiszeile', '- **Chronik & Lehren:** → [04a-Chronik.md#adr-v9-30](04a-Chronik.md#adr-v9-30) (3 Nachtrag/Nachträge)', false],
+    // Zweite Wortliste (Verifikationsbefund, 2026-08-09)
+    ['Verifikations-Bullet', '- **Verifikation:** frischer Server, Realbestand, 44 Positionen …', true],
+    ['Rot-Proben', '- **Rot-Proben, jede negativ geprüft:** Zusicherung entfernt → rot …', true],
+    ['Eingecheckte Fixture', '- **Eingecheckte Fixture statt Realbestand-Zusicherung:** …', true],
+    ['Am laufenden System belegt', '- **Am laufenden System belegt:** Filter setzen → zurück → sichtbar …', true],
+    ['Browser-Beleg', '- **Browser-Beleg** (frischer Server): 44 Scroll-Positionen …', true],
+    ['Beim Bau dazugelernt', '- **Beim Bau dazugelernt — `ADDR` wird ein Container:** …', true],
+    ['Verifizierter Spec-Gap ist Substanz', '- **Verifizierter Spec-Gap gegenüber dem v8-Oracle:** `sourceRef` fehlte …', false],
+    ['Messung IN einer Klausel', '- **Entscheidung 2b:** die Klassenhöhe ist die Schätzung — Verifikation am Realbestand ergab 34,1px …', false],
+    ['Befund bleibt Substanz', '- **Befund, am laufenden System gemessen:** der Picker war die dritte Stelle …', false],
   ];
   let bad = 0;
   for (const [name, zeile, soll] of faelle) {

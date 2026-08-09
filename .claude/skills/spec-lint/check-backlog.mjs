@@ -141,6 +141,49 @@ const L12_ZITAT = /[„“‚'"]\**$/;
 
 const L11_ZAHL = /\d+\s?×|\d+ von \d+|\d[\d.,]*\s+[A-Za-zÄÖÜäöü`]/;
 
+/** L14: Prosa-Budget einer `gebaut`-Zeile (Regel 1: „Titel + ADR-Zeiger, sonst nichts").
+ *
+ *  WARUM ES DIESE REGEL GIBT. Am 2026-08-04 wurden 236 erledigte Zeilen auf Titel +
+ *  ADR-Zeiger gekürzt (290 → 132 KB); die Begründung stand danach als Prosa in Regel 1.
+ *  Fünf Tage später waren 20 KB zurück: sechs neue erledigte Zeilen à ~800–1.400 Zeichen
+ *  und BL-311, das seinen Bau-Verlauf mitschrieb, bis es **12.879 Zeichen** maß — länger
+ *  als jede Zeile vor der Kürzung, und alle mit ADR-Zeiger, also durchweg als zweite,
+ *  kürzere Fassung eines Textes, der schon woanders steht. Aufgefallen ist es dem Nutzer
+ *  beim Lesen, nicht dem Prüflauf. Das ist die Lehre aus TST-12 im Kleinen: eine
+ *  Konvention, die nur dokumentiert ist, hängt am Wieder-Erinnern jeder Sitzung.
+ *
+ *  GEMESSEN WIRD PROSA, NICHT ZEILENLÄNGE: Markdown-Links (Spec-Zeiger, ADR-Zeiger) und
+ *  die Trennzeichen dazwischen zählen nicht mit — sonst bestrafte die Regel eine Zeile
+ *  dafür, dass sie ordentlich verweist. Übrig bleibt genau das, was Regel 1 verbietet.
+ *
+ *  ZWEI HÄRTEN, und die Grenze zwischen ihnen ist die Ausnahme aus Regel 1 selbst:
+ *  - Zeile MIT ADR-Zeiger → **Fehler** ab `L14_BUDGET`. Ihre Begründung hat eine bessere
+ *    Adresse; die Prosa ist Doppelfassung. Nach der Konsolidierung 2026-08-09 gibt es
+ *    davon null — die Ratsche ist also 0 und darf nie steigen.
+ *  - Zeile OHNE ADR-Zeiger → Warnung, mit Ratsche auf dem Ist-Stand. Sie ist die EINZIGE
+ *    Fassung ihrer Begründung; kürzen ohne vorherigen Umzug nach 04a wäre löschen (Regel
+ *    1, Ausnahme). Die Ratsche hält nur fest, dass keine NEUE dazukommt. Nebenbefund beim
+ *    Bau der Regel: Regel 1 nannte „zwölf" solche Zeilen — es sind 36.
+ *
+ *  Das Budget ist gemessen, nicht gegriffen: 270 der 308 erledigten Zeilen lagen nach der
+ *  Konsolidierung bei ≤ 200 Zeichen Prosa (181 davon unter 50), die Verteilung ist an
+ *  dieser Stelle bimodal. 200 trennt die konsolidierte Form von der Wiederkehr. */
+const L14_BUDGET = 200;
+
+/** Ist-Stand 2026-08-09 nach der zweiten Konsolidierung: 31 Zeilen in `05`, 5 in `05a`.
+ *  Fällt, sobald eine davon ihren Inhalt nach [04a](specs/v9/04a-Chronik.md) umzieht.
+ *  NIE ANHEBEN. */
+const L14_RATSCHE = 36;
+
+/** Die Prosa einer Punkt-Spalte: alles außer Markdown-Links und ihren Trennzeichen. */
+export function prosaLaenge(punkt) {
+  return punkt
+    .replace(/\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/[→·]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim().length;
+}
+
 // --- Dateizugriff -----------------------------------------------------------
 
 const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
@@ -481,6 +524,30 @@ function pruefe() {
           `gehört unter „${soll}" (Status-Wort ändern reicht nicht, die Zeile muss umziehen)`,
       );
   }
+
+  // L14: Prosa-Budget der erledigten Zeilen (Regel 1). Begründung: s. `L14_BUDGET`.
+  const l14Ohne = [];
+  for (const z of zeilen) {
+    if (z.status !== 'gebaut') continue;
+    const prosa = prosaLaenge(z.punkt);
+    if (prosa <= L14_BUDGET) continue;
+    if (/#adr-v9-\d+/.test(z.punkt))
+      fehler.push(
+        `L14 ${z.id}: ${prosa} Zeichen Prosa in einer "gebaut"-Zeile MIT ADR-Zeiger ` +
+          `(Budget ${L14_BUDGET}) — Regel 1: Titel + ADR-Zeiger, sonst nichts; der Text steht im ADR`,
+      );
+    else l14Ohne.push(`${z.id}:${prosa}`);
+  }
+  if (l14Ohne.length > L14_RATSCHE)
+    fehler.push(
+      `L14 ${l14Ohne.length} erledigte Zeilen ohne ADR-Zeiger über ${L14_BUDGET} Zeichen ` +
+        `(Ratsche ${L14_RATSCHE}) — neue Prosa in einer erledigten Zeile: ${l14Ohne.join(' · ')}`,
+    );
+  else if (l14Ohne.length)
+    warnungen.push(
+      `L14 ${l14Ohne.length} erledigte Zeilen ohne ADR-Zeiger über ${L14_BUDGET} Zeichen ` +
+        `(Ratsche ${L14_RATSCHE}, Abarbeitungsliste — Inhalt nach 04a, dann kürzen): ${l14Ohne.join(' · ')}`,
+    );
 
   // L3-Ratsche: Status-Wörter in den Specs 10–32.
   let l3 = 0;
