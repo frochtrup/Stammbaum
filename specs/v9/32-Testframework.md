@@ -86,6 +86,26 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
   lässt, belegt nicht, dass das Bewachte entbehrlich ist (bei der monotonen Höhenübernahme
   genau so eingetreten — sie bleibt stehen, ihre Rolle ist nur nicht mehr die tragende).
 
+- **TST-26 — Ein Test über eine Umgebungs-Eigenschaft prüft zuerst, dass die Umgebung sie
+  hat; und ein Wächter über eine Menge von Kommandos vergleicht seine Liste gegen die
+  echte.**
+  Zwei Formen desselben stillen Ausfalls, beide an derselben Zusicherung aufgetreten
+  (Proxys gehören nicht in die Datenbank, [ADR-v9-241](04-Entscheidungslog.md#adr-v9-241)).
+  **(a) Die Umgebung.** `structuredClone` lehnt einen Svelte-Proxy im Browser und unter
+  happy-dom ab, unter **node** klont es ihn klaglos (hier nachgemessen; dieselbe Falle
+  bereits in [ADR-v9-117](04-Entscheidungslog.md#adr-v9-117) belegt). Eine Datei ohne
+  `@vitest-environment happy-dom` hätte dieselben Zusicherungen enthalten und wäre
+  vollständig grün gewesen, ohne irgendetwas zu prüfen. Deshalb steht als erste Zusicherung
+  eine **Kontrollprobe**, die die Umgebungs-Eigenschaft selbst feststellt — sie wird rot,
+  wenn der Docblock verschwindet, statt dass die Fälle darunter still bedeutungslos werden.
+  **(b) Die Vollständigkeit.** Ein Wächter, der EINE Zusicherung für N gleichartige
+  Kommandos einlöst, ist so viel wert wie seine Liste. Statt sie zu pflegen, wird sie
+  gegen die Wirklichkeit gehalten (`Object.keys(appState).filter(k => k.startsWith('save'))`):
+  ein neu hinzugefügtes Kommando ohne Testfall macht den Wächter rot. Das ist die
+  Testebenen-Entsprechung zum Prüfstein aus
+  [ADR-v9-239](04-Entscheidungslog.md#adr-v9-239) — für eine Verfahrensregel den
+  mechanischen Boden bauen, statt sie aufzuschreiben.
+
 ---
 
 ## 2. Test-Ebenen

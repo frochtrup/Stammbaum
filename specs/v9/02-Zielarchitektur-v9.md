@@ -89,6 +89,8 @@ Jedes Kommando: (1) validiert, (2) mutiert das Modell atomar, (3) invalidiert be
 
 Der Domänenkern hat **keine** Reaktivität (keine Signals, keine Stores). Er ist reine Funktionen + Datenstrukturen. Reaktivität ist ein reines UI-Schale-Konzept: die Schale hält reaktive Referenzen auf Kern-Aggregate und rechnet abgeleitete Ansichten (`derived`) daraus. Ein Kommando → Schale re-liest die Chokepoints → reaktive Views aktualisieren sich.
 
+Das gilt in **beide** Richtungen. Ein Modell, das ein Formular gebaut hat, tritt als **gewöhnliche Daten** in ein Kommando ein — ein reaktiver Proxy darf die Grenze nicht passieren, weil der Kern seine Entitäten kopiert (`draft.ts::thaw` per `structuredClone`) und ein Proxy dabei scheitert. Die Umwandlung geschieht an genau **einer** Stelle: `ui/shell/app-state.svelte.ts` entkoppelt jedes eingehende Modell (`roh()` = `$state.snapshot`), nicht jedes Formular für sich. Der Kern selbst kann das nicht tun — `$state.snapshot` wäre dort ein Framework-Import (INV-ARCH-1). Siehe [ADR-v9-241](04-Entscheidungslog.md#adr-v9-241); der Sonderfall „Ziel ist eine Plattform-API (IndexedDB/`postMessage`)" steht in [ADR-v9-117](04-Entscheidungslog.md#adr-v9-117).
+
 ---
 
 ## 4. Build-Freiheit des Kerns (kritisch)
