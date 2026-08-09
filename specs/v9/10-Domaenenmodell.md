@@ -97,6 +97,15 @@ ChildLink {
 }
 ```
 
+**Die Kindschaft ist eine eigene Aussage mit eigenen Belegen** ([ADR-v9-244](04-Entscheidungslog.md#adr-v9-244)).
+`ChildLink.citations` belegt, dass DIESE Person Kind DIESER Eltern ist — nicht die Ehe der
+Eltern (`Family.citations`) und nicht ein Ereignis der Person. Beide Formate führen sie am
+Beziehungsknoten selbst: GEDCOM als `SOUR` unter `FAMC`, GRAMPS als `<citationref>` unter
+`<childref>`; ebenso das Kind-Verhältnis (`PEDI` bzw. `frel`/`mrel`). Da GRAMPS die
+Beziehung ausschließlich FAM-seitig führt, wird sie beim Lesen in die INDI-Seite gemergt
+(s. §3) — **samt Belegen und Verhältnis**, sonst hätte die Aussage auf diesem Weg keinen
+Träger im Modell.
+
 **PersonName (extraNames):** `{ nameRaw, given, surname, prefix, suffix, type, citations: Citation[] }`
 
 Jede weitere `1 NAME`-Zeile wird als `PersonName` gelesen und geschrieben — beidseitig in beiden Formaten (GEDCOM: die zweite+ NAME-Zeile; GRAMPS: das zweite+ `<name>`, dort mit `alt`-Kennung); die Tag↔Typ-Zuordnung liegt einmal in der Enum-Tabelle, unbekannte Werte reisen verlustfrei durch. **Bewusst ohne die Untertag-Ergänzung aus dem NAME-Wert**, die der Hauptname macht ([ADR-v9-112](04-Entscheidungslog.md#adr-v9-112)): die ist eine Anzeige-Bequemlichkeit und erzeugte hier `GIVN`/`SURN`-Zeilen, die in der Quelle nicht standen — eine Ergänzung ohne Anlass ([ADR-v9-197](04-Entscheidungslog.md#adr-v9-197)). Eine Namensform reist so, wie sie kam. Der `TYPE` des HAUPTnamens hat seinen eigenen Platz (`Person.nameType`); ohne ihn wäre er modelliert-aber-heimatlos und ginge beim Neubau verloren ([ADR-v9-207](04-Entscheidungslog.md#adr-v9-207)).
