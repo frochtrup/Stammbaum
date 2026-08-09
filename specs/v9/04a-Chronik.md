@@ -1006,3 +1006,27 @@ Am 2026-08-09 aus [32-Testframework.md](32-Testframework.md) ausgelagert. Jeder 
 **Nachgezogen auf Nutzer-Rückfrage (Punkt 1).** Die erste Fassung ließ den ⚠-Hinweis nach dem Eintragen eines Stichtags STEHEN: die Zeitleisten-Zeile fragte weiter nach dem ganzen Jahr, in dem beide Perioden gelten. Fachlich richtig, praktisch nutzlos — man trug einen Stichtag ein und sah nichts. Die Zeile fragt jetzt nach EINEM Tag (dem Stichtag, wo einer erfasst ist, sonst dem 1. Januar) und beschriftet sich entsprechend. **Am laufenden System belegt** (`Testdateien/orte-2.json`, Ort „Dolgen (Hann.)"): `30 SEP 1810`/`1 OCT 1810` eingetragen → aus „ab 1810 ⚠" wird „ab 1. Oktober 1810" ohne Hinweis, Warnungen 6 → 5, Zeilen 24 → 23 (die zweite Grenzzeile fällt der vorhandenen Dedup zu Recht zum Opfer: die Kette ändert sich dort nicht). Danach zurückgesetzt.
 
 **Beim Bau aufgefallen, nicht behoben:** trägt ein Ort denselben Elternort in ZWEI Perioden (Dolgen: „Amt Ilten" 1512–1810 und 1814–1859), sind die `aria-label` der Zeitraum-Felder doppelt — `getByLabelText` trifft dann die erste Zeile. Für die Bedienung folgenlos (die Felder stehen sichtbar untereinander), für Screenreader und Test-Automatik nicht. Keine Backlog-Zeile, weil es keine Regression von BL-324 ist: die Labels waren vorher genauso doppelt.
+
+<a id="bl-324-nachtrag"></a>
+## BL-324 — Nachtrag aus der Bewertung
+
+**Anlass: Nutzer-Auftrag „bewerte die gebaute Lösung gegen Spec und bisherige Lösungskonzepte" (2026-08-09).** Die Bewertung war nicht folgenlos — sie hat zwei Fehler gefunden, die kein Test und kein Lint gemeldet hatten, weil beide in der EINGABE saßen und alle Tests die Kern-Funktionen fütterten.
+
+**Der konzeptionelle Fehler: es gab die Lösung schon.** Für „Nutzer gibt ein Datum ein" führt das Projekt seit Langem `gedcom-date.ts` mit `normalizeMonth` (deutsche Monatsnamen voll und abgekürzt) und ein strukturiertes Feld-Trio im Ereignis-Formular. Ich habe das nicht wiederverwendet, sondern ein Freitextfeld gebaut, das selbst rät — genau die „pro View neu erfundene" Form, die INV-UI-4 verbietet. Die Folgen waren am laufenden System messbar:
+
+| Eingabe | vorher | jetzt |
+|---|---|---|
+| `1. Oktober 1810` | still zu `1810` entwertet (Nutzer sieht ein Datum, gespeichert wird ein Jahr) | `1 OCT 1810` |
+| `1.10.1810` | still zu `1810` | `1 OCT 1810` |
+| `xyz` | Periode still GELEERT | abgelehnt, Feld springt sichtbar zurück |
+| `32. Oktober 1810` | — | kein Stichtag, Jahr bleibt (beim Test aufgefallen) |
+
+**Der Folgeschaden, der die Sache ernst macht.** Eine geleerte Zuordnung wird „nach unten offen" und springt damit in der Sortierung nach VORN (Spec 11 §1). Die unmittelbar folgende Korrektur trifft dann eine andere Zeile — bei der eigenen Sonde so passiert und mit einer **invertierten Periode** geendet (`von: 1 OCT 1810`, `bis: 30 SEP 1810`), die niemand beanstandete. Aus „ein Feld nimmt Unsinn an" wurde in zwei Schritten stille Datenbeschädigung.
+
+**Warum `Lesung` ein Ergebnisobjekt ist und nicht `Grenze | null`.** `null` ist als `GrenzEingabe` gültig und heißt dort „offen" — ein Aufrufer, der die Prüfung vergisst und den Rückgabewert durchreicht, hätte damit gelöscht statt abgelehnt. Das Ergebnisobjekt lässt sich nicht versehentlich weiterreichen; der Compiler verlangt das Auspacken. Er hat prompt alle sieben Aufrufstellen gemeldet.
+
+**Die zweite Nacharbeit: die Kongruenz-Zusage bekommt ihren Boden.** [11 §1](11-Orte-Hoefe-Identitaet.md) verlangt, dass `from`/`to` aus `fromDate`/`toDate` ableitbar sind. Erzwungen war das nur im Helfer `datiert()` (die vier `with…`-Kommandos); die GOV-Anreicherung setzt beide Hälften an FÜNF Stellen direkt — kongruent, aber durch Zufall derselben Parse-Quelle, nicht durch einen Mechanismus. `tests/core/grenzen-kongruenz.test.ts` prüft jetzt beide Schreibpfade, den Realbestand, und hat eine Gegenprobe (eine absichtlich auseinandergelaufene Grenze MUSS gemeldet werden) — ohne die wüsste niemand, ob der Wächter überhaupt etwas findet.
+
+**Verifikation.** `npm test` 4181 grün, `npm run lint` grün. Browser (frischer Server, `Testdateien/orte-2.json`): `xyz` → Feld springt auf `1810` zurück, `1. Oktober 1810` → `1 OCT 1810`; danach zurückgesetzt, Ausgangsstand (24 Zeilen, 6 ⚠) wiederhergestellt.
+
+**Die Lehre, die über diesen Fall hinausgeht.** Alle Tests waren grün, während die Eingabe Daten verlor — weil jeder Test die Kern-Funktion mit bereits kanonischen Werten fütterte. Ein Formularfeld ist eine eigene Fehlerquelle, und zwar die einzige, die der Nutzer bedient. Nächstes Mal gehört zur eigenen Verifikation eines neuen Eingabefeldes eine **Fehleingabe**, nicht nur der gute Fall — dieselbe Klasse wie TST-16 (bewusst ein unangereichertes Objekt wählen), nur eine Ebene tiefer.
