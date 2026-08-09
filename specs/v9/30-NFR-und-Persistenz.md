@@ -8,9 +8,10 @@
 
 **NFR-1 Performance & Skalierung:**
 - Parsing großer Dateien im Hintergrund (Worker), Fortschrittsanzeige.
-- **Virtuelles Scrollen für die Index-Flächen** — welche das sind, entscheidet das Kriterium in [21 §10b](21-UI-UX.md) ([ADR-v9-234](04-Entscheidungslog.md#adr-v9-234)); die FORM steht in [ADR-v9-235](04-Entscheidungslog.md#adr-v9-235):
+- **Virtuelles Scrollen für die Index-Flächen** — welche das sind, entscheidet das Kriterium in [21 §10b](21-UI-UX.md) ([ADR-v9-234](04-Entscheidungslog.md#adr-v9-234)); die FORM steht in [ADR-v9-235](04-Entscheidungslog.md#adr-v9-235) und [ADR-v9-236](04-Entscheidungslog.md#adr-v9-236):
   - **Ein Fenster je Gruppe**, wo mehrere Listen einen Scroll-Container teilen (Suchtreffer) — die Gruppenstruktur bleibt erhalten, statt für ein gemeinsames Fenster flachgelegt zu werden.
-  - **Positionsbestimmung O(1) über EINE zur Laufzeit gemessene Zeilenhöhe je Gruppe** (zwei Höhen, wo Kopfzeilen zwischen den Zeilen stehen). Das ersetzt die frühere Vorgabe „O(log n)-Positionsbestimmung" (Höhen-Präfixsumme + binäre Suche): sie löst ungleiche Zeilenhöhen, die diese Flächen nicht haben. Eine dritte Höhe wäre der Anlass, sie nachzuholen.
+  - **Positionsbestimmung O(log n) über eine Höhen-Präfixsumme mit binärer Suche.** Die Höhe einer Zeile folgt aus ihrer **Höhenklasse**, und die steht in den DATEN (hat die Zeile eine Zweitzeile? ist sie eine Zwischenüberschrift?); gemessen wird nur EINE Musterhöhe je Klasse. Eine einzige Höhe je Gruppe genügt nicht: dieselbe Trefferliste enthält 34,1px- und 51,1px-Zeilen.
+  - **Eine Messung, die den Zustand speist, aus dem sie folgt, wird monoton übernommen** (nur größere Werte). Sonst kreist sie, und der Effektbaum bricht ab — die Fläche friert dann ein, statt falsch zu rechnen.
   - **Platzhalter tragen die nicht gerenderten Zeilen** — `Platzhalter + Fenster = Gesamthöhe` an JEDER Scroll-Position, damit Scrollbalken und Position wahr bleiben.
   - **Ohne gemessene Höhe rendert die Fläche alles**, nicht nichts (kurz teuer statt still leer).
 - Sortier-Cache mit gezielter Invalidierung.

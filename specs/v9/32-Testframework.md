@@ -57,6 +57,15 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
   aufgetreten: ein wiederverwendeter Dev-Server liefert HMR-Leichen, und eine Seite ohne
   Reload zeigt alten Code — die verräterische Spur ist ein Messwert, der über ALLE Eingaben
   hinweg identisch bleibt.
+  **Zweite Lesart derselben Spur, teurer erkauft ([ADR-v9-236](04-Entscheidungslog.md#adr-v9-236)):**
+  identische Messwerte heißen nicht nur „alter Code", sondern auch „das Framework hat
+  aufgegeben". Ein abgebrochener Svelte-Effektbaum (`effect_update_depth_exceeded`, ausgelöst
+  von einer Messung, die den Zustand speist, aus dem sie folgt) liefert für JEDE Eingabe
+  dieselbe Zahl, weil die Seite nicht mehr rendert. Beide Lesarten trennt EIN Handgriff, und
+  er kommt vor jeder weiteren Hypothese: erst die **Konsole** lesen, dann einen
+  **Bau-Marker** in die Fläche legen (eine Zahl im DOM, die sich bei jeder Änderung ändert)
+  und im Browser prüfen, dass er mitzieht — HMR *und* Reload. Was danach gemessen wird, ist
+  belegbar; was davor gemessen wurde, ist es nicht.
 
 ---
 
