@@ -67,6 +67,25 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
   und im Browser prüfen, dass er mitzieht — HMR *und* Reload. Was danach gemessen wird, ist
   belegbar; was davor gemessen wurde, ist es nicht.
 
+- **TST-25 — Untestbar ist das LAYOUT, nicht die RÜCKKOPPLUNG: einen messenden Mechanismus
+  headless fahren, indem man die Höhen stellt statt das Layout.**
+  Die konstruktive Kehrseite von TST-24. Dort steht, dass eine Naht, die einen Messwert
+  STELLT, die Messung nicht beweist — richtig, und daraus wurde drei Anläufe lang der
+  Fehlschluss „also ist hier nur der Browser zuständig". Er ist es für die Frage „misst der
+  Browser, was wir annehmen". Er ist es NICHT für die Frage, an der der Mechanismus zweimal
+  gestorben ist: ob der KREIS aus Fenster berechnen → Zeilen darin messen → Fenster neu
+  berechnen bei ungleichen Höhen zur Ruhe kommt. Dieser Kreis braucht kein Layout, nur
+  Höhen — und die dürfen aus einer Tabelle kommen, solange sie so ungleich sind wie die
+  echten (`tests/ui/window-convergence.test.ts` fährt ihn mit den im Browser gemessenen
+  Verteilungen und prüft an jeder Scroll-Position Konvergenz, Deckung und die
+  Platzhalter-Zusicherung). **Die Arbeitsteilung, die daraus folgt:** der Test beweist, warum
+  es nicht fehlschlagen KANN; der Browser beweist, dass es TUT. Belegt am Gegenbeispiel
+  (2026-08-09): die Scroll-Wiederherstellung war im Browser grün und im Test rot — sie
+  überschrieb ihr eigenes Ziel, nur nicht in dem Moment, in dem hingesehen wurde.
+  **Und die Umkehrung gilt nicht:** ein Wächter, dessen Rot-Fall sich nicht konstruieren
+  lässt, belegt nicht, dass das Bewachte entbehrlich ist (bei der monotonen Höhenübernahme
+  genau so eingetreten — sie bleibt stehen, ihre Rolle ist nur nicht mehr die tragende).
+
 ---
 
 ## 2. Test-Ebenen

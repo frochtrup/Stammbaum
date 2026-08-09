@@ -653,3 +653,20 @@ Geprüft wurden alle 15 (199–213), gelesen wurden die Entscheidungs-Bullets �
 - **Die Idempotenz-Zusicherung trägt das Argument NICHT:** die 21 Fassungen wurden durchgesehen und sind sachlich identisch und korrekt — dort gäbe es nur Schreibweise zu vereinheitlichen.
 
 **Nutzer-Entscheidung: „das scheint es nicht wert zu sein."** Keine Backlog-Zeile. Der Satz im ADR bleibt stehen, wie er gefallen ist; diese Messung ist seine Einschränkung. Wer ihn später wieder aufgreift, findet hier die Zahl statt der Vermutung — und den einzigen Teil, der eine Prüfung überhaupt bestanden hätte (die fünf Bilanz-Ausnahmelisten, nicht die 83 Zeilen).
+
+<a id="adr-v9-238"></a>
+## ADR-v9-238
+
+**Beim Bau des Wächters für den gemessenen Pfad (2026-08-09, [32 TST-25](32-Testframework.md), `tests/ui/window-convergence.test.ts`): die MONOTONIE ist nicht mehr die tragende Zusicherung.**
+
+Der Wächter fährt den echten Kreis — Fenster berechnen → Zeilen darin messen → neu berechnen — mit den im Browser gemessenen Höhenverteilungen (Liste 34,1/51,1/66,6; Raster 82,4…220,4; dazu ein Ausreißer-Fall mit einer 300px-Zeile unter 799 flachen).
+
+Beim Rot-Testen zeigte sich zweierlei:
+
+- **Rot wird er sofort ohne die Höhen JE ZEILE** — das Modell liegt dann bei 240.000 statt 41.129px im Ausreißer-Fall (eine hohe Zeile vergiftet ihre Klasse für 800 Zeilen), bei der Liste 79.920 statt 56.854. Das ist genau der Defekt, den [ADR-v9-236](04-Entscheidungslog.md#adr-v9-236) behoben hat, und er ist damit bewacht.
+- **Grün bleibt er, wenn man die monotone Übernahme der Klassen-Schätzung entfernt.** Seit jede gerenderte Zeile ihre eigene Höhe trägt, terminiert der Kreis über die Zeilen-Stabilität und die Bündelung je Frame; die Klassen-Schätzung betrifft nur noch nie gerendertes Material. Auch ein gezielt gebauter Fall (Sprünge zwischen zwei weit entfernten Stellen mit großer ungerenderter Mitte) blieb grün.
+
+Die monotone Übernahme bleibt trotzdem stehen. Sie kostet nichts — und „mein Test hat es nicht gefangen" ist kein Beleg für Entbehrlichkeit: genau dieser Umkehrschluss hat den Browser-Spike dieser Zeile entwertet, der die Mess-Rückkopplung „ausgeschlossen" hatte, weil seine Zeilen zufällig gleich hoch waren.
+
+**Was der Wächter NICHT abdeckt** (und was deshalb beim Browser-Lauf bleibt): ob der Browser die Höhen so misst, wie die Tabelle annimmt. Der Test beweist, warum es nicht fehlschlagen kann; der Browser beweist, dass es tut.
+
