@@ -122,6 +122,14 @@ jobs:
 
 Das Skalen-Gate braucht dabei zwingend den **eigenen Aufruf** `npm run test:perf`: die Haupt-Vitest-Config schließt `tests/perf/` aus ([32 §2](32-Testframework.md)), ein Pfad-Argument gegen sie fände null Tests und meldete grün — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon einmal hatte.
 
+### 4a. Pre-Push-Hook — dieselben Schritte, lokal, vor dem Push
+
+`.githooks/pre-push` ruft `tools/run-ci-steps.mjs`; installiert wird er über `core.hooksPath`, gesetzt vom `prepare`-Script (läuft bei jedem `npm install`, kein Handgriff nach dem Klonen). Notausgang: `git push --no-verify`. Laufzeit gemessen: **47 s** für alle acht Schritte.
+
+**Die Schrittliste steht NICHT im Hook, sie wird aus `ci.yml` gelesen.** Eine zweite Liste daneben wäre genau die Drift, gegen die der Hook gebaut ist: wer einen CI-Schritt ergänzt, müsste daran denken, ihn auch im Hook einzutragen — und daran nicht zu denken ist der Ausgangsfehler. Findet das Skript keine `- run: npm …`-Zeile, bricht es mit Exit 2 ab, statt grün durchzulaufen ([ADR-v9-200](04-Entscheidungslog.md#adr-v9-200): ein Gate, das nichts prüft, ist schlimmer als keins). Beide Rot-Fälle sind verifiziert, nicht behauptet.
+
+**Warum ein Hook und nicht noch ein Merksatz** ([ADR-v9-239](04-Entscheidungslog.md#adr-v9-239)): „vor dem Push alle CI-Schritte laufen lassen" stand als Notiz in der Projekt-Memory und hat nicht gehalten — es liefen drei von acht, `check:csp` brach, CI wurde rot. In derselben Sitzung war die Bilanz eindeutig: vier mechanisch durchgesetzte Regeln hielten, vier Merksätze nicht. Verfahrensregeln gehören in ein Gate; Merksätze bleiben den Urteilsfragen vorbehalten, die kein Skript entscheiden kann.
+
 ---
 
 ## 5. Vite / GitHub-Pages-Konfiguration
