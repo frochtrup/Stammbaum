@@ -13,7 +13,8 @@
   - **Positionsbestimmung O(log n) über eine Höhen-Präfixsumme mit binärer Suche.** Die Höhe einer Zeile folgt aus ihrer **Höhenklasse**, und die steht in den DATEN (hat die Zeile eine Zweitzeile? ist sie eine Zwischenüberschrift?); gemessen wird nur EINE Musterhöhe je Klasse. Eine einzige Höhe je Gruppe genügt nicht: dieselbe Trefferliste enthält 34,1px- und 51,1px-Zeilen.
   - **Eine Messung, die den Zustand speist, aus dem sie folgt, wird monoton übernommen** (nur größere Werte). Sonst kreist sie, und der Effektbaum bricht ab — die Fläche friert dann ein, statt falsch zu rechnen.
   - **Platzhalter tragen die nicht gerenderten Zeilen** — `Platzhalter + Fenster = Gesamthöhe` an JEDER Scroll-Position, damit Scrollbalken und Position wahr bleiben.
-  - **Ohne gemessene Höhe rendert die Fläche alles**, nicht nichts (kurz teuer statt still leer).
+  - **Ohne gemessene Höhe rendert die Fläche ein Anfangsfenster** — nicht nichts (das sähe aus wie Datenverlust) und nicht alles (das wäre im ersten Takt genau die Knoten-Spitze, gegen die es das Fenster gibt).
+  - **Die Höhe einer Zeile ist gemessen, sobald sie einmal im Fenster stand**; die Klassenhöhe ist nur die Schätzung für alles Ungerenderte. Sonst legt eine einzige umgebrochene Zeile ihre Höhe unter jede andere ihrer Klasse.
 - Sortier-Cache mit gezielter Invalidierung.
 - **v9-Zusicherung: 20.000 Personen** (ADR-v9-89). Budgets bei dieser Größe:
 
