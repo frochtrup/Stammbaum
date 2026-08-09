@@ -15,6 +15,9 @@
   - **Platzhalter tragen die nicht gerenderten Zeilen** — `Platzhalter + Fenster = Gesamthöhe` an JEDER Scroll-Position, damit Scrollbalken und Position wahr bleiben.
   - **Ohne gemessene Höhe rendert die Fläche ein Anfangsfenster** — nicht nichts (das sähe aus wie Datenverlust) und nicht alles (das wäre im ersten Takt genau die Knoten-Spitze, gegen die es das Fenster gibt).
   - **Die Höhe einer Zeile ist gemessen, sobald sie einmal im Fenster stand**; die Klassenhöhe ist nur die Schätzung für alles Ungerenderte. Sonst legt eine einzige umgebrochene Zeile ihre Höhe unter jede andere ihrer Klasse.
+  - **Eine Gruppe außerhalb des Sichtbereichs rendert gar nichts** — sonst kostet jede Gruppe mindestens ihr Overscan-Fenster, und eine nach Buchstaben gruppierte Liste zahlt das 27-fach.
+  - **Die Höhenklasse folgt aus den DATEN, nicht aus dem Layout** — bei einer Liste „hat die Zeile eine Zweitzeile?", bei einem Kachelraster „enthält die Reihe eine Miniatur?". Eine Klasse, deren Schätzung weit neben der Wahrheit liegt, löst beim Scrollen eine Korrektur-Kettenreaktion aus.
+  - **Gewacht wird ein absolutes Knoten-Budget je Fläche, unabhängig von der Zeilenzahl** (`tests/perf/list-render.perf.test.ts`) — eine Kennzahl „je Zeile" misst eine Fläche, die mit ihren Daten wächst, und genau das soll es nicht mehr geben.
 - Sortier-Cache mit gezielter Invalidierung.
 - **v9-Zusicherung: 20.000 Personen** (ADR-v9-89). Budgets bei dieser Größe:
 
