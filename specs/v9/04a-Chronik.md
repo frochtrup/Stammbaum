@@ -670,3 +670,16 @@ Die monotone Übernahme bleibt trotzdem stehen. Sie kostet nichts — und „mei
 
 **Was der Wächter NICHT abdeckt** (und was deshalb beim Browser-Lauf bleibt): ob der Browser die Höhen so misst, wie die Tabelle annimmt. Der Test beweist, warum es nicht fehlschlagen kann; der Browser beweist, dass es tut.
 
+<a id="adr-v9-239"></a>
+## ADR-v9-239
+
+**Zweite Anwendung des Prüfsteins am selben Tag (2026-08-09): die Pipe-Falle ist jetzt ein Gate.**
+
+[ADR-v9-199](04-Entscheidungslog.md#adr-v9-199) hält fest, dass `cmd | grep x; echo "EXIT=$?"` den Status von `grep` meldet und ein Fehlschlag damit als grün durchgeht. Die Regel dagegen stand als Prosa — und ist in EINER Sitzung dreimal wieder aufgetreten, zweimal davon, während dieselbe Sitzung die Regel zitierte.
+
+Nach dem Prüfstein aus ADR-v9-239 („gibt es eine mechanische Untergrenze? Wenn ja, IST die Regel der Bau des Gates") ist daraus ein `PreToolUse`-Hook geworden: `~/.claude/hooks/pipe-guard.mjs`, verdrahtet über `.claude/settings.local.json`. Er lehnt ein Bash-Kommando ab, das eine echte Pipe UND `$?` enthält, ohne `pipefail` zu setzen, und nennt die zwei sicheren Formen.
+
+**Sechs Fälle vorab geprüft, dann im Betrieb ausgelöst:** die Falle wird blockiert; `set -o pipefail; …`, `||`-Ketten mit `$?`, Pipes ohne `$?` und die Datei-Form laufen durch.
+
+**Warum das hier steht und nicht in einem Spec-Kapitel:** das Gate liegt außerhalb des Repos, in der Agenten-Umgebung. Es sichert nicht das Produkt, sondern die Art, wie an ihm gearbeitet wird — dieselbe Klasse wie der Pre-Push-Hook, nur eine Ebene weiter außen.
+
