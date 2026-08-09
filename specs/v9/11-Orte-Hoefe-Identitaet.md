@@ -63,6 +63,8 @@ HofObject {
 
 `fromDate`/`toDate` sind **app-privat**: sie leben in `orte.json` und erreichen weder GEDCOM noch GRAMPS (der Write-Back schreibt zu `pname`/`placeref` ohnehin keine Datumskinder und vergleicht über die Jahre — LP-1 bleibt unberührt).
 
+**Ein kuratierter Stichtag wird ausgeschrieben, nicht nur gespeichert.** Jede Leseansicht einer datierten Angabe (Namensvarianten, Hof-Adressvarianten, Zugehörigkeits-Zeitachse) zeigt ihn als volles Datum — „ab 1. Oktober 1700" statt „ab 1700" —, formatiert über dieselbe Funktion wie die eigenen Ereigniszeilen ([21 §6f](21-UI-UX.md) INV-UI-9), und der Wortlaut kommt aus **einer** Funktion (`spanLabelOf`), nicht aus einer Inline-Fassung je Fläche (INV-UI-4). Wo kein Tag kuratiert ist, bleibt die Jahresform unverändert. Das ist keine Kosmetik: eine Genauigkeit, die nur das Eingabefeld kennt, ist für den Leser nicht vorhanden — und die Bearbeiten-Zeile liest ihre Gegengrenze aus dem angezeigten Text zurück, verlöre den Tag also beim nächsten Edit.
+
 **Drei Datierungs-Zustände, nicht zwei ([ADR-v9-181](04-Entscheidungslog.md#adr-v9-181)).** `null` heißt „offen", und offen ist **richtungsabhängig**:
 
 | `from` | `to` | Bedeutung | Sortiert |
