@@ -948,3 +948,33 @@ Am 2026-08-09 aus [32-Testframework.md](32-Testframework.md) ausgelagert. Jeder 
 **Browser-Beleg (frischer Server, `Testdateien/Unsere Familie 2026.ged`).** Dreimal hintereinander „Heirat bearbeiten → Speichern": Modal schließt jedes Mal, Konsole leer. Der gemeldete Weg vollständig nachgefahren (Zitat hinzufügen → „+ Neue Quelle anlegen" ausfüllen und speichern → Zitat wieder entfernen → Speichern): Modal schließt, keine Fehler. Die beiden zur Prüfung angelegten Quellen (`TESTQUELLE-ZZZ`, `PROBE-NEUE-QUELLE`) sind danach wieder gelöscht; das Heirats-Ereignis steht unverändert („27. Mai 1914, Ochtrup …", Zitate Wegener + KB Ochtrup).
 
 **Beim Bau dazugelernt.** Der erste Reproduktionsversuch (Zitat hinzufügen → entfernen → speichern) war **grün** und hätte den Befund fast als „nicht reproduzierbar" abgelegt — er war es nur, weil dieser Save der ERSTE war. Die Vorbedingung ist nicht die Quellen-Handlung, sondern ein vorangegangenes Speichern desselben Ereignisses. Der Ablauf, den ein Nutzer meldet, ist die Spur; die minimale Form muss man daraus erst herausschälen.
+
+<a id="adr-v9-242"></a>
+## ADR-v9-242
+
+**Verifikation (2026-08-09).** Symlink auf `orte-2.json` umgehängt, `ORTSBESTAND.erwartet` auf die gemessenen 402/185 gesetzt, Wächter ergänzt. `tests/core/realdaten-basis.test.ts` + `tests/roundtrip/kurations-rundlauf-realdaten.test.ts` + `tests/ui/place-merge-reload-realdaten.test.ts`: 5 grün, 2 übersprungen (die beiden Skip-mit-Namen-Zeilen). Der Kurations-Rundlauf am NEUEN Bestand unverändert stabil: 7 Dubletten-Gruppen, 3 als typwidrig übersprungen, 401 Orte danach.
+
+**Rot-Probe.** `erwartet.placeObjects` auf 999 gesetzt → Exit 1 mit AssertionError; zurückgesetzt → grün.
+
+**Beim Bau aufgefallen.** Die vier Ortsdateien unterscheiden sich nicht nur in der Revision, sondern im Kurationsstand: `orte.v9.json` 310 Orte / 236 pnames, `orte-2.json` 402 / 623. Wer gegen die alte misst, misst einen Bestand mit knapp der Hälfte der Namensvarianten — genau die Größe, um die es bei einer Aussage über Datierungen geht.
+
+<a id="adr-v9-243"></a>
+## ADR-v9-243
+
+**Verifikation (2026-08-09) — die Zahlen, auf denen die Entscheidung steht.** Alle an `Testdateien/orte-2.json` (rev 277) bzw. `Testdateien/Unsere Familie 2026.ged` gemessen, letztere über den vollen Ladepass (`parseGedcom` + kuratierter Bestand + `applyPlaceResolution`), nicht über den Dateitext:
+
+| Messung | Wert |
+|---|---|
+| datierte `pnames` / `enclosedBy` / Hof-`addrs` | 564 von 623 · 815 von 869 · **0** von 188 |
+| `dateRaw` vorhanden | 48 von 1680, alle jahrgenau, **0** mit Monat oder Tag |
+| `enclosedBy`-Überlappungen | 433 Randberührungen · **0** echte |
+| `pnames`-Überlappungen | 199 Randberührungen · **74** echte |
+| Ereignisse mit gebundenem Ort / davon mit Jahr | 5065 / 4391 |
+| davon Kette im Jahr mehrdeutig | 94 |
+| davon Name im Jahr mehrdeutig | 174 |
+| davon mehrdeutig UND tagegenau datiert | 114 |
+| Orte mit `govId` | 12 von 402 (28 der 815 datierten `enclosedBy`) |
+
+**Beim Bau dazugelernt.** Die Frage kam als eine („tagegenau abbilden"), der Bestand gab zwei Antworten. Die `enclosedBy`-Achse ist ein reines Granularitätsproblem — null echte Überlappungen, 433 Randberührungen. Die `pnames`-Achse ist es NICHT: ihre 74 echten Überlappungen sind zwei gleichzeitig gültige Namen desselben Orts (deutsch/polnisch, französisch/deutsch), also die Sprachachse in der Zeitachse. Hätte ich nur gezählt, wie viele Paare sich überlappen, wäre beides eine Zahl gewesen und die Antwort falsch; erst die Beispiele nebeneinander zeigten die zwei Klassen. Die Trennung ist die eigentliche Arbeit dieses Eintrags, nicht die Modelländerung.
+
+**Beim Bau aufgefallen — Spec/Code-Drift.** [11 §5](11-Orte-Hoefe-Identitaet.md) sagt seit jeher, überlappende Perioden würden „mit einem Warnhinweis (⚠, Ort-Steckbrief)" markiert. Im Code existiert nur `EnclosureMeta.truncated` (Kettenabbruch), kein Überlappungs-Marker: alle 433 Fälle werden stumm per Tie-Break aufgelöst. Als [BL-325](05-Backlog.md) eingetragen, nicht mit erledigt.

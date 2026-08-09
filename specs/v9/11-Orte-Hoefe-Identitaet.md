@@ -53,7 +53,14 @@ HofObject {
 }
 ```
 
-`DatedName`/`DatedRef`/`DatedAddress` = `{ value, from, to }` (Wert mit optionalem Gültigkeitszeitraum).
+`DatedName`/`DatedRef`/`DatedAddress` = `{ value, from, to }` (Wert mit optionalem Gültigkeitszeitraum) — plus optional `fromDate`/`toDate` für die tagegenaue Fassung, s. u.
+
+**Zwei Genauigkeiten, eine Wahrheit ([ADR-v9-243](04-Entscheidungslog.md#adr-v9-243)).** `from`/`to` sind **Jahre** und bleiben die Vergleichsbasis. Wo der Tag bekannt ist, tragen ihn zusätzlich `fromDate`/`toDate` als GEDCOM-Datumsstring (dieselbe Form wie `Event.date`, kein zweites Datumsformat). Zwei Regeln halten das zusammen:
+
+- **`from`/`to` sind aus `fromDate`/`toDate` ableitbar und müssen dazu passen** — das Jahr ist nie eine zweite, unabhängige Angabe. Wer die Tagesangabe setzt, setzt das Jahr mit.
+- **Der Vergleich ist zweistufig, nie tagesgenau erzwungen:** tagegenau nur, wenn Ereignis- *und* Ortsseite einen Tag tragen; sonst Jahr gegen Jahr wie bisher. Am Realbestand (`Testdateien/Unsere Familie 2026.ged`) sind 6604 von 9377 Ereignisdaten tagegenau, 2822 nicht, und 747 tragen einen Qualifier (`ABT`/`BEF`/`AFT`/`BET`/`FROM`/`CAL`), bei dem ein Tag Scheingenauigkeit wäre. Ein Modell ohne Jahres-Rückfall wäre für ein Drittel des Bestands schlechter, nicht besser.
+
+`fromDate`/`toDate` sind **app-privat**: sie leben in `orte.json` und erreichen weder GEDCOM noch GRAMPS (der Write-Back schreibt zu `pname`/`placeref` ohnehin keine Datumskinder und vergleicht über die Jahre — LP-1 bleibt unberührt).
 
 **Drei Datierungs-Zustände, nicht zwei ([ADR-v9-181](04-Entscheidungslog.md#adr-v9-181)).** `null` heißt „offen", und offen ist **richtungsabhängig**:
 
@@ -225,6 +232,10 @@ Vier zentrale Helfer für die **Event→Ort/Hof-Auflösung** — die einzigen ko
 **`buildListPlaceName` ist der Listen-Zwilling von `buildPlacForGedcom`** (ADR-v9-100, [21 §6l](21-UI-UX.md) INV-UI-14) und liegt bewusst im Kern, nicht in der UI-Schale: die Zeitleisten-Insel ([21 §8](21-UI-UX.md)) konsumiert ihn ebenso wie `ui/shell/person-display.ts` — EINE Regel, zwei Konsumenten (INV-UI-4). Er ist **reine Anzeige**: er speist nie den Writer, nie eine Identitäts-/Match-Entscheidung und nie die Review-Klassifikation (§6). Sein Bestandteil `placeDisplayName(po) = po.shortName || po.title || po.id` ist der einzige erlaubte Weg, „den anzuzeigenden Namen eines Orts" zu bilden — kein View liest dafür `po.title` direkt.
 
 **Überlappende `enclosedBy`-Perioden — Tie-Break-Regel:** widersprechen sich zwei `enclosedBy`-Einträge für dasselbe Jahr (z. B. fehlerhaft importierte oder manuell überlappend eingetragene Zeiträume), gewinnt der Eintrag mit dem **höheren Startjahr** (`from`) — die zeitlich näher liegende Periode. `buildPlacForGedcom`/`enclosureChainAsOf` markieren den Fall mit einem Warnhinweis (⚠, Ort-Steckbrief), still gewählt wird trotzdem deterministisch, kein Blockieren der Projektion.
+
+**Der Tie-Break bleibt der Boden, wird aber seltener gebraucht ([ADR-v9-243](04-Entscheidungslog.md#adr-v9-243)).** Tragen beide Seiten einen Tag, entscheidet die Periode selbst statt der Vorrangregel. Das ist keine Feinheit: am maßgeblichen Ortsbestand (`Testdateien/orte-2.json`, rev 277, 402 Orte) sind **alle 433** überlappenden `enclosedBy`-Paare reine **Randberührungen** — `[…1810] × [1810…]`, genau ein gemeinsames Jahr; **echte Überlappungen gibt es null**. Für ein Ereignis am 31.12.1810 wählt der Tie-Break heute richtig, für eines am 1.1.1810 falsch, und in beiden Fällen stumm. Betroffen sind 94 der 4391 datierten, ortsgebundenen Ereignisse des Realbestands.
+
+**Bei `pnames` liegt der Fall anders und Tagesgenauigkeit hilft dort NICHT.** Dieselbe Messung zählt 199 Randberührungen, aber auch **74 echte Überlappungen über mehrere Jahre** — und die sind kein Datierungsfehler, sondern **Parallelität**: „Guben [1235…]" neben „Gubin [1945…]", „Département de la Lippe [1811–1813]" neben „Lippe-Departement [1811–1813]". Das sind zwei gleichzeitig gültige Namen desselben Orts, also die **Sprachachse** (`translations`), die in die Zeitachse geraten ist. Kein Tagesdatum entscheidet sie; sie ist eine eigene Frage ([BL-326](05-Backlog.md)) und wird hier ausdrücklich nicht mitbeantwortet.
 
 **Aggregatoren** (`collectPlaces`, `buildHofIndex`) sind **id-basiert** (nicht string-basiert): zwei gleichnamige Orte bleiben distinkt, mehrere Cache-Varianten desselben Orts kollabieren auf einen Eintrag.
 
