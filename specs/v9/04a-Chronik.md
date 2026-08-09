@@ -978,3 +978,16 @@ Am 2026-08-09 aus [32-Testframework.md](32-Testframework.md) ausgelagert. Jeder 
 **Beim Bau dazugelernt.** Die Frage kam als eine („tagegenau abbilden"), der Bestand gab zwei Antworten. Die `enclosedBy`-Achse ist ein reines Granularitätsproblem — null echte Überlappungen, 433 Randberührungen. Die `pnames`-Achse ist es NICHT: ihre 74 echten Überlappungen sind zwei gleichzeitig gültige Namen desselben Orts (deutsch/polnisch, französisch/deutsch), also die Sprachachse in der Zeitachse. Hätte ich nur gezählt, wie viele Paare sich überlappen, wäre beides eine Zahl gewesen und die Antwort falsch; erst die Beispiele nebeneinander zeigten die zwei Klassen. Die Trennung ist die eigentliche Arbeit dieses Eintrags, nicht die Modelländerung.
 
 **Beim Bau aufgefallen — Spec/Code-Drift.** [11 §5](11-Orte-Hoefe-Identitaet.md) sagt seit jeher, überlappende Perioden würden „mit einem Warnhinweis (⚠, Ort-Steckbrief)" markiert. Im Code existiert nur `EnclosureMeta.truncated` (Kettenabbruch), kein Überlappungs-Marker: alle 433 Fälle werden stumm per Tie-Break aufgelöst. Als [BL-325](05-Backlog.md) eingetragen, nicht mit erledigt.
+
+<a id="bl-325"></a>
+## BL-325
+
+**Verifikation (2026-08-09).** `EnclosureMeta.ueberlappt` neben `truncated` (bewusst ein eigenes Feld: dort fehlt eine Antwort, hier gibt es mehrere), gesetzt in `enclosureWinnerAsOf`, durchgereicht bis `HierarchyTimelineRow`, im Steckbrief als ⚠ an derselben Stelle wie das „› ?" (INV-UI-4). `npm test` 4147 grün, `npm run lint` grün.
+
+**Rot-Probe.** `ueberlappt: treffer > 1` auf `false` gesetzt → zwei der vier neuen Modell-Tests rot; zurückgesetzt → grün.
+
+**Das Pflichtfeld hat die letzte Stelle gefunden, nicht ich.** `EnclosureMeta.ueberlappt` ist NICHT optional — `tsc` meldete daraufhin `tests/core/places-registry.test.ts:181`, den einzigen Aufrufer, den weder `npm test` (vitest typprüft nicht) noch die Suche gefunden hatten. Derselbe Mechanismus wie bei `resetKey` ([ADR-v9-83](04-Entscheidungslog.md#adr-v9-83)): den Compiler die Frage an jeder Stelle stellen lassen.
+
+**Browser-Beleg (frischer Server, echter Bestand).** „Dolgen (Hann.)": ⚠ an genau den Jahren 1512 · 1810 · 1859 · 1885 · 1946 · 1974. Fünf davon sagt die Vorab-Messung an `Testdateien/orte-2.json` für den Ort selbst voraus; **1946 kommt aus einer übergeordneten Ebene** — das ist die Ketten-Weitergabe, im Betrieb bestätigt, nicht nur im Test. Gegenprobe an weiteren Orten: „Ahaus" 8 von 18 Zeilen, „Arpke" 5 von 20 — der Hinweis unterscheidet, er steht nicht überall.
+
+**Beim Bau aufgefallen.** Der Anteil markierter Zeilen ist hoch (30–45 % an den geprüften Orten), und das ist kein Fehler des Hinweises: eine Zeitleisten-Zeile ENTSTEHT bei einem Wechsel, und ein Wechsel bei inklusiven Jahresgrenzen IST die Randberührung. Wo der kuratierte Bestand `to: 1809` / `from: 1810` schreibt statt zweimal 1810, bleibt die Zeile unmarkiert — dieselbe Datenlage, andere Schreibweise. Genau diese Uneinheitlichkeit räumt BL-324 ab; bis dahin ist der Hinweis ehrlich, aber häufig.
