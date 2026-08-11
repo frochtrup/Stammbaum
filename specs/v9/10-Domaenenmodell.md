@@ -159,7 +159,11 @@ Family {
 ```
 Source {
   id: SourceId
-  abbr (ABBR), title (TITL), author (AUTH), publisher (PUBL), text (TEXT): string
+  abbr (ABBR), title (TITL), author (AUTH), publisher (PUBL): string
+  text (TEXT): string               // ZITIERTER Wortlaut aus der Quelle (Transkription)
+  noteText (NOTE): string           // Anmerkung ÜBER die Quelle — nicht dasselbe wie text
+  extraNotes: string[]              // zweite und weitere eigenständige NOTE-Zeile (NOTE ist {0:M})
+  noteRefs (NOTE @Nxx@): NoteId[]   // Zeiger auf NOTE-Records, getrennt vom Inline-Text
   createdDate (CREA·7.0 / _DATE·5.5.1): string   // Erfassungsdatum; „Erfasst am"
   repo (REPO): RepoId | string     // @Rxx@-Referenz ODER Legacy-Freitext
   callNumber (CALN → GRAMPS reporef/@callno): string   // Signatur
