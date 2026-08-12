@@ -106,6 +106,8 @@ Tests sind in einem spezifikationsgetriebenen Prozess das **ausführbare Spec-Or
   [ADR-v9-239](04-Entscheidungslog.md#adr-v9-239) — für eine Verfahrensregel den
   mechanischen Boden bauen, statt sie aufzuschreiben.
 
+- **TST-27 — Kein nativer Browser-Dialog in der Haupt-App; per Lint-Gate erzwungen.** `window.confirm` liefert in der Vorschau-Fläche **sofort `false`**, ohne je ein Fenster zu zeigen — jede bestätigungspflichtige Aktion war dort wirkungslos (Nutzer-Befund 2026-08-12, [ADR-v9-263](04-Entscheidungslog.md#adr-v9-263)). Ersatz: `ConfirmDialog.svelte` (ui/shell), Teil des gerenderten Baums. Ausgenommen ist der Standalone-Orte-Editor ([22](22-Orte-Editor-Standalone.md)), der ohne die Shell-Primitiven läuft. **Der eigentliche Lehrsatz steckt in den Tests, nicht im Dialog:** alle 16 Lösch-Tests begannen mit `vi.stubGlobal('confirm', () => true)` und prüften damit alles AUSSER dem Mechanismus, der versagte — die Stub-Zeile ersetzt genau das Stück, um das es geht (Verwandtschaft: TST-22 misst, ob ein Test ROT wird; hier war die Frage, ob er überhaupt das Richtige berührt). Migriert auf `tests/ui/confirm-helper.ts`: die Rückfrage wird **angeklickt** wie von einem Nutzer. Wirkung negativ verifiziert: ein `window.confirm` testweise eingesetzt → Lint rot, zurückgesetzt → grün.
+
 ---
 
 ## 2. Test-Ebenen
