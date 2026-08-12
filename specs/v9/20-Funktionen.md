@@ -218,7 +218,7 @@ Formulare als Bottom-Sheets (Mobile) / Panels (Desktop) mit progressiver Offenle
  - **Vorbelegte Werte** je Feld, zwei Anzeigemodi: versteckter Chip (Wert wird beim Speichern übernommen, erscheint nicht im Formular) oder gesperrt-sichtbar (Wert sichtbar, nicht editierbar).
  - **JSON-Export/Import** einzelner Templates. App-privat, reist nicht mit der Datei ([30 §2](30-NFR-und-Persistenz.md)).
 - **Schnellerfassungs-Modus:** beim Anlegen einer neuen Person bleibt das Formular nach dem Speichern offen für die nächste Neuanlage, statt zur Liste zurückzukehren — Quelle und Seite aus der zuletzt gespeicherten Zitation bleiben vorbelegt.
-- **Quellreferenz-Zwischenablage** (⧉ kopieren, 📋 einfügen): eine Quelle+Seite an beliebiger anderer Formular-Stelle wiederverwenden, ohne den Entitäts-Picker erneut zu durchsuchen.
+- **Quellreferenz-Zwischenablage:** ein ⧉ je Zitatzeile legt die VOLLSTÄNDIGE Zitation (Quelle, Seite, QUAY, Notiz, Weblink, Evidenz-Achsen) in eine transiente Sitzungs-Ablage; ein „📋 Übernehmen“-Chip an der Quellen-Sektion fügt sie an beliebiger anderer Stelle ein und erscheint nur, solange die Ablage gefüllt ist (INV-UI-11) — die Einfüge-Seite steht EINMAL je Sektion, nicht als zweite Glyphe je Zeile. Teilt sich die Ablage-Primitive mit der Ereignis-Zwischenablage (INV-UI-4), Kategorie A ([30 §2](30-NFR-und-Persistenz.md)). **Record-Identität ([13 §6](13-Interop-Roundtrip.md)):** die `grampsId` reist mit — ein `<citation>` ist in GRAMPS ein geteilter Record, dieselbe Fundstelle an einem zweiten Ereignis ist EIN Record mit zwei Besitzern; die eingefügte Zeile löst sich beim ersten Edit davon. Für kopierte EREIGNISSE gilt das Gegenteil (eigene Identität je Besitzer), ebenso für alles aus einer Fremddatei Übernommene.
 
 ---
 
