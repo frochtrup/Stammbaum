@@ -6,7 +6,7 @@ Ausgelagert aus [04-Entscheidungslog.md](04-Entscheidungslog.md) am 2026-07-16. 
 
 **Inhalt ist wörtlich übernommen** (reines Verschieben, kein Umformulieren) — die Lehren sind zu teuer erkauft, um sie zu paraphrasieren.
 
-**Seit 2026-08-09 ([ADR-v9-240](04-Entscheidungslog.md#adr-v9-240)) nimmt diese Datei zwei weitere Sorten auf:** Verifikationsbefunde, die in `04` als Bullet standen (`check-adr-split` meldet sie dort jetzt), und die **Vorgeschichte der Basis-Specs** — die Befunde hinter den UI-Invarianten ([Spec 21](#spec-21-befunde), [Spec 20](#spec-20-befunde)) und die Lehren hinter den Test-Kontrakten ([Spec 32](#spec-32-lehren)). Die Regel dahinter ist dieselbe: 10–32 sagen, was gilt; hier steht, was passiert ist.
+**Seit 2026-08-09 ([ADR-v9-240](04-Entscheidungslog.md#adr-v9-240)) nimmt diese Datei zwei weitere Sorten auf:** Verifikationsbefunde, die in `04` als Bullet standen (`check-adr-split` meldet sie dort jetzt), und die **Vorgeschichte der Basis-Specs** — die Befunde hinter den UI-Invarianten ([Spec 21](#spec-21-befunde), [Spec 20](#spec-20-befunde)) und die Lehren hinter den Test-Kontrakten ([Spec 32](#spec-32-lehren)). Die Regel dahinter ist dieselbe: 10–32 sagen, was gilt; hier steht, was passiert ist. **Seit 2026-08-13 ([ADR-v9-272](04-Entscheidungslog.md#adr-v9-272)) sind es zwei weitere:** die Vorgeschichte der übrigen Basis-Specs ([10 · 11 · 12 · 31](#spec-10-13-31-vorgeschichte)) und die Begründungen der [erledigten Backlog-Zeilen ohne eigenen ADR](#erledigte-zeilen-ohne-adr). Beide Umzüge sind seither durch eine Lint-Ratsche gehalten (L15 bzw. L14), nicht durch Erinnerung.
 
 ## ADR-v9-19
 
@@ -1148,3 +1148,218 @@ Die dritte Zeile ist der Punkt: „Maria Decker" gegen eine vorhandene „Anna D
 **Warum es trotzdem kein vierter Modus wurde.** Naheliegend wäre gewesen, `prefillMode` um `'carry'` zu erweitern — die Fläche hat schon eine Modus-Auswahl, ein vierter Eintrag wäre null neues Bedienelement. Der Fall selbst verbietet es: der Nachname im Hofregister hat **gar keine Vorbelegung**. Ein vierter Modus wäre die Anzeige-Anweisung über nichts — und die Paar-Union in `SlotPrefill` existiert seit ADR-v9-264 E3 genau dafür, dass so etwas ein Typfehler ist. **Die Struktur, die eine frühere Entscheidung festgehalten hat, hat die spätere gegen einen bequemen Fehler verteidigt** — das ist der Nutzen von „der Compiler stellt die Frage", einen ADR später eingelöst.
 
 **Ein Massen-Edit hat wieder zugeschlagen, und der Diff hat ihn gefangen.** Zwei Aufrufstellen derselben Komponente unterscheiden sich nur in der Einrückung — das 10-Leerzeichen-Muster ist ein Substring des 12-Leerzeichen-Musters, also traf `str.replace` beide, und der zweite Aufrufer bekam die neuen Props doppelt. Gefunden, weil ich nach dem Skript in die Datei gesehen habe statt nur den Testlauf; `tsc` hätte es vermutlich auch gemeldet, aber erst nach dem nächsten Schritt. Die Lehre steht schon in `CLAUDE.md` („nach einem skriptgesteuerten Edit den Diff lesen") — hier hat sie gehalten.
+
+<a id="spec-10-13-31-vorgeschichte"></a>
+## Specs 10 · 11 · 12 · 31 — die ausgelagerte Vorgeschichte
+
+Am 2026-08-13 aus den Basis-Specs ausgelagert ([BL-322](05-Backlog.md), Fortsetzung von [ADR-v9-240](04-Entscheidungslog.md#adr-v9-240) Entscheidung 3, die 20/21/32 bereits bereinigt hatte). Dieselbe Regel wie dort: **10–32 sagen, was gilt; hier steht, was passiert ist.** Die Regeln selbst sind unverändert in ihren Specs geblieben — verschwunden ist nur ihre datierte Vorgeschichte, und zwar wörtlich hierher, nicht gekürzt. Was ausdrücklich BLIEB: der datierte BELEG einer geltenden Zusage (`Coverage-Audit … gemessen 2026-07-26` in [13](13-Interop-Roundtrip.md), die Ist-Spalte der Budget-Tabelle in [30](30-NFR-und-Persistenz.md)) — das ist keine Vorgeschichte, sondern die Messung, die [ADR-v9-237](04-Entscheidungslog.md#adr-v9-237) verlangt.
+
+**10-Domaenenmodell.md §5.2 — Datums-Anzeigetiefe (INV-UI-9).** **Befund (2026-07-12, Nutzer-Fund):** vor dieser Präzisierung nutzte die Anzeige AUSSCHLIESSLICH die Jahr-only-Form — auch im Eigene-Ereignis-Kontext (`PersonDetail`/`FamilyDetail`s eigene Ereigniszeilen). Tag/Monat waren im Editor eingebbar, verschwanden aber in JEDER Lese-Ansicht spurlos; derselbe Mangel betraf den Qualifier (kein „ca."/„vor"/… sichtbar). Nicht nur ein Kosmetik-Fehler: bei Datumsangaben mit Tag+Monat (z. B. Kirchenbuch-Einträge) ging die recherchierte Präzision für den Nutzer unsichtbar verloren, obwohl sie korrekt gespeichert war (kein Datenverlust, nur ein Anzeige-Fehler — roundtrip-sicher).
+
+**11-Orte-Hoefe-Identitaet.md §9.2 — automatischer Hof-Nachlauf: die zurückgenommene Erst-Entscheidung.** **Automatischer Hof-Nachlauf nach Dorf-Merge (ADR-v9-45, Nachtrag 2026-07-10 — korrigiert v8-Abweichung von oben zurück).** Ursprünglich als „bewusst nicht übernommen" entschieden (kein Analogon zu v8s `_reconcileFarmsUnderVillage`, stattdessen ein zweiter manueller Dedup-Lauf) — das war falsch, aus zwei Gründen: (1) **Entdeckbarkeit** — niemand stößt Massen-Dedup von selbst direkt nach einem thematisch anderen Vorgang (Dorf-Merge) noch mal an. (2) **Echte Resolver-Regression, kein reines Unordnungsproblem** — `hof-registry.ts::findByAddr` liefert bei ≥2 Kandidaten `null` („strikt eindeutig — sonst Review"), das Event fällt in Review-Klasse C (§6). Zwei gleichnamige Höfe waren vor dem Dorf-Merge unter verschiedenen Dörfern eindeutig auflösbar; nach dem Merge hängen beide am selben Dorf — bei GEDCOM-Quellen kippt das bei JEDEM folgenden vollen Reload (`hofId` nie persistiert, §2) von „eindeutig" auf „mehrdeutig". Der fehlende Nachlauf ist damit keine Frage der Aufräum-Ordnung, sondern eine stille Verschlechterung der Auflösungsqualität für zuvor korrekt funktionierende Events.
+
+**12-Forschungsdaten.md §1 — `sourceRef` war entfallen.** **Nachtrag (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** `sourceRef` war im v8-Oracle vorhanden (`ui-views-tasks.js` `t.sid`, per Quellen-Dropdown im Aufgabe-Modal setzbar, gegen den echten v8-Code verifiziert) und ist beim v9-Neuaufsatz zunächst ohne bewusste Entscheidung entfallen — hiermit wiederhergestellt.
+
+**31-Dev-Umgebung.md §4 — `check:svelte` fand vier Fehler, die 1663 Tests nicht sahen.** Svelte-**Templates** (Props, Bindings, Markup-Ausdrücke) sah bis 2026-07-16 gar kein Gate; der erste Lauf fand vier echte, von 1663 Tests unentdeckte Fehler im Produktionscode.
+
+**31-Dev-Umgebung.md §5 — das statische `base` beim ersten Pages-Deploy.** **Lehre (2026-07-07):** genau dieser Fehler ist beim ersten Pages-Deploy passiert („Vorschau startet nicht") und wurde erst durch den Nutzer-Hinweis entdeckt, nicht vorab.
+
+**31-Dev-Umgebung.md §6 — der hardcoded Port in `launch.json`.** **Lehre (2026-07-10):** die `dev`-Konfiguration hatte hardcoded `--port 5173 --strictPort`, was `preview_start` bei einer bereits laufenden zweiten Session (anderer Chat, gleicher Port) hart blockierte — der Tool-Fehler weist zwar auf die Lösung hin, aber `autoPort: true` allein reicht nicht: der Start-Befehl darf KEINEN hardcoded `--port`/`--strictPort`-Flag mehr setzen (sonst überschreibt er die vom Tool zugewiesene `$PORT`), UND `vite.config.ts` braucht `server: { port: process.env.PORT ? Number(process.env.PORT) : 5173 }`, sonst bindet Vite trotzdem auf den Default.
+
+<a id="erledigte-zeilen-ohne-adr"></a>
+## Erledigte Backlog-Zeilen — die Begründungen ohne eigenen ADR
+
+Am 2026-08-13 aus [05](05-Backlog.md)/[05a](05a-Backlog-Orte-Editor.md) ausgelagert ([BL-322](05-Backlog.md), Abarbeitungsliste der Lint-Regel L14). Diese 36 Zeilen tragen **keinen** ADR-Zeiger — ihre Begründung stand nirgends sonst, kürzen ohne Umzug wäre also löschen gewesen (Regel 1, Ausnahme). Der Text steht deshalb hier **wörtlich**; im Backlog blieb Titel + Zeiger. Wer wissen will, WAS gilt, liest den Titel; wer wissen will, WARUM es so gebaut wurde, folgt dem Zeiger hierher.
+
+<a id="bl-296"></a>
+### BL-296
+
+**`Testdateien/` war nur zur Hälfte ignoriert** — im PUBLIC Spec-Repo liegen dort echte Personendaten (GEDCOM, kuratierter Orts-/Hof-Bestand, App-Daten). `.gitignore` deckte `Testdateien/*.json` ab, also nur die oberste Ebene: `Testdateien/alt/orte.v9.json` war NICHT ignoriert und stand bei jedem `git status` als unversioniert da — ein `git add -A` hätte ihn veröffentlicht. Aufgefallen beim Commit zu BL-287, wo ich deshalb jede Datei einzeln staged habe; die Sorgfalt beim Stagen ist aber kein Schutz, sondern eine Gewohnheit. **Gebaut 2026-08-02:** der ganze Ordner ist ignoriert (keine Datei daraus ist getrackt, eine Ausnahme wäre also bewusst zu formulieren). Gegenprobe: `git check-ignore -v` trifft die Unterordner-Datei, `git add -A --dry-run` nimmt nichts mehr auf
+
+<a id="bl-271"></a>
+### BL-271
+
+**Wisch-Geste im offenen Editor und im offenen Modal abschalten** ([21 §2](21-UI-UX.md), [21 §5](21-UI-UX.md)) — `swipeNav` hat dafür die Option `enabled` („Aus, solange z. B. ein Modal offen ist"), der einzige Aufrufer `EntityTab.svelte` übergibt sie nie (0 Vorkommen). Der Modal-Backdrop liegt zwar `position: fixed`, hängt im DOM aber im Swipe-Knoten: Touch-Events blubbern hoch. Ein Rechtswisch im offenen `EventEditModal` oder in einem halb ausgefüllten Formular navigiert weg und verwirft die Eingabe still — einen Dirty-Schutz gibt es nirgends (`dirty`/`unsaved`/`beforeunload` über `ui/`: 0 Treffer), und §5 verlangt für navigationsüberdauernden Unterzustand ohnehin die Routen-Quelle statt komponenten-lokalen `$state`. **Gebaut 2026-08-01:** nicht über `enabled` — die Option war das falsche Werkzeug, weil der Bearbeiten-Zustand komponenten-lokal in `PlaceDetail`/`PersonDetail` lebt und `EntityTab` ihn gar nicht sehen kann. Stattdessen prüft die Geste ihren eigenen STARTPUNKT (`wischGesperrt`, `swipe-nav.ts`) gegen zwei Marken: die bereits geteilte Overlay-Primitive `.stb-modal-backdrop` (deckt jedes Modal ab, ohne Anmeldung) und `data-no-swipe` an den fünf inline aufgeklappten Formularen. Bewusst NICHT pauschal `input`/`button` — Ereigniszeilen SIND Buttons. Wächter: Einheitstests der reinen Prüffunktion plus ein Quellen-Wächter, dass alle fünf Formulare das Attribut tragen; am laufenden System gegengeprüft, dass Svelte das Attribut nicht wegkompiliert und die Sperre außerhalb des Formulars NICHT greift
+
+<a id="bl-263"></a>
+### BL-263
+
+**Dateinamen mit Umlaut waren nie auflösbar** (Nachtrag zu [BL-258](05-Backlog.md#erledigte-punkte)). Mit einem ECHT verbundenen Ordner (419 Dateien) fanden sich 183 von 189 Verweisen — die sechs Fehlschläge trugen ALLE einen Umlaut. Ursache: macOS/APFS liefert Dateinamen zerlegt (NFD, `u` + kombinierendes Trema), die GEDCOM-Datei trägt sie zusammengesetzt (NFC). Beide sehen identisch aus und sind als Zeichenketten verschieden, auch nach `toLowerCase()` — der Effekt war absolut, nicht graduell. `.normalize('NFC')` in `normalizePath` und im Basisnamen-Index; fünf Tests zuerst rot, inkl. der Zusicherung, dass die zwei Formen wirklich verschieden sind. Am Bestand gegengeprüft: **189 von 189**, 0 ⚠ in der Galerie. Kein Test hätte diese Form von sich aus vorgeschlagen — sie fiel erst mit echten Dateien auf
+
+<a id="bl-242"></a>
+### BL-242
+
+**GED7-`SCHMA`-Block** — [13 §4](13-Interop-Roundtrip.md) führte ihn, im Code existierte davon nichts (Spec/Code-Drift, bei BL-83 aufgefallen). GEDCOM 7 kennt **dokumentierte** und **undokumentierte** Extension-Tags: ein `_`-Tag ohne SCHMA-Eintrag ist datei-lokal, und die öffentliche Spec empfiehlt ausdrücklich, keine zu verwenden — v9 exportierte seine Evidenz-/Forschungs-Tags also in genau der abgeratenen Form. `g7Schma()` **leitet** die Liste aus dem fertig transformierten Baum ab, statt sie zu pflegen: das v8-Orakel (`_g7WriteSchma`) führte eine feste 29er-Liste, die Tags deklarierte, die in der Datei gar nicht vorkommen, und alles seither Hinzugekommene verfehlte (`_TASKID`/`_HKIND`/`_HREF` fehlen dort bereits). URI-Basis bleibt die von v8 (dieselbe URI = dasselbe Konzept). Ein vorhandener Block wird **ersetzt**, nicht ergänzt (sonst wüchse bei jedem GED7→GED7-Durchlauf einer nach, [13 §2.3](13-Interop-Roundtrip.md)); angehängt statt einsortiert, weil die Spec für die HEAD-Unterstrukturen keine Reihenfolge vorschreibt und nur `GEDC` zuerst empfiehlt; ohne `_`-Tags kein leerer Block. Negativ geprüft (ohne das Ersetzen wird der Stabilitätstest rot); an Realdaten gemessen: 1 Block, 14 Tags, `GEDC` bleibt vorn. **Bekannte, im Code benannte Grenze:** deklariert werden auch **fremde**, nur durchgereichte Tags unter unserem Namensraum (in der Ancestris-Datei die Mehrzahl — `_LATI`/`_STYLE`/`_VALID`). Sie undeklariert zu lassen wäre spec-konform, die Unterscheidung „eigen vs. fremd" bräuchte aber genau die gepflegte Zweitliste, die dieser Bau abschafft — falls das kippt, ist es EINE Filterstelle
+
+<a id="bl-241"></a>
+### BL-241
+
+**GED7-Export schrieb Freitext in ein Enum-Feld**: `ged7-adapter.ts` benannte `ASSO/RELA`→`ROLE` bloß um. `ROLE` ist in GEDCOM 7 eine **Enumeration** (`CHIL…OTHER`, gegen gedcom.io geprüft), die acht deutschen UI-Presets sind dort nie zulässig. `ged7Role()` kodiert jetzt: bekannter Klartext → Enum (`GODP`/`WITN`/`FRIEND`/`NGHBR`/`CLERGY`/`OFFICIATOR`), sonst `OTHER`; der Wortlaut immer zusätzlich in `3 PHRASE` (verlustfrei). Ein bereits gültiger Enum-Wert bleibt unverändert und OHNE PHRASE (sonst wüchse bei jedem GED7→GED7-Durchlauf eine Zeile nach); beim Lesen schlägt die PHRASE den Enum-Wert. DEV-05 in `tests/v8-abweichungen.md` von „identisch" auf `bug-fix` korrigiert. **Latenz war gemessen:** im echten Bestand null Assoziationen (`MeineDaten_ancestris.ged` 0 `ASSO`, `Unsere Familie.gramps` 0 `<personref>`) — deshalb `kür`, nicht `basis`
+
+<a id="bl-224"></a>
+### BL-224
+
+Handbuch: Anhang E (Einstieg + Grenzen des Editors), `data-doc`-Markierungen an den Stellen in Kap. 7/8, die nur ein Programm betreffen, Manifest und Extraktor, der daraus das eigenständige Editor-Handbuch erzeugt. Wächter: Manifest-IDs existieren, jeder interne Anker im Extrakt löst auf, jedes `data-doc="orte"`-Element liegt in einem Manifest-Abschnitt
+
+<a id="bl-226"></a>
+### BL-226
+
+Eigener Aufnahmepfad für die Editor-Screenshots gegen `dev:orte` mit `fixtures/orte.json`; Dokument wird ohne Dateidialog geladen, indem der Aufnahmelauf `showOpenFilePicker` ausblendet und die Datei in das versteckte `input[type=file]` legt. Varianten-Regel: `<name>.orte.png` gewinnt, falls vorhanden, sonst bleibt das geteilte Bild
+
+<a id="bl-60"></a>
+### BL-60
+
+**Personen-Kontext-Sprung in die Karte** — gebaut als DER EINE Lens-Umschalter im **Absprung-Modus** (`active=null` → `role="group"`), nicht als eigener `🗺`-Knopf (INV-UI-3, Altlast §10). Aus Baum/Zeitleiste trug der Umschalter den Sprung längst; die Lücke war der Personen-Steckbrief. Ersetzt dort die zwei handgebauten Knöpfe „⧖ Im Baum anzeigen"/„📖 Story" und behebt einen **gemessenen INV-UI-11-Bruch** (375px: 3 Zeilen / 5 Elemente → 1 Zeile / 3 Elemente). Der Sprung setzt `lensFocus` UND die lens-eigene Auswahl + Anzeige-Modus (`focusPersonInLens`) — nur `lensFocus` wirkte ab dem zweiten Sprung nicht mehr; an Realdaten mit zwei aufeinanderfolgenden Sprüngen geprüft
+
+<a id="bl-206"></a>
+### BL-206
+
+Orte/Höfe: **Achtungs-Punkt am „Werkzeuge"-Disclosure-Trigger** (reiner Dot, keine Außen-Zahl) bei offenen Kurations-Fällen (Dedup-Gruppen ∨ Review-Pending; GOV-Platzhalter folgen mit BL-131); beschriftete Einzelzähler nur aufgeklappt. `FilterBar`-Dot-Modus (INV-UI-4). Validator-Anteil zurückgezogen (Dashboard/§6h, „keine zweite Badge-Fundstelle"). Ersetzt die v8-Glyphenreihe `⚠N/⇉N/⚙N/N` auf den Buttons (Altlast §10, hinter Disclosure ohnehin unsichtbar). Test-first (FilterBar/PlaceList/HofList-Component-Tests); browser-verifiziert an Realdaten (Orte „· 390"/„· 21 Gruppen", Höfe „· 1"/kein Dedup-Zähler — ODER-Logik). ADR-v9-148
+
+<a id="bl-130"></a>
+### BL-130
+
+**Nominatim-Geocoding (Einzel + Batch)** — reine Antwort-Auswertung `core/places/geocode.ts` (Nominatim-JSON → Koordinaten/Typ/Verwaltungskette), Netzwerk hinter mockbarem Adapter `services/places/geocode-service.ts` (`geocodePlace`/`batchGeocodePlaces`, Rate-Limit 1,1 s). UI: `GeocodeButton` im Ort-Bearbeiten (füllt Koordinaten/Typ zur Prüfung) + „Alle ohne Koordinaten geocodieren" (Batch, Fortschritt) in der Orte-Werkzeugleiste. Opt-in; `connect-src` erlaubt jetzt `nominatim.openstreetmap.org` ([30 §NFR-3](30-NFR-und-Persistenz.md)). v8-Orakel `geocoding.js`
+
+<a id="bl-186"></a>
+### BL-186
+
+Story: **Familien-Biografie** (`buildFamilyStory`, couple-zentrisch) + Person⇄Familie-`ViewModeToggle` (`route.storyMode`) + Familien-Detail-📖-Einstieg + `storyFamily`-Fokus-Slot. Browser-verifiziert (beide Einstiege, Modus-Umschalter)
+
+<a id="bl-187"></a>
+### BL-187
+
+Story-Karte: Lebensweg-Polylinie (`personBiographyPoints`) als reines Inline-SVG (`buildStoryMapSvg`) — EIN Renderweg für Live-Lens UND Download (offline-tauglich, keine Kacheln); der volle interaktive Pan/Zoom bleibt der kanonischen Karte-Lens vorbehalten (INV-UI-3), aus der Story per „🗺 In Karte öffnen" erreichbar (ADR-v9-141, bewusste Abweichung von „interaktiv live"). 6 Tests
+
+<a id="bl-188"></a>
+### BL-188
+
+Story: Inline-SVG-Diagramm (`buildStoryDiagramSvg`; Eltern·Proband+Partner·Kinder bzw. Paar·Kinder), klickbare Karten re-zentrieren die Story (`tree-model`-Traversierung, kein zweiter Rechenweg). Browser-verifiziert. 5 Tests
+
+<a id="bl-189"></a>
+### BL-189
+
+Story: eingebettete Fotos (`collectStoryMedia`; Personen-Fotos als `data:`-URI in Lens + Download, `isDisplayableImage`-Wiederverwendung wie BL-181, Primärfoto zuerst; bloße Pfade weggelassen). 3 Tests
+
+<a id="bl-154"></a>
+### BL-154
+
+**Cross-Family-Emission (Epic) — ABGESCHLOSSEN.** GEDCOM↔GRAMPS aus EINEM Modell, der eine Cross-Convert-Pfad steht (Native/LP-1 unangetastet). Teilstücke BL-155…160 alle gebaut: modelEquiv+Coverage (155), ID-Remap+Enum (156), Modell→GEDCOM (157), Modell→GRAMPS (158), RT-4-Gate+Härtung (159), Export-UI (160). RT-4 grün in beide Richtungen an Realdaten (substantieller Rest [] nach dokumentierten Repräsentationskategorien)
+
+<a id="bl-161"></a>
+### BL-161
+
+04↔04a-Split strukturell erzwingen (Zwang statt Erinnerung): (a) `04` auf vor-Split inline-Nachträge durchsehen (ADR-29/30/… tragen noch `Nachtrag 2026-…`-Bullets inline) → nach `04a` verschieben; (b) Lint-Guard gegen inline-Nachtrag in `04` (Bullet `Nachtrag/Bau-Stand/Korrektur` bzw. Datum `(2026-…)`/Testzahl/Commit inline) — der `decision-log`-Skill 3a dokumentiert die Regel, aber nur bei Skill-Lauf (bei ADR-124/125 per Hand-Edit umgangen)
+
+<a id="bl-135"></a>
+### BL-135
+
+„teilweise" (partial) als vierter `LogResult`-Wert — trennt „nichts gefunden" von „Fund, aber unvollständig" (Wiedervorlage). Parser (`gedcom-parse` `_RESULT`), Writer bereits generisch, log-model-Label + LogView-Picker + amber-farbcodierte Zeile; Roundtrip `net_delta=0` verifiziert
+
+<a id="bl-58"></a>
+### BL-58
+
+Forschungsprojekte: `matchesScope` (3 Achsen UND-verknüpft, leere Achse frei, Übersteuerung durch ausdrückliche Personenbezüge — seit BL-238 `personRefs`) + app-private IndexedDB-Persistenz (`STORE_PROJECTS`/`ProjectsStore`, `$state.snapshot` beim Speichern — Browser-Fund: Proxy nicht klonbar) + Chip-Selektor `ProjectBar` auf der ResearchTab-Umbrella-Ebene (INV-UI-11); scoped Aufgaben/Protokoll/Hypothesen/Dashboard
+
+<a id="bl-68"></a>
+### BL-68
+
+Leerzustand-Suppression generalisiert (§10f): strukturell OPTIONALE Detail-Sektionen (Namens-Varianten, Kinder, Weitere Ereignisse, Lebenszyklus, Quellen) rendern bei leerem Inhalt weder Header noch „Keine X"-Satz (inline `{#if length > 0}`); erwartbare HAUPT-Sektionen behalten den Header, ersetzen die „Keine X"-Zeile aber durch die vorhandene Aktions-Affordanz (z. B. „+ Wohnort" auf `PersonDetail`). Über alle Detail-Views (Person/Family/Hof/Place/Source/Repository) am Code + Browser geprüft. (Ursprünglicher Beleg `sym:suppressEmpty` benannte einen Helfer, der gegen Vereinfachen-vor-Erfinden nichts über inline-`{#if}` hinaus trägt; Beleg auf die reale Suppression korrigiert)
+
+<a id="bl-67"></a>
+### BL-67
+
+List-Toolbar-Ownership (§10c): jede Liste besitzt ihre Toolbar (Suche/Filter/Werkzeuge) selbst; `EntityTab` rendert keine listen-spezifischen Aktions-Buttons mehr, nur den Entitäts-Segment-Umschalter. Massen-Dedup/Review-Öffner leben als `onOpenDedup`/`onOpenReview`-Props in `PlaceList`/`HofList` (hinter der Werkzeuge-Disclosure, `FilterBar`), `EntityTab` entscheidet nur, welche Komponente rendert. Bereits unter BL-96 gebaut, am Code + Browser (Orte-Tab) verifiziert. (Ursprünglicher Beleg `sym:ListToolbar` benannte eine geteilte Komponente, die §10c gar nicht verlangt — „EINE Komponente" heißt je Liste ihre eigene, kein neues Primitive; die geteilte Disclosure trägt bereits `FilterBar`, INV-UI-4. Beleg auf die echte Prop-Ownership korrigiert)
+
+<a id="bl-144"></a>
+### BL-144
+
+GRAMPS Event/Zitat **Add/Remove** Write-Back (Folgestufe zu BL-142, gebaut): das Hinzufügen/Entfernen GANZER geteilter Records zieht die Owner-`<eventref>`/`<citationref>`-Listen mit (`personKinder`/`familyKinder`/`eventKinder` reconcilen OHNE Umordnung → Byte-Treue am Unveränderten). Neue Records werden mit frischer eindeutiger GRAMPS-**id** (E/C-NNNN) + Handle synthetisiert (`assignNewIds`, deterministisch); verwaiste `<event>`/`<citation>` fallen per Fixpunkt-Pass weg (Kaskade: entferntes Event verwaist sein nur-dort genutztes Zitat), geteilte bleiben solange ein Owner sie hält. Zugleich Fidelity-Feld von Handle auf **id** umgestellt (BL-136-konform: Refs sind id-basiert, `buildRefIndex` löst id↔Handle für events/citations). An `Unsere Familie.gramps`: neues Event bekommt reale id (E6657), Datum+Zitat round-trippen; Entfernen löscht Record (6657→6656); `xml2===xml1`
+
+<a id="bl-110"></a>
+### BL-110
+
+Picker-Trefferliste hing als `position: absolute` im eigenen Teilbaum — dritte Overlay-Art, die BL-85 nicht mitzog. Gemessen an „Kind hinzufügen": Klippkante `.family-detail` bei y=333, Panel bis y=570, sichtbar 34 px, Treffer unerreichbar. Jetzt `use:anchoredTo` (INV-UI-13); `--stb-anchor-width` hält die Liste feldbündig, `focusout` prüft beide Teilbäume, sonst schlösse der eigene Klick die Liste vor der Auswahl
+
+<a id="bl-95"></a>
+### BL-95
+
+Lens-Umschalter lief bei 375 px über (385 px Bedarf, 272 px Platz) — „Story" lag vollständig außerhalb, erreichbar nur per Horizontal-Scroll ohne Affordanz. Der Vollbild-Knopf, der die Zeile teilte, war zugleich ein zweiter, schwererer Defekt: im Vollbild legt sich die Insel (`position: fixed`) über Kopfzeile UND Bottom-Nav — der Modus war nur durch Neuladen verlassbar (`elementFromPoint` gemessen). Der Schalter sitzt jetzt IN der Insel (Escape verlässt zusätzlich), die Kopfzeile hat keinen Aktions-Bereich mehr, `.stb-segment-row` bricht um statt zu scrollen; doppelte Einrückung und 2,4 px Pillen-Polsterung geben die letzten 8 px. Alle vier Lenses stehen bei 375 px in EINER Zeile
+
+<a id="bl-80"></a>
+### BL-80
+
+GRAMPS-Export gab nur den geparsten Baum wieder — jede Modell-Änderung (Name, Geschlecht, Quelle, Notiz, neu, gelöscht) fehlte im Export, und der Roundtrip-Test bestätigte das als Erfolg. Jetzt `applyDatabaseToXml` nach den vier Regeln der GEDCOM-Seite (unverändert ⇒ identischer Knoten, geändert ⇒ Passthrough bleibt, neu ⇒ synthetisiert, gelöscht ⇒ entfernt). Ein Unterschied zwingend: GRAMPS hat eine DTD, die Kind-Reihenfolge ist Vorschrift — Felder werden einzeln an ihrer Stelle aktualisiert statt als Block verschoben
+
+<a id="bl-81"></a>
+### BL-81
+
+`xml-tree` verlor gemischten Inhalt still: der Parser erfasste Text UND Kinder, der Serializer schrieb im Kinder-Zweig nur die Kinder. Der Roundtrip merkte nichts, weil der zweite Durchlauf denselben Verlust erzeugte. Jetzt Abbruch mit Tag + Textauszug — keine Rettung, weil die Position des Textes im Modell gar nicht erfasst ist und ein Rateweg eine FALSCHE statt einer unvollständigen Datei schriebe. Preis gemessen: 0 Vorkommen in 5,7 MB echtem GRAMPS
+
+<a id="bl-82"></a>
+### BL-82
+
+Union-Merge verglich `clock.now()` mit `remote.ts` — „jetzt" gegen „irgendwann früher", die lokale Seite gewann immer; ein Gerät mit stundenaltem, unverändertem Stand machte die Kuration des anderen rückgängig. Die Alt-Tests belegten beide Richtungen nur dank einer Uhr, die eine echte nicht erzeugen kann. Jetzt Drei-Wege-Merge gegen den gemeinsamen Vorfahren (`SyncBase`, Pflichtparameter); beidseitige Änderungen werden als echter Konflikt gemeldet statt als „kein Datenverlust"
+
+<a id="bl-84"></a>
+### BL-84
+
+26 tote Sprungmarken (21× `#adr-v9-NN` aus [04a](04a-Chronik.md), 4× `#17-orte-tab`/`#18-höfe-tab` in [20](20-Funktionen.md), 1× in [21 §5](21-UI-UX.md)) — GitHub bildet den Anker aus der VOLLEN Überschrift. Statt die Links auf Langslugs umzuschreiben tragen die Ziele jetzt echte `<a id>`-Anker (107 ADR-Überschriften, uniform); `check-anchors.mjs` prüft es mechanisch, mit GitHubs vendorierter Slug-Regel statt einer Näherung (Äquivalenz über 327 Überschriften gemessen)
+
+<a id="bl-51"></a>
+### BL-51
+
+[S]/[E]-Inventur: alle 29 Bullets aus Spec 20 am Code verifiziert, 21 neue Zeilen (BL-111…BL-134), zwei begründete Ausnahmen (s. Kopf). Der ursprüngliche Beleg `!txt:noch nicht…inventarisiert@05-Backlog.md` war **strukturell unerfüllbar** — das Muster stand in der Beleg-Zelle selbst, ein negierter `txt:`-Beleg auf die eigene Datei kann nie zutreffen. Ersetzt durch die L7-Ratsche, die aus der Doku-Aussage einen Wächter macht
+
+<a id="bl-138"></a>
+### BL-138
+
+Anonymisierter Export war unbrauchbar und nicht verdrahtet: (a) die BFS lief ohne `dead`-Bremse durch datierte Verstorbene und klassifizierte 2767 von 2795 Personen als lebend (Orakel: 689) — Bremse jetzt Orakel-konform, die Zahl ist als Test verankert; (b) `anonymizeIndi` hatte null Produktions-Aufrufer — jetzt `anonymizeDoc` über die `roots` plus orthogonaler Rohr-Schalter `anonymizeReferenceYear` mit erzwungenem `_anon`-Suffix/Download auch bei 5.5.1 mit Handle, GRAMPS+Anon wirft; (c) FAM-Ereignisdetails lebender Paare blieben stehen (265 `MARR`-Daten) — jetzt geschwärzt, Links bleiben (DEV-06). `anonymizeDoc` ist rein: der geschwärzte Baum fließt nie in den App-Zustand zurück
+
+<a id="bl-119"></a>
+### BL-119
+
+Export-Fläche im „Datei"-Eintrag (kein eigenes Nav-Ziel): Formatwahl 5.5.1/Strict/GED7 + Anonymisierungs-Checkbox mit Zähler „N von M Personen werden geschwärzt", über dieselbe `save-action.ts`-Ebene wie Knopf und ⌘S (`exportGedcom`, `saveCurrentDoc` delegiert dorthin). Der Zieldateiname kommt aus `exportFileName` — eine Regel für Rohr und Fläche. Vorher hatte `ExportFormat` in `ui/`/`app/` keinen einzigen Aufrufer. GRAMPS bewusst ausgeklammert (BL-139)
+
+<a id="bl-123"></a>
+### BL-123
+
+Fan-Chart (konzentrische Halbkreis-Segmente, 3–6 Generationen, ADR-v9-123): reine polar `fan-layout.ts` (BFS-Ahnen, `RADII`-Ringe, Arc-Pfade π→0, rotierter Text mit Initialen-Kürzung, Orakel `ui-fanchart.js`) + `fan-chart.ts` mountet in den geteilten Viewport (BL-151). Geschlechtsfarben über die geteilten `--stb-sex-*`-Tokens, Generations-Abstufung. Modus `fan` an `TreeModeId`/`ViewModeToggle`. Browser-verifiziert an Realdaten (5 Gen, 62 Segmente, Segment-Rezentrierung, Tastatur-↑, saubere Modus-Wechsel)
+
+<a id="oe-11"></a>
+### OE-11
+
+Zwei Fenster ab der Layout-Grenze (ADR-v9-171): Liste (22 rem) links, Steckbrief rechts; darunter unverändert eine Fläche mit Rückweg, Werkzeuge nehmen immer die ganze Fläche. Dasselbe Muster wie `EntityTab`, keine zweite Media-Query — macht zugleich die Voraussetzung wahr, unter der die geteilte Kopfzeile ihren Rückweg oberhalb der Grenze weglässt
+
+<a id="oe-1"></a>
+### OE-1
+
+Programm-Skelett: eigener Einstieg `app-orte/` mit eigener Vite-Konfiguration (`root`, `base` `/stammbaum-v9/orte/`, `outDir ../dist/orte`, `emptyOutDir: false`), CSP-Plugin wiederverwendet. Die Konfiguration liegt IM Editor-Baum, damit sein Bau-Wissen mit ihm zusammenbleibt
+
+<a id="oe-2"></a>
+### OE-2
+
+Dokument-Lebenszyklus (INV-ORTE-3): öffnen über eigene `PickerAdapter`-Instanz, „Neu", Änderungsmarke, Speichern mit `rev+1`/`device`/`ts` durch `FileService.exportToFile` (Tier 1 in dieselbe Datei, sonst Teilen/Download), Schema-Gate → Nur-Lese-Modus
+
+<a id="oe-3"></a>
+### OE-3
+
+`PlacesHost`-Implementierung des Editors über `makeDatabase()` + geladene Orte/Höfe, mit Undo/Redo über `services/undo` auf Schnappschüssen von `{placeObjects, hofObjects}`; `caps.hasEventContext` folgt der geladenen Kontextdatei, `canEditEvents`/`canNavigateToLens` sind dauerhaft falsch
+
+<a id="oe-7"></a>
+### OE-7
+
+Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien der Orts-/Hofmengen, übernommen werden ausschließlich Ereignis-Verknüpfungen auf vorhandene Objekte. Test serialisiert das Dokument vor und nach dem Laden und vergleicht
+
+<a id="adr-v9-272"></a>
+## ADR-v9-272
+
+**Bau BL-322 — 2026-08-13.** Vier Prüfer grün (`check-backlog` inkl. `--selftest`, `check-anchors`, `check-adr-split`, `check-adr-prinzipien`). Bilanz: Backlog 149 → 134 KB, 354 Zeilen vorher wie nachher (keine ID verloren, keine dazugekommen — nachgerechnet, nicht angenommen), sechs Basis-Specs ohne datierte Vorgeschichte, `04a` um 202 Zeilen gewachsen. Beide Ratschen stehen auf 0.
+
+**Die Zeile widersprach sich selbst — und das ist der interessanteste Teil.** BL-322 hielt die Nutzer-Entscheidung vom 2026-07-12 fest („kein Rundumschlag, nur beim Anfassen") und verlangte im selben Feld einen Fertig-Zustand, der genau ein Rundumschlag ist. Beides stand nebeneinander, seit die Zeile im August angelegt wurde. Aufgelöst hat es der ausdrückliche Auftrag, sie zu erledigen; ohne ihn hätte ich sie nicht als Sweep abgearbeitet. **Merksatz:** eine Backlog-Zeile, die eine Einschränkung zitiert und danach das Gegenteil als Fertig-Zustand definiert, ist keine Zeile, sondern eine offene Frage — und man sieht es nur, wenn man beide Hälften derselben Zelle liest.
+
+**Der Wächter musste am WORT ansetzen, nicht an der Stellung.** Naheliegend wäre „ein Datum am Anfang eines Bullets ist Vorgeschichte" gewesen. Das hätte `**Belegt (2026-08-09, …)**` in [32](32-Testframework.md) mitgenommen — ein Bullet-Anführer, der trotzdem ein Beleg ist und den ADR-v9-240 E3 ausdrücklich stehen lässt. Die Trennlinie ist semantisch: **eine Messung belegt, was GILT; ein Nachtrag erzählt, was WAR.** Mit der Wortliste meldet L15 in 20/21/32 und in 13/30 null Treffer — also genau dort nichts, wo die datierten Sätze Belege sind. Dass die Regel dafür eine benannte Lücke behält (`… sah bis 2026-07-16 gar kein Gate` fängt sie nicht), ist der Preis; er ist billiger als ein Wächter, der Belege frisst.
+
+**Beim Auslagern wäre beinahe eine geltende Regel mit ausgezogen.** Die `Lehre (2026-07-10)`-Klausel in [31](31-Dev-Umgebung.md) §6 endete mit zwei OPERATIVEN Sätzen: kein hardcoded `--port` im Start-Befehl, und `vite.config.ts` braucht `server.port` aus `PORT`. Mein Skript schnitt an „Bei künftiger Neuanlage" — und nahm die beiden Sätze davor mit nach 04a. Gefunden beim Lesen des Diffs, nicht vom Lint. **Eine Lehre kann eine geltende Regel enthalten; verschoben wird die Geschichte, nicht der Absatz.** Das ist die Auslagerungs-Fassung des CLAUDE.md-Reflexes „nach einem skriptgesteuerten Edit den Diff lesen" — und der zweite Fall in dieser Sitzung, in dem er getragen hat.
+
+**Zwölf von 36 Titeln taugten automatisch nicht.** Der Ableitungsversuch „nimm den führenden Fettdruck" lieferte verschachtelten Fettdruck (`**Story: **Familien-Biografie****`) oder halbe Nebensätze. Sie sind von Hand gesetzt. Eine Konsolidierung, die Titel generiert, spart die falsche Arbeit ein: der Titel ist das Einzige, was von der Zeile im Backlog übrig bleibt.

@@ -73,6 +73,32 @@ const L3_RATSCHE = 0;
  *  eigenen [S]-Bullet in §2 (BL-289, ADR-v9-207); vorher steckte sie als Halbsatz im
  *  Eingabekomfort-Bullet, der sie ausdrücklich NICHT als Ereignis führte. */
 const SE_BULLETS = 41;
+/** L15-Ratsche: datierte VORGESCHICHTE in den Basis-Specs 10–32 (BL-322, Fortsetzung von
+ *  ADR-v9-240 Entscheidung 3). Nach der Bereinigung am 2026-08-13 auf 0 — NIE WIEDER
+ *  ANHEBEN: 10–32 sagen, was gilt; was passiert ist, steht in 04a.
+ *
+ *  WARUM ES DIESE REGEL GIBT. ADR-v9-240 hat 20/21/32 von Hand geräumt und die übrigen
+ *  sechs Specs als BL-322 offen gelassen. Eine Räumung ohne Gate ist eine Räumung auf
+ *  Wiedervorlage: beim Backlog war die gemessene Halbwertszeit fünf Tage (ADR-v9-240).
+ *  Dieselbe Bauform wie L3, das die Status-Wörter in denselben Dateien hält. */
+const L15_RATSCHE = 0;
+
+/** Was als Vorgeschichte zählt: ein GESCHICHTS-Wort in Sichtweite eines Datums.
+ *
+ *  Ausdrücklich NICHT getroffen — und das ist der ganze Trick der Wortliste — der
+ *  datierte BELEG einer geltenden Zusage, den ADR-v9-240 E3 ausdrücklich stehen lässt:
+ *  `**Belegt (2026-08-09, …)**` (32), `gemessen 2026-08-03` (21), `| Ist (2026-07-18) |`
+ *  (30), `(Nutzer-Befund 2026-08-10)` mitten im Satz (21), `Coverage-Audit … gemessen
+ *  2026-07-26` (13). Der Unterschied ist nicht die Stellung, sondern das Wort: eine
+ *  Messung belegt, was GILT; ein Nachtrag/eine Lehre erzählt, was WAR.
+ *
+ *  BENANNTE GRENZE: eine Vorgeschichte ohne eines dieser Wörter (`… sah bis 2026-07-16
+ *  gar kein Gate`) fängt die Regel nicht — sie war beim Räumen von 31 dabei, aber von
+ *  Hand. Ein Wächter mit benannter Lücke ist ehrlicher als eine Wortliste, die halbe
+ *  Sätze errät und dabei Belege mitnimmt. */
+const L15_MARKER =
+  /(?:Nachtrag|Lehre \(|Befund \(|Korrektur|Konsistenz-Analyse|Ursprünglich)[^\n]{0,40}?20\d\d-\d\d-\d\d/;
+
 const L3_WOERTER =
   /(nicht gebaut|✅ gebaut|noch offen|noch nicht gebaut|bleibt offen|weiterhin offen|offene Folgearbeit|nicht umgesetzt)/gi;
 
@@ -173,7 +199,11 @@ const L14_BUDGET = 200;
 /** Ist-Stand 2026-08-09 nach der zweiten Konsolidierung: 31 Zeilen in `05`, 5 in `05a`.
  *  Fällt, sobald eine davon ihren Inhalt nach [04a](specs/v9/04a-Chronik.md) umzieht.
  *  NIE ANHEBEN. */
-const L14_RATSCHE = 36;
+/** 36 → 0 am 2026-08-13 (BL-322): die 36 Zeilen sind wörtlich nach 04a umgezogen und im
+ *  Backlog auf Titel + Zeiger gekürzt. NIE WIEDER ANHEBEN — eine Ratsche, die 36 zulässt,
+ *  wo null stehen, erlaubt 36 neue. Wer eine erledigte Zeile begründen will, ohne einen ADR
+ *  dafür zu haben, schreibt den Text nach 04a und verweist. */
+const L14_RATSCHE = 0;
 
 /** Die Prosa einer Punkt-Spalte: alles außer Markdown-Links und ihren Trennzeichen. */
 export function prosaLaenge(punkt) {
@@ -560,6 +590,24 @@ function pruefe() {
     fehler.push(`L3 Status-Wörter in Specs 10–32: ${l3} > Ratsche ${L3_RATSCHE} (${l3Dateien.join(' · ')}) — Soll und Ist vermischen sich wieder`);
   else if (l3 > 0)
     warnungen.push(`L3 ${l3} Status-Wörter in Specs 10–32 (Ratsche ${L3_RATSCHE}, BL-50 offen): ${l3Dateien.join(' · ')}`);
+
+  // L15-Ratsche: datierte Vorgeschichte in den Specs 10–32 (BL-322).
+  const l15 = [];
+  for (const f of fs.readdirSync(path.join(SPEC, 'specs/v9')).filter((f) => /^[123]\d-/.test(f))) {
+    fs.readFileSync(path.join(SPEC, 'specs/v9', f), 'utf8')
+      .split('\n')
+      .forEach((l, i) => {
+        const m = L15_MARKER.exec(l);
+        if (m) l15.push(`${f}:${i + 1}: ${m[0]}`);
+      });
+  }
+  if (l15.length > L15_RATSCHE)
+    fehler.push(
+      `L15 ${l15.length} datierte Vorgeschichten in den Specs 10–32 > Ratsche ${L15_RATSCHE} — ` +
+        `10–32 sagen, was gilt; was passiert ist, gehört nach 04a (ADR-v9-240 E3):\n    ${l15.join('\n    ')}`,
+    );
+  else if (l15.length > 0)
+    warnungen.push(`L15 ${l15.length} datierte Vorgeschichten in den Specs 10–32 (Ratsche ${L15_RATSCHE}): ${l15.join(' · ')}`);
 
   // L4: Spec-Links der Backlog-Zeilen auflösbar?
   for (const z of zeilen)

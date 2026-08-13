@@ -4,7 +4,7 @@
 
 Forschungsartefakte hängen an Person/Familie. Alle außer Projekten **reisen mit der Datei** (GEDCOM via `_`-Tags, GRAMPS via `<attribute>`) — weil sie zur Person/Familie gehören, nicht ins App-Private (LP-3). Serialisierung: siehe [13](13-Interop-Roundtrip.md).
 
-**Verhältnis der drei Forschungsartefakte (Nachtrag 2026-07-07, ADR-v9-36):** Task/LogEntry/Hypothesis bilden die drei Phasen eines GPS-Forschungszyklus — Task = „was ist zu tun" (zukunftsgerichtet), LogEntry = „was habe ich gesucht, was kam raus" (ein konkreter Suchvorgang), Hypothesis = „was vermute ich, warum" (schwebende Theorie bis Klärung). Bewusst **drei getrennte** Typen mit unterschiedlicher Status-Semantik statt eines gemeinsamen „Vorgang"-Typs — ein Zusammenlegen würde echte Bedeutungsunterschiede verlieren (Kanban-Status ≠ Suchergebnis ≠ Hypothesen-Verdikt). Zwei schlanke, **optionale** Vorwärts-Verweise verbinden sie, ohne die Typen zu koppeln: `ResearchTask.sourceRef` (§1) und `LogEntry.taskId` (§2). `Hypothesis.evidence` bleibt bewusst OHNE Task-/Log-Bezug (INV-H2: reine SID-Referenz, kein zweiter Verweis-Pfad zu pflegen) — eine Hypothese kann aus mehreren Sucheinträgen über Zeit entstehen, ein einzelner Log-Verweis wäre irreführend.
+**Verhältnis der drei Forschungsartefakte ([ADR-v9-36](04-Entscheidungslog.md#adr-v9-36)):** Task/LogEntry/Hypothesis bilden die drei Phasen eines GPS-Forschungszyklus — Task = „was ist zu tun" (zukunftsgerichtet), LogEntry = „was habe ich gesucht, was kam raus" (ein konkreter Suchvorgang), Hypothesis = „was vermute ich, warum" (schwebende Theorie bis Klärung). Bewusst **drei getrennte** Typen mit unterschiedlicher Status-Semantik statt eines gemeinsamen „Vorgang"-Typs — ein Zusammenlegen würde echte Bedeutungsunterschiede verlieren (Kanban-Status ≠ Suchergebnis ≠ Hypothesen-Verdikt). Zwei schlanke, **optionale** Vorwärts-Verweise verbinden sie, ohne die Typen zu koppeln: `ResearchTask.sourceRef` (§1) und `LogEntry.taskId` (§2). `Hypothesis.evidence` bleibt bewusst OHNE Task-/Log-Bezug (INV-H2: reine SID-Referenz, kein zweiter Verweis-Pfad zu pflegen) — eine Hypothese kann aus mehreren Sucheinträgen über Zeit entstehen, ein einzelner Log-Verweis wäre irreführend.
 
 ---
 
@@ -22,8 +22,6 @@ ResearchTask {
 ```
 GEDCOM: `_TASK`/`_CAT`/`_TSTAT`/`_ID` + optional `SOUR @Sxx@` (Standard-Tag, kein neuer `_`-Tag) für `sourceRef`. **`_DONE` wird gelesen, aber nicht geschrieben** ([ADR-v9-213](04-Entscheidungslog.md#adr-v9-213)): v8 führte den Erledigt-Haken neben dem später dazugekommenen `_TSTAT`, also zwei Zeilen für eine Aussage — eine fremde Datei kann sie widersprüchlich mitbringen, und der Wert-Halt ([13 §2](13-Interop-Roundtrip.md)) würde den Widerspruch konservieren. `_TSTAT` trägt sie allein; `_DONE` bleibt der Rückfall beim Lesen, für Aufgaben von vor v8 sw v307. Pro Person/Familie + globale Liste (Filter Alle/Offen/Erledigt) + Markdown-Export. UI: [20 §1.11](20-Funktionen.md).
 
-**Nachtrag (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** `sourceRef` war im v8-Oracle vorhanden (`ui-views-tasks.js` `t.sid`, per Quellen-Dropdown im Aufgabe-Modal setzbar, gegen den echten v8-Code verifiziert) und ist beim v9-Neuaufsatz zunächst ohne bewusste Entscheidung entfallen — hiermit wiederhergestellt.
-
 ---
 
 ## 2. Forschungsprotokoll (Log)
@@ -37,7 +35,7 @@ LogEntry {
 ```
 GEDCOM `_RLOG` (Wire-Struktur analog `_TASK`, [13 §2.3](13-Interop-Roundtrip.md)). `result='partial'` („teilweise") trennt „nichts gefunden" von „Fund, aber unvollständig" und trägt damit die Wiedervorlage. Globaler Protokoll-Tab (personenweise gruppiert ⇄ chronologische Research-Timeline) mit Markdown-Export. UI: [20 §1.11b](20-Funktionen.md).
 
-**`taskId`-Verknüpfung (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** verbindet einen Sucheintrag mit der Aufgabe, die ihn veranlasst hat — schließt die bislang fehlende Verbindung zwischen „was ist zu tun" (Task) und „was habe ich gesucht" (Log), die weder im v8-Oracle noch in der ursprünglichen v9-Spec bestand. Bewusst NUR ein optionaler Vorwärts-Verweis (Log → Task), keine erzwungene 1:1-Kopplung oder automatisches Schließen der Aufgabe — eine Aufgabe kann mehrere Sucheinträge brauchen, bevor sie erledigt ist; das Schließen bleibt eine bewusste Nutzerhandlung (`status`), kein abgeleiteter Seiteneffekt.
+**`taskId`-Verknüpfung ([ADR-v9-36](04-Entscheidungslog.md#adr-v9-36)):** verbindet einen Sucheintrag mit der Aufgabe, die ihn veranlasst hat — schließt die bislang fehlende Verbindung zwischen „was ist zu tun" (Task) und „was habe ich gesucht" (Log), die weder im v8-Oracle noch in der ursprünglichen v9-Spec bestand. Bewusst NUR ein optionaler Vorwärts-Verweis (Log → Task), keine erzwungene 1:1-Kopplung oder automatisches Schließen der Aufgabe — eine Aufgabe kann mehrere Sucheinträge brauchen, bevor sie erledigt ist; das Schließen bleibt eine bewusste Nutzerhandlung (`status`), kein abgeleiteter Seiteneffekt.
 
 ---
 
@@ -85,7 +83,7 @@ GEDCOM `_HYPO`-Subtree auf INDI/FAM.
 - **INV-H3:** eine Hypothese mit `kind: 'identity'` hat mindestens einen `refs`-Eintrag und eine nicht-leere `rationale` — ein Ausschluss ohne Begründung ist eine Abweisung, kein Befund.
 - `kind: 'free'` ist die unveränderte bisherige Hypothese; sie schreibt weder `_HKIND` noch `_HREF`.
 
-**Bewusst OHNE Task-/Log-Bezug (Konsistenz-Analyse 2026-07-07, ADR-v9-36):** anders als `LogEntry` bekommt `Hypothesis` KEINEN `taskId`/Log-Verweis — eine Hypothese verdichtet sich typischerweise aus mehreren Sucheinträgen über Zeit, ein einzelner Vorwärts-Verweis wäre irreführend bzw. würde nur den letzten Auslöser abbilden. `evidence` bleibt die einzige Verknüpfung nach außen (SID-Referenz, INV-H2).
+**Bewusst OHNE Task-/Log-Bezug ([ADR-v9-36](04-Entscheidungslog.md#adr-v9-36)):** anders als `LogEntry` bekommt `Hypothesis` KEINEN `taskId`/Log-Verweis — eine Hypothese verdichtet sich typischerweise aus mehreren Sucheinträgen über Zeit, ein einzelner Vorwärts-Verweis wäre irreführend bzw. würde nur den letzten Auslöser abbilden. `evidence` bleibt die einzige Verknüpfung nach außen (SID-Referenz, INV-H2).
 
 **Bewusste Abgrenzung (Kern-Entscheidung):** *leichte* statusbehaftete Annotation, KEIN Alternativ-Baum / Zwei-Schichten-Evidenzmodell. Die Hypothese ist Metadaten *über* die Person; sie ändert die Fakten nicht. (Ein Alternativ-Baum bräche die Roundtrip-Treue — siehe [01 §4 Nicht-Ziele](01-Vision-und-Prinzipien.md).)
 
