@@ -302,6 +302,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-355 | — | defekt | basis | **Eine Ereignis-Fortsetzung erreichte das Modell nicht — 118 Zeichen sind aus einem echten Export verschwunden** — `collectText` beim Lesen, `textNode` beim Schreiben, Verlust-Wächter am Realbestand → [ADR-v9-266](04-Entscheidungslog.md#adr-v9-266) | [13 §2](13-Interop-Roundtrip.md), [32 TST-28](32-Testframework.md), [ADR-v9-211](04-Entscheidungslog.md#adr-v9-211) | `test:tests/roundtrip/wire-loss-realbestand.test.ts` | gebaut |
 | BL-354 | — | feature | kür | **JSON-Ex-/Import einzelner Erfassungs-Vorlagen** — ergänzt den Bestand, ersetzt ihn nie ([ADR-v9-264](04-Entscheidungslog.md#adr-v9-264)) | [20 §2](20-Funktionen.md), [30 §2.3](30-NFR-und-Persistenz.md), [14 §2](14-Dateihandling.md) | `sym:exportEntryTemplates` | gebaut |
 | BL-353 | — | feature | kür | **Erfassung als Arbeits-Ziel: Vorlagen-Liste und Builder** → [ADR-v9-265](04-Entscheidungslog.md#adr-v9-265) | [20 §2](20-Funktionen.md), [21 §3](21-UI-UX.md), [21 §6h](21-UI-UX.md) | `test:tests/ui/EntryTemplateView.component.test.ts` | gebaut |
 | BL-352 | — | feature | kür | **Erfassungs-Fläche der Vorlagen** — geteilte Datumszeile, Vorschlagen statt Binden → [ADR-v9-264](04-Entscheidungslog.md#adr-v9-264) | [20 §2](20-Funktionen.md), [21 §6a](21-UI-UX.md) | `test:tests/ui/EntryTemplateCapture.component.test.ts` | gebaut |
