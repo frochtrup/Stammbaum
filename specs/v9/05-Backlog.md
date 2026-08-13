@@ -167,7 +167,7 @@ der Tabelle.
 | Ⓖ Navigation & Shell | BL-94 (Inhalt zuerst spezifizieren) | Shell / Navigation, `swipe-nav.ts`, Modal-Schalen |
 | Ⓗ Import / Export / Dedup | BL-330 (GRAMPS-Owner-Refs) · BL-207 · BL-313 (Randfall der Autoritätsregel, unabhängig) · BL-166 (vertagt) | Write-Back, Import-Vergleich, Dedup, Export-Pipe |
 | Ⓘ Orte-Editor (Standalone) | BL-227 (vertagt) | CI-Workflow |
-| Ⓙ Bearbeitung & Formulare | BL-233 · BL-334 (Meldungs-Kanäle) — die Erfassungs-Vorlagen sind vollständig gebaut | `ui/shell/StatusNotice.svelte`, `ui/views/person`, `ui/views/place`, `ui/views/hof`, `ui/views/media`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage, `EventEditModal`), `tests/ui/touch-target.test.ts` |
+| Ⓙ Bearbeitung & Formulare | BL-233 · BL-334 (Meldungs-Kanäle) | `ui/shell/StatusNotice.svelte`, `ui/views/person`, `ui/views/place`, `ui/views/hof`, `ui/views/media`, `ui/shell` (Formulare, `SourceCitationRow`, Ablage, `EventEditModal`), `tests/ui/touch-target.test.ts` |
 | Ⓝ Doku-Disziplin | BL-322 (zwei Abarbeitungslisten, unabhängig voneinander) | `specs/v9/`, `.claude/skills/spec-lint/` |
 | Ⓞ Zeitachse der Orte | BL-326 (die Wahlregel, unabhängig und noch unentschieden) | `core/places/types.ts`, `core/places/place-registry.ts`, `core/places/gov.ts`, `services/places/types.ts`, `ui/views/place/PlaceEnclosureEditModal.svelte`, `ui/views/place/PlaceNamesSection.svelte`, `ui/views/hof/HofDetail.svelte` |
 | Ⓜ Skalierung & Reaktionszeit | BL-312 (erst das Budget, dann die Optimierung) | `tests/perf/`, `ui/shell/pagination.ts`, `ui/shell/app-state.svelte.ts`, die sechs `*List.svelte` |
@@ -302,6 +302,8 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-357 | — | feature | kür | **Der Builder benutzt die üblichen Eingabefelder, und die Rollen-Blöcke sind verschiebbar** → [ADR-v9-268](04-Entscheidungslog.md#adr-v9-268) | [20 §2](20-Funktionen.md), [21 §6a](21-UI-UX.md) | `sym:moveRoleBlock` | gebaut |
+| BL-358 | — | feature | kür | **Die Eltern des Partners als eigene Rollen** → [ADR-v9-268](04-Entscheidungslog.md#adr-v9-268) | [20 §2](20-Funktionen.md), [10 §2](10-Domaenenmodell.md) | `test:tests/core/model/partner-eltern.test.ts` | gebaut |
 | BL-356 | — | defekt | basis | **Der Coverage-Wächter meldete 76/135 statt 87/135 — elf beanspruchte Tags fehlten im Nenner** — zehn Ereignistags aus BL-335 plus `DATA`; neue Gegenrichtung im Test statt Erinnerung → [ADR-v9-267](04-Entscheidungslog.md#adr-v9-267) | [32 TST-29](32-Testframework.md), [ADR-v9-249](04-Entscheidungslog.md#adr-v9-249), [ADR-v9-127](04-Entscheidungslog.md#adr-v9-127) | `txt:die Gegenrichtung@tests/core/coverage-spec.test.ts` | gebaut |
 | BL-355 | — | defekt | basis | **Eine Ereignis-Fortsetzung erreichte das Modell nicht — 118 Zeichen sind aus einem echten Export verschwunden** — `collectText` beim Lesen, `textNode` beim Schreiben, Verlust-Wächter am Realbestand → [ADR-v9-266](04-Entscheidungslog.md#adr-v9-266) | [13 §2](13-Interop-Roundtrip.md), [32 TST-28](32-Testframework.md), [ADR-v9-211](04-Entscheidungslog.md#adr-v9-211) | `test:tests/roundtrip/wire-loss-realbestand.test.ts` | gebaut |
 | BL-354 | — | feature | kür | **JSON-Ex-/Import einzelner Erfassungs-Vorlagen** — ergänzt den Bestand, ersetzt ihn nie ([ADR-v9-264](04-Entscheidungslog.md#adr-v9-264)) | [20 §2](20-Funktionen.md), [30 §2.3](30-NFR-und-Persistenz.md), [14 §2](14-Dateihandling.md) | `sym:exportEntryTemplates` | gebaut |
