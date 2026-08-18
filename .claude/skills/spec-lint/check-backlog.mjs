@@ -72,7 +72,7 @@ const L3_RATSCHE = 0;
  *  40 -> 41 (2026-08-02): die Konfession ist ein Ereignis geworden und hat damit einen
  *  eigenen [S]-Bullet in §2 (BL-289, ADR-v9-207); vorher steckte sie als Halbsatz im
  *  Eingabekomfort-Bullet, der sie ausdrücklich NICHT als Ereignis führte. */
-const SE_BULLETS = 41;
+const SE_BULLETS = 42;
 /** L15-Ratsche: datierte VORGESCHICHTE in den Basis-Specs 10–32 (BL-322, Fortsetzung von
  *  ADR-v9-240 Entscheidung 3). Nach der Bereinigung am 2026-08-13 auf 0 — NIE WIEDER
  *  ANHEBEN: 10–32 sagen, was gilt; was passiert ist, steht in 04a.
