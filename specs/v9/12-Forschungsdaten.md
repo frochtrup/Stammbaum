@@ -51,7 +51,7 @@ Pro Zitat (`citation.eval`, siehe [10 §5.3](10-Domaenenmodell.md)), unabhängig
 | Informant (optional) | Freitext oder Person-Xref | `_INFM` |
 
 ```
-EvidenceEval { sourceType, infoQuality, evidence, informant }
+EvidenceEval { source, information, evidence, informant? }
 ```
 
 `evalToQuay()` leitet einen QUAY-*Vorschlag* ab (`original+primary`→3, `negative`→0, `authored/undetermined/indirect`→1, sonst 2). Serialisiert als **modellierter** `_EVAL`-Subtree unter SOUR (nicht verbatim — [13 §2.3](13-Interop-Roundtrip.md)). Validator-Regel `MISSING_EVAL` bewusst **default-off** (opt-in-Disziplin, [20 §3](20-Funktionen.md)). UI-Verdrahtung (Bewertungs-Aufklapper an der Zitat-Zeile): [20 §1.11c](20-Funktionen.md).
