@@ -202,6 +202,13 @@ Welle 5. Ihren Platz nimmt die dabei **ausgezählte** Geschwister-Population der
 Klasse ein (Listen-Suche/-Filter, die drei anderen Forschungs-Segmente): dasselbe Muster,
 sieben weitere Flächen — **am selben Tag gebaut** ([ADR-v9-230](04-Entscheidungslog.md#adr-v9-230)). **Welle 5 ist damit vollständig abgetragen:** BL-318 schloss am selben Tag (die Instabilität lag in der Test-Automatik, [ADR-v9-232](04-Entscheidungslog.md#adr-v9-232)) und BL-315 als „nicht reproduzierbar" ([ADR-v9-233](04-Entscheidungslog.md#adr-v9-233), Nutzer-Beleg: mehrfacher Safari-Import über mehrere Sitzungen). Die Zählung der folgenden Wellen bleibt unverändert, damit Verweise nicht ins Leere gehen.
 
+**Am 2026-08-21 gebaut:** die Suche und der Filter der Quellenliste samt der Gattung als
+Namenskonvention (BL-372/373, [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277)) sowie die Suche der drei
+Forschungs-Segmente und die Verwandtschafts-Relevanz als zweite Scope-Achse (BL-374/375,
+[ADR-v9-278](04-Entscheidungslog.md#adr-v9-278)). Die Welle 7 dieser Zählung ist damit vollständig
+abgetragen und steht nicht mehr in der Liste; die folgenden Wellen behalten ihre Bezeichnung,
+damit Verweise nicht ins Leere gehen.
+
 2. **Welle 4 — die Befunde der Stand-Bewertung (2026-08-04):** BL-312.
    Die `basis`-Zeile dieser Welle ist am selben Tag gebaut und steht deshalb nicht mehr
    hier; eine zweite ist am 2026-08-13 zurückgezogen worden, weil die Messung ihre Prämisse
@@ -311,6 +318,10 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-372 | K | feature | basis | **Suchfeld und navigationsfester Zustand der Quellenliste** → [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277) | [20 §1.6](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §10a](21-UI-UX.md) | `sym:createSourceListState` | gebaut |
+| BL-373 | S | feature | kür | **Gattung der Quelle über die Namenskonvention, mit Filter und Auswahlbox** → [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277) | [20 §1.6](20-Funktionen.md), [21 §10a](21-UI-UX.md) | `sym:sourceKindOf` | gebaut |
+| BL-374 | — | feature | kür | **Suche in Aufgaben, Protokoll und Hypothesen** → [ADR-v9-278](04-Entscheidungslog.md#adr-v9-278) | [20 §1.11](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §6h](21-UI-UX.md) | `sym:matchesResearchQuery` | gebaut |
+| BL-375 | S | feature | kür | **Verwandtschafts-Relevanz als zweite Scope-Achse der Forschungsfläche** → [ADR-v9-278](04-Entscheidungslog.md#adr-v9-278) | [20 §1.11](20-Funktionen.md), [21 §5](21-UI-UX.md), [10 §2](10-Domaenenmodell.md) | `sym:computeKinship` | gebaut |
 | BL-371 | — | feature | kür | **Der Fächer reicht bis acht Ahnen-Ringe** (vorher 6) → [ADR-v9-276](04-Entscheidungslog.md#adr-v9-276) | [20 §1.3](20-Funktionen.md), [21 §8](21-UI-UX.md), [ADR-v9-275](04-Entscheidungslog.md#adr-v9-275), [ADR-v9-276](04-Entscheidungslog.md#adr-v9-276) | `txt:jede wählbare Stufe bis 8 hat einen Radius@tests/islands/fan-layout.test.ts` | gebaut |
 | BL-370 | — | feature | kür | **Jedes Fächer-Segment nennt im Tooltip Namen und Geburtsjahr** — die gezeichnete Beschriftung verkürzt sich nach außen und endet ab Ring 6 ganz → [ADR-v9-276](04-Entscheidungslog.md#adr-v9-276) | [20 §1.3](20-Funktionen.md), [11 §5](11-Orte-Hoefe-Identitaet.md), [ADR-v9-86](04-Entscheidungslog.md#adr-v9-86), [ADR-v9-276](04-Entscheidungslog.md#adr-v9-276) | `test:tests/ui/fan-tooltip.test.ts` | gebaut |
 | BL-368 | — | feature | kür | **Die Generationenzahl ist je Baum-Modus wählbar** → [ADR-v9-275](04-Entscheidungslog.md#adr-v9-275) | [20 §1.3](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §8](21-UI-UX.md), [ADR-v9-275](04-Entscheidungslog.md#adr-v9-275) | `sym:createTreeViewState` | gebaut |

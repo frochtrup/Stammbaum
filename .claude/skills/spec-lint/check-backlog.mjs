@@ -71,8 +71,13 @@ const L3_RATSCHE = 0;
  *  §1.1 (BL-213, ADR-v9-190) — vorher trug ihn nur die Backlog-Zeile.
  *  40 -> 41 (2026-08-02): die Konfession ist ein Ereignis geworden und hat damit einen
  *  eigenen [S]-Bullet in §2 (BL-289, ADR-v9-207); vorher steckte sie als Halbsatz im
- *  Eingabekomfort-Bullet, der sie ausdrücklich NICHT als Ereignis führte. */
-const SE_BULLETS = 42;
+ *  Eingabekomfort-Bullet, der sie ausdrücklich NICHT als Ereignis führte.
+ *  42 -> 44 (2026-08-21): die Gattung der Quelle (§1.6, BL-373) und die
+ *  Verwandtschafts-Relevanz als zweite Scope-Achse (§1.11i, BL-375) sind eigene
+ *  [S]-Bullets; die Backlog-Zeilen gab es vorher. Die Suche in den drei
+ *  Forschungs-Segmenten (BL-374) und in der Quellenliste (BL-372) zählt NICHT mit —
+ *  sie ergänzt vorhandene Bullets, statt neue anzulegen. */
+const SE_BULLETS = 44;
 /** L15-Ratsche: datierte VORGESCHICHTE in den Basis-Specs 10–32 (BL-322, Fortsetzung von
  *  ADR-v9-240 Entscheidung 3). Nach der Bereinigung am 2026-08-13 auf 0 — NIE WIEDER
  *  ANHEBEN: 10–32 sagen, was gilt; was passiert ist, steht in 04a.
