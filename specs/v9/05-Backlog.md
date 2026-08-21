@@ -318,6 +318,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-376 | — | defekt | basis | **Ein Forschungsprojekt war weder änderbar noch löschbar — der Öffner war eine Doppelklick-Geste** → [ADR-v9-279](04-Entscheidungslog.md#adr-v9-279) | [20 §1.11f](20-Funktionen.md), [21 §6i](21-UI-UX.md) | `test:tests/ui/ProjectBarBearbeiten.component.test.ts` | gebaut |
 | BL-372 | K | feature | basis | **Suchfeld und navigationsfester Zustand der Quellenliste** → [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277) | [20 §1.6](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §10a](21-UI-UX.md) | `sym:createSourceListState` | gebaut |
 | BL-373 | S | feature | kür | **Gattung der Quelle über die Namenskonvention, mit Filter und Auswahlbox** → [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277) | [20 §1.6](20-Funktionen.md), [21 §10a](21-UI-UX.md) | `sym:sourceKindOf` | gebaut |
 | BL-374 | — | feature | kür | **Suche in Aufgaben, Protokoll und Hypothesen** → [ADR-v9-278](04-Entscheidungslog.md#adr-v9-278) | [20 §1.11](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §6h](21-UI-UX.md) | `sym:matchesResearchQuery` | gebaut |
