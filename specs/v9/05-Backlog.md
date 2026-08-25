@@ -318,6 +318,7 @@ Archiv: ihr Beleg muss weiterhin treffen, sonst ist das Feature umbenannt oder v
 
 | ID | P | Typ | Klasse | Punkt | Spec | Beleg | Status |
 |---|---|---|---|---|---|---|---|
+| BL-378 | — | defekt | basis | **Lange `_QUERY`-Texte kamen gekürzt zurück und gingen beim nächsten Schreiben verloren** → [ADR-v9-281](04-Entscheidungslog.md#adr-v9-281) | [13 §2](13-Interop-Roundtrip.md), [32 TST-30](32-Testframework.md) | `test:tests/roundtrip/wire-loss-lange-werte.test.ts` | gebaut |
 | BL-377 | — | defekt | basis | **Die Segmentgrenzen der Orts-Zeitleiste stammten aus jedem erreichbaren Elternknoten, nicht nur aus den zur jeweiligen Zeit gültigen** → [ADR-v9-280](04-Entscheidungslog.md#adr-v9-280) | [20 §1.7](20-Funktionen.md), [11 §5](11-Orte-Hoefe-Identitaet.md) | `test:tests/ui/place-detail-model.test.ts` | gebaut |
 | BL-376 | — | defekt | basis | **Ein Forschungsprojekt war weder änderbar noch löschbar — der Öffner war eine Doppelklick-Geste** → [ADR-v9-279](04-Entscheidungslog.md#adr-v9-279) | [20 §1.11f](20-Funktionen.md), [21 §6i](21-UI-UX.md) | `test:tests/ui/ProjectBarBearbeiten.component.test.ts` | gebaut |
 | BL-372 | K | feature | basis | **Suchfeld und navigationsfester Zustand der Quellenliste** → [ADR-v9-277](04-Entscheidungslog.md#adr-v9-277) | [20 §1.6](20-Funktionen.md), [21 §5](21-UI-UX.md), [21 §10a](21-UI-UX.md) | `sym:createSourceListState` | gebaut |
