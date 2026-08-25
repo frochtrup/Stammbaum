@@ -1393,3 +1393,17 @@ Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien de
 **Die wertvollere Hälfte ist die Nicht-Meldung.** 704 `addr`-Werte geprüft, 0 offen: die Bauform von ADR-v9-81 ist auf der Draht-Seite sauber. Das war bis heute eine Hoffnung, gestützt auf einen Einzelfix, und ist jetzt eine Messung über den ganzen Bestand. Ein Wächter, der nichts meldet, hat trotzdem etwas gesagt — vorausgesetzt, man hat ihn vorher rot gesehen (die gepflanzte Spiegelung).
 
 **Ein `*/` im Doc-Kommentar hat den Kommentarblock beendet.** Der Pfad-Ausdruck `/notes/*/text` in einer JSDoc-Zeile — Transform-Fehler „Unterminated string", 40 Zeilen weiter unten gemeldet. Kostete zwei Minuten, gehört aber in die Chronik, weil die Fehlermeldung an der falschen Stelle zeigt: bei „Unterminated" im Testkopf zuerst nach `*/` in den Kommentaren suchen, nicht nach Anführungszeichen.
+
+
+<a id="adr-v9-283"></a>
+## ADR-v9-283
+
+**Bau BL-381 — 2026-08-25.** Modell test-first, dann die Komponente, dann drei Einbaustellen. Gate: alle acht Schritte grün, 4.695 Tests (15 neue). `PersonDetail.svelte` stand vor dem Bau bei 582 von 600 Zeilen (max-lines-Ratsche) — der Einbau kostet dort zwei Zeilen, alles Übrige trägt die geteilte Komponente. Das war kein Zufall, sondern die Bauvorgabe: `ProofSummaryNote` hat denselben Weg vorgezeichnet.
+
+**Die Zahl, die ich geschätzt hatte, war falsch — und der Fehler war klein genug, um gefährlich zu sein.** 42 Zeichen je Zeile geschätzt, 46 gemessen. Kein dramatischer Unterschied, und genau deshalb wäre die Schätzung nie aufgefallen; die Schwelle hätte um zwei Notizen des Bestands danebengelegen. Nebenbefund der Messung: die mittlere ZEICHENBREITE (49) ist nicht dieselbe Größe wie der tatsächliche UMBRUCH (46) — wer Zeilen schätzen will, misst den Umbruch, nicht die Buchstaben.
+
+**Die Browser-Verifikation kostete mehr Zeit als der Bau, und zweimal lag es an meiner Methode.** (a) Ein Speichern im Personen-Formular kam nicht an — ich hatte zwischen Füllen und Speichern das Fenster umgestellt, worauf das Formular seinen Zustand aus der Person neu initialisierte. Kein Produktfehler, sondern eine selbst gebaute Falle. (b) „Demo laden" schien wirkungslos: die Fläche zeigte 11 Personen statt 24, und ich suchte den Fehler in meiner eigenen Datei-Bearbeitung, bis klar war, dass eine ältere Arbeitskopie geladen war und mein Klick auf einen inzwischen weggescrollten Sidebar-Eintrag ging. **Beide Male galt: erst die eigene Messanordnung verdächtigen, dann den Code** — die Regel steht in CLAUDE.md und hat auch hier gehalten.
+
+**Was die Verifikation eingebracht hat, was kein Test zeigen konnte:** die drei Flächen im Zusammenspiel. Der Quellen-Steckbrief zeigt jetzt eigene und geteilte Notiz untereinander, mit „auch bei 2 weiteren Datensätzen" an der geteilten — genau die Auskunft, die BL-382 vor dem Edit braucht. Und die Familien-Notiz, die zuvor an keiner Stelle der App existierte, steht da, wo man sie sucht.
+
+**Eine Lücke habe ich beim Messen selbst gefunden und gleich geschlossen:** `autoGrow` reagierte auf Eingaben, nicht auf Größenänderungen — nach dem Drehen des Telefons wäre die Höhe der alten Breite stehen geblieben. Drei Zeilen, im selben Zug erledigt statt als Folgezeile notiert.
