@@ -1419,3 +1419,17 @@ Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien de
 **Die Fertig-Bedingung hat sich selbst geprüft.** BL-380 stand mit „…und die Ausnahme in `wire-edit-ankunft.test.ts` (d) fällt weg" im Backlog. Genau das ist passiert: aus `['/notes/*/text']` wurde `[]`, am Realbestand kommen alle 32.030 mutierten Felder zurück. Eine Zeile so zu formulieren, dass ein Test sie schließt, ist billiger als jede Statusmeldung — und ehrlicher.
 
 **Was der Reihe nach richtig war:** BL-381 (Anzeige) vor BL-380 (Write-Back) zu bauen, hat die Notizen erst sichtbar gemacht; dass der Write-Back fehlte, wäre sonst weiter eine Zeile im Backlog geblieben, die niemanden drückt. Umgekehrt gilt für BL-382: ohne diesen Bau liefe der erste Edit an einer geteilten Notiz ins Leere.
+
+
+<a id="adr-v9-285"></a>
+## ADR-v9-285
+
+**Bau BL-382 — 2026-08-25.** Kern-Kommando, Sektion, drei Aufrufer, 13 Komponententests. Gate: alle acht Schritte grün, 4.712 Tests. Damit ist die Kette Ⓝ (Anzeige → Write-Back → Bearbeiten) an einem Tag geschlossen.
+
+**Zwei Wächter haben mich korrigiert, und der erste widerlegte eine Annahme, keine Nachlässigkeit.** Ich hatte die Speichern-Knöpfe als `type="button"` gebaut und im Kommentar begründet, ein mehrzeiliges Feld vertrage keinen Enter-Submit. `entity-form-keyboard.test.ts` (BL-276) meldete es sofort — und die Begründung war schlicht falsch: ein `<textarea>` löst kein implicit submission aus, Enter bleibt dort ein Absatz, und der `<form onsubmit>`-Pfad existiert trotzdem. Der Konflikt zwischen Regel und Fall, den ich zu sehen glaubte, gab es nie. **Merksatz:** wer eine Regel für seinen Fall aufweichen will, prüft zuerst, ob der Fall die Regel überhaupt verletzt.
+
+**Der zweite Wächter meldete meinen eigenen Kommentar.** `plain-input.test.ts` sucht `<textarea` je Zeile und verlangt `{...PROSE_FIELD}` daneben — und traf eine Kommentarzeile, in der ich das Element beim Namen nenne. Sein Geschwister-Wächter `entity-form-keyboard.test.ts` entfernt Kommentare vor der Suche und begründet das wortgleich mit „die Erklärung eines Verstoßes darf nicht als Verstoß zählen"; hier fehlte es. Nachgezogen statt umformuliert: eine Regel, die sich durch Umschreiben des Kommentars umgehen lässt, prüft die falsche Sache. Zeilenweise ersetzt, damit die gemeldete Zeilennummer weiter stimmt, und negativ verifiziert (Spread an einer echten Stelle entfernt → wieder rot).
+
+**Die Live-Verifikation hat den Unterschied gezeigt, den kein Komponententest zeigen kann:** dass ein Edit an der geteilten Notiz den RECORD ändert und die beiden Verweise unberührt lässt, und dass `✕` genau einen Verweis löst, während `0 @N_TEST@ NOTE` in der Datei stehen bleibt. Beides in der Arbeitskopie nachgesehen, nicht in der Anzeige — die Anzeige hätte auch dann plausibel ausgesehen, wenn das Falsche passiert wäre.
+
+**Die Personenliste rendert nur die ersten Gruppen** (Paginierung, Spec 21 §10b) — ein per Skript gesuchter Name aus einer späteren Gruppe ist schlicht nicht im DOM. Zweimal darüber gestolpert; der verlässliche Weg in eine bestimmte Person führte am Ende über den Quellen-Steckbrief und dessen Referenz-Link.
