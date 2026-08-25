@@ -1407,3 +1407,15 @@ Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien de
 **Was die Verifikation eingebracht hat, was kein Test zeigen konnte:** die drei Flächen im Zusammenspiel. Der Quellen-Steckbrief zeigt jetzt eigene und geteilte Notiz untereinander, mit „auch bei 2 weiteren Datensätzen" an der geteilten — genau die Auskunft, die BL-382 vor dem Edit braucht. Und die Familien-Notiz, die zuvor an keiner Stelle der App existierte, steht da, wo man sie sucht.
 
 **Eine Lücke habe ich beim Messen selbst gefunden und gleich geschlossen:** `autoGrow` reagierte auf Eingaben, nicht auf Größenänderungen — nach dem Drehen des Telefons wäre die Höhe der alten Breite stehen geblieben. Drei Zeilen, im selben Zug erledigt statt als Folgezeile notiert.
+
+
+<a id="adr-v9-284"></a>
+## ADR-v9-284
+
+**Bau BL-380 — 2026-08-25.** Test-first: neun Zusicherungen zuerst, davon sechs rot. Nach Dispatch, `emitNote`-Umzug, `noteEqual` und `RECOGNIZED_NOTE` waren drei immer noch rot — und zwar die drei, die den EDIT prüfen. Neuanlage und Löschung liefen bereits.
+
+**Die halbe Stunde steckte in der letzten Zeile von `mergeRecord`.** Sie gibt `tag` und `value` des ORIGINALS zurück. Für INDI/FAM/SOUR/REPO/OBJE ist das genau richtig — deren Nutzlast steckt in den Kindern, der Record-Wert ist leer, und ihn zu erhalten ist Treue. Der Notiz-Record ist der erste, dessen **Wert die Nutzlast IST**: der Edit kam durch Dispatch, Emitter und Gleichheitsprüfung und wurde im letzten Moment überschrieben. Kein Tippfehler, sondern eine Annahme, die fünfmal gestimmt hatte. **Merksatz:** wer eine geteilte Merge-Funktion für einen neuen Record-Typ benutzt, prüft zuerst, ob dessen Nutzlast dort steckt, wo die bisherigen sie hatten.
+
+**Die Fertig-Bedingung hat sich selbst geprüft.** BL-380 stand mit „…und die Ausnahme in `wire-edit-ankunft.test.ts` (d) fällt weg" im Backlog. Genau das ist passiert: aus `['/notes/*/text']` wurde `[]`, am Realbestand kommen alle 32.030 mutierten Felder zurück. Eine Zeile so zu formulieren, dass ein Test sie schließt, ist billiger als jede Statusmeldung — und ehrlicher.
+
+**Was der Reihe nach richtig war:** BL-381 (Anzeige) vor BL-380 (Write-Back) zu bauen, hat die Notizen erst sichtbar gemacht; dass der Write-Back fehlte, wäre sonst weiter eine Zeile im Backlog geblieben, die niemanden drückt. Umgekehrt gilt für BL-382: ohne diesen Bau liefe der erste Edit an einer geteilten Notiz ins Leere.
