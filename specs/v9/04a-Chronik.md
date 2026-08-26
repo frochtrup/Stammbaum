@@ -1513,3 +1513,45 @@ bekannte `_DONE`→`_TSTAT`-Migration). Die Herkunft der doppelten `MAP` ist **n
 datiert auf den 14.08. und dort an eine Recherche-Eingabe gekoppelt, aber auf neun geprüften
 Pfaden des heutigen Codes nicht reproduzierbar. Sie steht hier als offene Frage, nicht als
 Geschichte.
+
+<a id="adr-v9-292"></a>
+
+## ADR-v9-292
+
+**Die Entscheidungsvorlage stand im Backlog — und beide Antworten waren falsch.** BL-384
+bot „volle undatierte Kette" gegen „gar keine Reprojektion" an, beide als vertretbar
+markiert. Die Messung hat sie in derselben Viertelstunde beide erledigt: die Kette hätte
+696 von 711 Ereignissen 2.022 erfundene Segmente geschrieben (686 davon über eine
+reihenfolgeabhängige `enclosedBy[0]`-Wahl), der Verzicht hätte 471 Hof-Ereignisse von
+[ADR-v9-81](04-Entscheidungslog.md#adr-v9-81) abgeschnitten. Die richtige Antwort war eine
+dritte und stand in keiner der beiden Spalten. **Das ist der Bullet „Optionen erst nach der
+Messung" in seiner nächsten Form:** dort ging es um eine Vorlage, die ICH ohne Messung
+geschrieben hatte — hier lag sie schon fertig im Backlog und sah dadurch entschieden aus.
+Eine Zeile, die zwei Optionen benennt, hat die Frage nicht beantwortet, sondern nur
+eingerahmt; der Rahmen ist keine Evidenz.
+
+**Der Fertig-Zustand derselben Zeile war ebenfalls zu kurz — und er war meiner.** BL-384
+schrieb vor: „die Sperre an den übrigen sechs Schreibstellen". Das setzt voraus, dass
+`unbekannteEbenen` den Fall überhaupt fängt. Sie fängt ihn nicht: sie fragt, ob die QUELLE
+eine Ebene nennt, die der Bestand nicht kennt — nicht, ob die PROJEKTION eine bekannte
+Ebene wegläßt. Gegenprobe an denselben 4.478 reichen, kuratierten Ereignissen, einmal ohne
+Datum gerechnet: 260 hätte `alignCuratedEventTexts` trotz bestandener Sperre gekappt. **Ein
+Fertig-Zustand ist eine Behauptung über einen Mechanismus, und Behauptungen über
+Mechanismen sind prüfbar** — diese war es in zehn Minuten, hätte aber ungeprüft einen Bau
+gesteuert, der sechs Aufrufer anfaßt und den Defekt stehen läßt.
+
+**Dieselbe Sperre wurde in der Sitzung davor zu Recht verworfen.** [ADR-v9-286](04-Entscheidungslog.md#adr-v9-286)
+notiert sie unter „Verworfen (a)", nach der Nutzer-Rückfrage „haben wir nicht so was
+ähnliches wie 1 schon?" — und das war richtig, weil sie damals als Einzellösung in
+`reprojectEventsOf` vorgeschlagen war, ohne Messung, neben einer vorhandenen Prüfung. Jetzt
+kommt sie mit Zahlen zurück, als Nachbarfrage benannt, über dieselbe Kettenabdeckung
+gebaut und im gemeinsamen Chokepoint statt an einem Aufrufer. **Ein verworfener Vorschlag
+ist verworfen in seiner damaligen Form, nicht für immer** — was ihn zurückholt, ist nicht
+Beharrlichkeit, sondern der Beleg, den er beim ersten Mal nicht hatte.
+
+**Die in der Zeile genannte Messgrundlage gab es nicht mehr.** BL-384 nennt
+`Testdateien/Unsere Familie 2026-4-2-2-2.ged` + `orte-2.json` „rev 448" — die Datei liegt
+nicht auf der Platte, und `orte-2.json` ist dort rev 277. Gemessen wurde am neuesten
+vorhandenen Paar (`…-4-2.ged` + `orte-7.json`, rev 347), und das steht im ADR. Der Reflex
+aus TST-21 hat gegriffen, weil er auf die Datei zeigt und nicht auf die Zahl: **wer eine
+fremde Zahl übernimmt, prüft zuerst, ob ihre Datei noch existiert.**
