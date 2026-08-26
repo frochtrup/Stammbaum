@@ -1433,3 +1433,17 @@ Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien de
 **Die Live-Verifikation hat den Unterschied gezeigt, den kein Komponententest zeigen kann:** dass ein Edit an der geteilten Notiz den RECORD ändert und die beiden Verweise unberührt lässt, und dass `✕` genau einen Verweis löst, während `0 @N_TEST@ NOTE` in der Datei stehen bleibt. Beides in der Arbeitskopie nachgesehen, nicht in der Anzeige — die Anzeige hätte auch dann plausibel ausgesehen, wenn das Falsche passiert wäre.
 
 **Die Personenliste rendert nur die ersten Gruppen** (Paginierung, Spec 21 §10b) — ein per Skript gesuchter Name aus einer späteren Gruppe ist schlicht nicht im DOM. Zweimal darüber gestolpert; der verlässliche Weg in eine bestimmte Person führte am Ende über den Quellen-Steckbrief und dessen Referenz-Link.
+
+<a id="adr-v9-286"></a>
+
+## ADR-v9-286
+
+**Bau 2026-08-26 — und zwei eigene Fehlschlüsse unterwegs, beide von Nutzer-Rückfragen aufgedeckt.**
+
+*Erstens:* Ich schlug als ersten Fix eine „Segment-Verlust-Sperre" in `reprojectEventsOf` vor. Die Rückfrage „haben wir nicht so was ähnliches wie 1 schon?" führte auf `unbekannteEbenen` — es gab die Sperre längst, sie beantwortet nur eine Nachbarfrage (Quelle ↔ Kette statt Kette ↔ Projektion). Der Abgleich deckte zugleich auf, dass die Regel an **einer von sieben** `ev.place`-Schreibstellen gebaut war. Meine Empfehlung war damit nicht bloß überflüssig, sondern die Einzellösung, die das Projekt gerade nicht will.
+
+*Zweitens:* Als der erste Anspruchs-Vorpass [ADR-v9-222](04-Entscheidungslog.md#adr-v9-222) brach, hatte ich die Erklärung schon fertig — „Fix A misfeuert auf `Lehrdte`" — und die Bisektion sagte das Gegenteil: **A grün, B rot**. Danach behauptete ich, die Evidenz könne `Oster 60` und `Lehrdte` gar nicht trennen; auch das war falsch, weil ich den **reloadeten** Zustand gezählt hatte statt der Datei. In der Quelle trägt `Lehrdte` null `ADDR=Lehrdte`, `Oster 60` zwei. **Lehre:** ein Zählwert über „was die Quelle sagt" muss an der PARSEten Datei erhoben werden, nicht an der aufgelösten Datenbank — dort hat die App ihre eigenen fill-if-empty-Werte längst hineingeschrieben ([ADR-v9-47](04-Entscheidungslog.md#adr-v9-47)), und man misst dann sich selbst.
+
+**Der Wächter, der hätte anschlagen müssen, war richtig gebaut und trotzdem stumm.** „Kein Wachstum beim zweiten Lesen" prüft **Stabilität** — und ein falscher Zustand kann vollkommen stabil sein. Der Defekt schlägt einmal zu (im Moment der Kuration) und friert dann als Fixpunkt ein; sichtbar wird er erst, wenn man die Objekte entfernt und neu lädt. Für diese Defektklasse ist die Negativ-Probe der einzige Zugang, nicht der Idempotenz-Test.
+
+**Warum die Testmenge nicht half — vier gemessene Gründe.** (1) Die Konventions-Matrix hatte die Zelle nicht: fünf Ereignis-Fixtures mit `place`+`addr`, zwei „Leitsegment == ADDR", drei „PLAC ohne Hof-Segment", **null** „verschieden, aber derselbe Hof". (2) Von 229 `addrs:`-Literalen in der Testsuite haben **7** mehr als eine Adressvariante — keines in `place-seed.test.ts` oder `konvention-matrix.test.ts`. (3) Jeder Seed-Test lief gegen `hofMap()`, also **null Höfe**: die Objektseite war eingefroren. (4) Der Property-Test variiert die Ereignisse breit (8 Typen × 7 PLAC × 4 ADDR), friert aber denselben Kontext ein — und prüft **Determinismus**, nicht Korrektheit; eine stabil falsche Antwort ist grün. Konsequenz ist [ADR-v9-286](04-Entscheidungslog.md#adr-v9-286) E5: das Kreuzprodukt statt des Fallkatalogs.
