@@ -3828,3 +3828,23 @@ Der Bau-Plan für BL-154 (spec-only). Konkretisiert ADR-v9-126 in buildbare Teil
 - **Offen und benannt:** die verbleibenden **12** sind ein eigener, älterer Defekt — ein `2 SOUR @S123@` verliert samt Unterbaum (`3 MAP`, `3 _EVAL`, `4 _STYP/_INFO/_EVID`, `3 OBJE`, `3 QUAY`), je 2×. Vor und nach dieser Änderung identisch vorhanden; er wird getrennt untersucht, statt hier mitgeraten zu werden.
 - **Verworfen:** (a) *Immer nach Wert paaren* — der Kopfkommentar von `paare` begründet die Positions-Paarung damit, dass der Passthrough dem richtigen Knoten folgen muss und Werte sich legitim ändern dürfen; Wert-Paarung nähme genau diese Fähigkeit. (b) *Den Emitter die Dateireihenfolge nachbilden lassen* — das Modell hat drei Listen und keine gemeinsame Ordnung; die Reihenfolge zu rekonstruieren hieße, eine vierte Wahrheit zu führen.
 - **Refs:** [13 §2](13-Interop-Roundtrip.md), [05 BL-388](05-Backlog.md), [ADR-v9-289](#adr-v9-289), [ADR-v9-288](#adr-v9-288), `core/interop/write-back.ts`.
+
+<a id="adr-v9-291"></a>
+
+## ADR-v9-291 — Auch der Paarungs-Vergleich liest einen Wert mit seinen Fortsetzungen ✅ · 2026-08-26
+
+- **Kontext:** [BL-389](05-Backlog.md). Aufgefallen als „vorbestehender Verlust" in der Bilanz zu [ADR-v9-290](#adr-v9-290) — und auf Nutzer-Rückfrage („vorbestehender Verlust???") untersucht statt stehengelassen. An `@F88@` (`Testdateien/Unsere Familie 2026-4-2-2-2.ged`) hängt an einer Familien-Notiz eine **Quellenzitation**: `2 SOUR @S123@` mit `PAGE`, `QUAY`, der vollständigen `_EVAL`-Bewertung und einem Matricula-Link. Isoliert gemessen, welcher Edit sie löscht:
+  ```
+  unberührt                 2 SOUR @S123@:  2 → 2   ok
+  zweite Notiz ANLEGEN      2 SOUR @S123@:  2 → 1   ← Verlust
+  Notiztext ändern          2 SOUR @S123@:  2 → 2   ok
+  Heiratsdatum ändern       2 SOUR @S123@:  2 → 2   ok
+  ```
+  Der Auslöser ist damit ausgerechnet die Funktion aus [ADR-v9-285](#adr-v9-285) — die Familien-Notiz, die einen Tag zuvor gebaut wurde.
+- **Berührte Prinzipien:** *LP-1* — eine belegte, bewertete Quellenangabe verschwand durch eine unbeteiligte Eingabe. *Vereinfachen vor Erfinden* — kein neuer Mechanismus: dieselbe Einsicht wie [ADR-v9-281](#adr-v9-281), nur an der dritten Stelle.
+- **Entscheidung — `paare` vergleicht `collectText`, nicht `.value`.** Bei ungleicher Gruppengröße (der Nutzer hat eines hinzugefügt oder gelöscht) paart `paare` über den Wert. Verglichen wurde der ROHE `.value`; trägt der alte Knoten `CONC`/`CONT`-Kinder, ist sein `.value` nur das ERSTE Fragment, während der frische Knoten den vollen Text trägt. Die Werte konnten deshalb **nie** übereinstimmen, es kam keine Paarung zustande — und der Kopfkommentar sagt die Folge selbst: „was übrig bleibt, bleibt ungepaart", also kein Passthrough, also weg.
+- **Die dritte Stelle derselben Regel.** [ADR-v9-266](#adr-v9-266) schloss sie am Ereigniswert, [ADR-v9-281](#adr-v9-281) verlegte sie in `childValue`/`collectText` („die Zusicherung wohnt in den zwei Funktionen, durch die jeder Wert läuft, statt in einer Liste von Feldern"). `paare` läuft nicht durch diese zwei Funktionen — es vergleicht Knoten, nicht Werte, und fiel deshalb durch dieselbe Masche. Der Satz gilt jetzt auch dort: **wer einen Wert vergleicht, liest ihn mit seinen Fortsetzungen.**
+- **Konsequenz:** drei Zusicherungen in `tests/roundtrip/note-zitat-passthrough.test.ts`, vorher rot; zwei davon Kontrollproben, die die Kante festhalten (ohne Fortsetzung nie betroffen, ohne zweite Notiz unberührt). Gate: alle acht Schritte grün, 4.804 Tests. **Bilanz am aktuellen Bestand** (alle Records schmutzig, Fragment-Arten): Verlust **24 → 12** ([ADR-v9-290](#adr-v9-290)) **→ 3**, Überschuss 0. Am gepinnten Bestand: Verlust 0, Überschuss 2 (die bekannte `_DONE`→`_TSTAT`-Migration).
+- **Offen und benannt:** die verbleibenden 3 sind eine `3 MAP` mit `4 LATI`/`4 LONG` an `@F190@`, je 2× — ein eigener Fall, der getrennt untersucht wird statt hier mitgeraten zu werden.
+- **Verworfen:** *Nur die NOTE-Gruppe sondern behandeln* — der Fehler sitzt nicht bei `NOTE`, sondern im Vergleich; jeder Tag mit Fortsetzung trifft ihn (`TEXT`, `_QUERY`, `AUTH`, `PUBL`). Eine Sonderregel je Tag wäre die Liste, die [ADR-v9-281](#adr-v9-281) gerade abgeschafft hat.
+- **Refs:** [13 §2](13-Interop-Roundtrip.md), [05 BL-389](05-Backlog.md), [ADR-v9-281](#adr-v9-281), [ADR-v9-285](#adr-v9-285), [ADR-v9-290](#adr-v9-290), `core/interop/write-back.ts`.
