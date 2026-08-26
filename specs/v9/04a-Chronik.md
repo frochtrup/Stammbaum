@@ -1447,3 +1447,69 @@ Kontextdatei nur lesend (INV-ORTE-2): GED/GRAMPS laden, Auflösung auf Kopien de
 **Der Wächter, der hätte anschlagen müssen, war richtig gebaut und trotzdem stumm.** „Kein Wachstum beim zweiten Lesen" prüft **Stabilität** — und ein falscher Zustand kann vollkommen stabil sein. Der Defekt schlägt einmal zu (im Moment der Kuration) und friert dann als Fixpunkt ein; sichtbar wird er erst, wenn man die Objekte entfernt und neu lädt. Für diese Defektklasse ist die Negativ-Probe der einzige Zugang, nicht der Idempotenz-Test.
 
 **Warum die Testmenge nicht half — vier gemessene Gründe.** (1) Die Konventions-Matrix hatte die Zelle nicht: fünf Ereignis-Fixtures mit `place`+`addr`, zwei „Leitsegment == ADDR", drei „PLAC ohne Hof-Segment", **null** „verschieden, aber derselbe Hof". (2) Von 229 `addrs:`-Literalen in der Testsuite haben **7** mehr als eine Adressvariante — keines in `place-seed.test.ts` oder `konvention-matrix.test.ts`. (3) Jeder Seed-Test lief gegen `hofMap()`, also **null Höfe**: die Objektseite war eingefroren. (4) Der Property-Test variiert die Ereignisse breit (8 Typen × 7 PLAC × 4 ADDR), friert aber denselben Kontext ein — und prüft **Determinismus**, nicht Korrektheit; eine stabil falsche Antwort ist grün. Konsequenz ist [ADR-v9-286](04-Entscheidungslog.md#adr-v9-286) E5: das Kreuzprodukt statt des Fallkatalogs.
+
+<a id="adr-v9-291"></a>
+
+## ADR-v9-286 … 291 — die Roundtrip-Sitzung vom 2026-08-26
+
+**Der Anlass waren zwei Nutzer-Befunde, das Ergebnis waren sechs Defekte** — und der Weg dorthin
+ist die eigentliche Lehre. Die Kette: BL-383 (Hofadressen als Ortsebene geseedet) → BL-385
+(monatsgenaue Daten auf das ganze Jahr verbreitert) → BL-386 (wiederholtes `_RATIO`) → BL-387
+(der Struktur-Korpus) → BL-388 (Notiz-Zeiger zerstörte die Notiz) → BL-389 (zweite Notiz löschte
+die Quellenzitation der ersten). Offen blieb allein BL-384, wo wirklich eine Entscheidung fällig
+ist.
+
+**Die Frage, die alles aufgeschlossen hat, kam vom Nutzer:** „wir hatten in Summe fünf
+Roundtrip-Fehlerklassen, die alle von keinem Test erkannt worden sind … das widerspricht der
+höchsten Zusicherung der App". Die Antwort war messbar und lag nicht bei den Zensen, sondern an
+drei Stellen:
+
+1. **Die zwei Wächter sehen keinen Wert.** `net_delta` vergleicht die ANZAHL logischer Zeilen,
+   `out1===out2` die App mit sich selbst. Negativ-Probe an vier echten Schadensformen — verlorene
+   Fortsetzung, falsch aufgelöste Ortskette, still ersetzter Wert, verletzte Reihenfolge —:
+   **alle vier `normDelta=0` und `out1===out2` true.** Erkannt wird ausschließlich eine ersatzlos
+   gelöschte Zeile.
+2. **Der Struktur-Korpus kannte die Formen nicht** (0 Fortsetzungen, 0 wiederholte Geschwister
+   gegen 707/1823) — [ADR-v9-289](04-Entscheidungslog.md#adr-v9-289).
+3. **Der Realbestands-Zensus läuft nur in eine Richtung** (was fehlt, nie was dazukommt). Die
+   Spiegel-Richtung, für [ADR-v9-289](04-Entscheidungslog.md#adr-v9-289) kalibriert, fand
+   innerhalb von Minuten zwei weitere Defekte — [ADR-v9-290](04-Entscheidungslog.md#adr-v9-290)
+   und [ADR-v9-291](04-Entscheidungslog.md#adr-v9-291), beide mit Textverlust.
+
+**Ein falscher Zustand kann vollkommen stabil sein.** Das ist der Satz, der die ganze Sitzung
+trägt. Er erklärt, warum „kein Wachstum beim zweiten Lesen" an beiden Ständen 0 meldet, obwohl
+der Bestand vergiftet war (BL-383 schlägt EINMAL zu, im Moment der Kuration, und friert dann als
+Fixpunkt ein); und warum ein Idempotenz-Test für diese Defektklasse blind ist. Zugang gibt allein
+die Negativ-Probe: das Objekt entfernen und neu laden.
+
+**Drei eigene Fehlschlüsse, alle drei von Nutzer-Rückfragen aufgedeckt, alle drei dasselbe
+Muster — die Erklärung war fertig, bevor die Messung sie stützte.**
+
+* *„haben wir nicht so was ähnliches wie 1 schon?"* — ich hatte eine „Segment-Verlust-Sperre"
+  vorgeschlagen; `unbekannteEbenen` gab es längst. Der Abgleich deckte zugleich auf, dass die
+  Regel an **einer von sieben** `ev.place`-Schreibstellen gebaut war.
+* Als der erste Anspruchs-Vorpass [ADR-v9-222](04-Entscheidungslog.md#adr-v9-222) brach, hatte
+  ich die Erklärung fertig („Fix A misfeuert auf `Lehrdte`"). Die Bisektion sagte das Gegenteil:
+  **A grün, B rot.** Danach behauptete ich, die Evidenz könne die Fälle nicht trennen — auch
+  falsch, weil ich den RELOADETEN Zustand gezählt hatte statt der Datei. In der Quelle trägt
+  `Lehrdte` null `ADDR=Lehrdte`, `Oster 60` zwei.
+* Ein echter Befund wurde von mir als Fehlalarm abgetan und die Entwarnung sogar als
+  *Verworfen*-Begründung in einen ADR geschrieben. Mein Prüfer war kaputt (`@@`-Escaping). Die
+  Kalibrierung desselben Wächters meldete den Defekt wenige Minuten später erneut — sonst wäre ein
+  Datenverlust dauerhaft zugedeckt gewesen.
+
+**Zwei Rückmeldungen zur Arbeitsweise.** *„wir haben wieder aus einem Fehler 3 Backlogeinträge
+gemacht????"* — die Zeile BL-385 war ein Rechenfehler mit gemessener Folge, kein
+Entscheidungsbedarf; meine Begründung („eine bewusste Spec-Änderung") war vorgeschoben, und sie
+wurde noch in derselben Sitzung gebaut. Und *„vorbestehender Verlust???"* — ich hatte einen
+echten, über die tags zuvor gebaute Familien-Notiz erreichbaren Datenverlust in eine Commit-Zeile
+geschrieben statt an den Anfang. Beides derselbe Fehler in verschiedener Verkleidung: eine
+Beobachtung an der Kernzusage wird gemeldet, nicht bilanziert.
+
+**Was am Ende belegt ist.** Bilanz am aktuellen Bestand (alle Records schmutzig, Fragment-Arten):
+Verlust **24 → 12 → 3**, Überschuss **10 → 0**; die restlichen 3 sind das Zusammenfassen zweier
+identischer `MAP`-Blöcke, also kein Verlust. Am gepinnten Bestand: Verlust 0, Überschuss 2 (die
+bekannte `_DONE`→`_TSTAT`-Migration). Die Herkunft der doppelten `MAP` ist **nicht geklärt** —
+datiert auf den 14.08. und dort an eine Recherche-Eingabe gekoppelt, aber auf neun geprüften
+Pfaden des heutigen Codes nicht reproduzierbar. Sie steht hier als offene Frage, nicht als
+Geschichte.
