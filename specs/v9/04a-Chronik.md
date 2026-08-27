@@ -1555,3 +1555,44 @@ nicht auf der Platte, und `orte-2.json` ist dort rev 277. Gemessen wurde am neue
 vorhandenen Paar (`…-4-2.ged` + `orte-7.json`, rev 347), und das steht im ADR. Der Reflex
 aus TST-21 hat gegriffen, weil er auf die Datei zeigt und nicht auf die Zahl: **wer eine
 fremde Zahl übernimmt, prüft zuerst, ob ihre Datei noch existiert.**
+
+<a id="adr-v9-295"></a>
+
+## ADR-v9-295
+
+**Der „Offen und benannt"-Punkt war eine Behauptung über die Oberfläche, geschrieben aus
+dem Code-Pfad.** Die erste Fassung sagte: bei undatierten Ereignissen liefere
+`buildPlacForGedcom` `null`, der Knopf „Projektion übernehmen" tue dort also sichtbar
+nichts. Beides stimmt einzeln, zusammen ergibt es den Defekt nicht. `verloreneEbenen`
+sperrt nur, wenn das Quellsegment ein **Knoten der Kette** ist; nennt die Quelle etwas, das
+der Bestand gar nicht kennt, greift sie nicht — [ADR-v9-292](04-Entscheidungslog.md#adr-v9-292)
+Entscheidung 3 sagt genau das, es ist `unbekannteEbenen`' Frage. Und wo sie doch greift,
+zeigt das Feld den Quelltext, die Zeile schweigt, der Knopf erscheint gar nicht. **Der
+behauptete Zustand ist nirgends beobachtbar** — ich hatte den Rückgabewert einer Funktion
+beschrieben und ihn für einen Bildschirm gehalten.
+
+**Aufgedeckt hat es eine Nutzer-Rückfrage von vier Wörtern:** „ein Ereignis ohne Datum hat
+und kann keine Projektion haben, oder?" Die Prämisse stimmte sogar — undatiert gibt es nur
+den atomaren Leitnamen, keine periodengerechte Kette. Falsch war der Schluss, den ich
+daraus gezogen hatte. Dass die Rückfrage die Prämisse bestätigte und trotzdem den Eintrag
+kippte, ist der Grund, sie ernst zu nehmen: sie fragte nach dem *Verhalten*, und darauf
+hatte ich keine Antwort, sondern eine Ableitung.
+
+**Die Nachmessung drehte die Zeile ein zweites Mal.** Erwartet hatte ich, nach der
+Korrektur bleibe die Restfrage „der Knopf kürzt undatiert auf den bloßen Leitnamen". Am
+Realbestand (`Testdateien/Unsere Familie 2026-4.ged` + `Testdateien/orte-5.json`, über den
+echten Ladepfad): 5208 gebundene Ortsereignisse, 680 undatiert, **16** mit sichtbarer
+Quelle-Zeile — und **0** Kürzungen. Die 16 sind 15× Leerfeld-Bereinigung
+(`", Mainz, , , , "` → `"Mainz"`, Ancestris-Fixed-Template) und 1× die Reparatur aus
+[ADR-v9-294](04-Entscheidungslog.md#adr-v9-294). Der Knopf tut dort also durchweg etwas
+Gutes. BL-394 steht seither als `feature` statt `defekt` und beschreibt, was es wirklich
+ist: eine Lücke in der **Sichtbarkeit** (welche Ebenen fallen weg?), kein vorgefundener
+Verlust.
+
+**Die Lehre ist nicht neu, nur die Stelle.** Dieselbe Fehlerform hat
+[ADR-v9-229](04-Entscheidungslog.md#adr-v9-229) für BL-319 festgehalten: eine Backlog-Zeile,
+die ICH aus einem Befund geschrieben habe, gegen die vorhandenen Mechanismen gehalten —
+damals gegen einen älteren ADR, hier gegen die eigene Oberfläche. **Ein Fertig-Zustand über
+ein UI ist erst belegt, wenn der beschriebene Zustand einmal auf dem Bildschirm stand oder
+in einem Test rot war.** Beide Male hat es eine Nutzerrückfrage gefunden, nicht meine
+Vorabprüfung — und beide Male war die Prüfung Minuten entfernt.
