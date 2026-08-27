@@ -168,6 +168,10 @@ Der volle Auflösungs-Pass wird bei **jedem Laden** ausgeführt; die Reprojektio
 7. Pfad B'  — event.addr ohne Hof + type ∈ {RESI, PROP, CENS}
               → Bootstrap eines Hofs aus Event-Typ-Semantik
 
+   ANKER-GUARD für 5 und 7 (nur BOOTSTRAP, nicht Bindung): der Anker muss eine
+   Siedlung sein (istHofFaehigerOrt, placeTypeRank < 7). Sonst kein stiller Hof
+   → Review-Klasse A/D.
+
 REPROJECT am Pfad-Ende:
    event.place ← buildPlacForGedcom(event, year)
    event.addr  ← resolveAddrAsOf(hofId, year)   (nur wenn leer)
@@ -176,6 +180,13 @@ REPROJECT am Pfad-Ende:
 **Schritt 0 — Village-Seed-Vorpass (ADR-v9-28, rein & deterministisch).** Vor der eigentlichen Auflösung erzeugt ein Vorpass (`seedPlacesFromEvents`) aus den distinkten PLAC-Hierarchien der Ereignisse die fehlenden **Village-PlaceObjects** (plus datierte `enclosedBy`-Kette aus den Folgesegmenten). Dadurch finden die Verwaltungs-Match-Pfade 3a/3b/3c anschließend ein existierendes PlaceObject vor — der frühere „leeres Orte-Tab bei reinem GEDCOM-Import" entfällt, **ohne** dass der Match-Algorithmus selbst geändert wird. **Kein Hof entsteht im Seed:** welches Segment das Village ist, entscheidet der Vorpass mit exakt dem Signal, das §4.3 ohnehin für Konvention 1 vs. 2 nutzt — liegt ein hof-relevanter Event-Typ **mit** `event.addr` vor, dessen Extract (Konvention α, §4.4) das PLAC-Leitsegment trifft (Konvention 1, „Hof, Dorf, …"), ist das Village `segs[1..]` (das Leitsegment bleibt dem Hof-Bootstrap überlassen); sonst ist das Leitsegment selbst das Village (Konvention 2 / einfache Orte). **Zwei Fragen stehen VOR diesem Textschluss ([ADR-v9-286](04-Entscheidungslog.md#adr-v9-286)):** (a) trägt ein **kuratierter** Hof (§9.1) im Anker-Dorf bereits diese Adresse, ist das Leitsegment dieser Hof — Wissen über das Objekt schlägt den Schluss aus dem Text, und `addrs` ist genau die Liste der Bezeichnungen EINES Hofes, sodass eine Adressvariante nicht mehr wie eine zweite Stelle wirkt; **rohe Bootstrap-Höfe zählen dabei nicht** (sie entstehen aus demselben Text, den sie deuten sollen — der Autoritätssatz aus [ADR-v9-224](04-Entscheidungslog.md#adr-v9-224)). (b) nennt die Datei dieselbe Stelle **anderswo** per Konvention 1 als Hofstelle (ein hof-relevanter Typ mit `event.addr` = Leitsegment), gilt sie auch für die übrigen Ereignisse dort als Hofstelle — sonst entschiede die Reihenfolge zweier Ereignisse an derselben Stelle, ob dort ein Hof oder ein Ort entsteht. Ein hof-relevantes Ereignis **ohne** `event.addr` begründet diesen Anspruch NICHT. Der Seed läuft ausschließlich auf der Verwaltungs-Achse und weicht die Hof-Erkennung nicht auf. Anfängliche Schreibvarianten desselben Orts erzeugen zunächst getrennte PlaceObjects (akzeptiert) und werden über den **Dubletten-Merge** ([20 §1.7](20-Funktionen.md)) zusammengeführt.
 
 **Einschränkung:** Hof-Bootstrap-Pfade (A/A'/C) feuern nur für hof-relevante (= wohn-/besitz-semantische) Event-Typen `{RESI, PROP, CENS}` (`HOF_EVENT_TYPES`). OCCU (Arbeitsstätte) ist bewusst NICHT dabei ([ADR-v9-143](04-Entscheidungslog.md#adr-v9-143)) — sein Orts-/Stadtsegment ist kein Gehöft. BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN/OCCU mit reichem PLAC (z. B. „Krankenhaus St. Joseph, Münster") werden NIE als Hof interpretiert. Pfad B (explizite `event.addr`) bleibt für alle Typen offen — explizite Adresseingabe ist Nutzer-Intent.
+
+**Ein Hof liegt in einer Siedlung, nicht in einem Landkreis ([ADR-v9-293](04-Entscheidungslog.md#adr-v9-293)).** Die Bootstrap-Pfade **C** und **B′** verankerten bis dahin an JEDEM `PlaceObject`, das irgendein `PLAC`-Segment traf — die EBENE dieses Ortes wurde nie gefragt. Gemessen (`Testdateien/orte-5.json`, rev 329): `RESI · PLAC „Kreis Cloppenburg, Großherzogtum Oldenburg, Deutsches Reich" · ADDR „Altenoythe"` erzeugte still einen Hof „Altenoythe" im PlaceObject `Landkreis Cloppenburg` (`type=County`), ohne eine einzige Review-Zeile; ebenso „Krapendorf" unter einem `Département` (`type=Province`). Was die `ADDR` dort nennt, ist keine Adresse, sondern eine dem Bestand **unbekannte Ortsebene**.
+
+- **Der Guard sitzt an den Bootstraps, nicht an der Bindung.** `istHofFaehigerOrt(type)` = `placeTypeRank(type) < 7` — dieselbe Staffelung, die die Disambiguierung gleichnamiger Orte schon benutzt (§5), keine zweite Typ-Liste. Ein BESTEHENDER Hof bleibt über A/A′/B überall bindbar, auch in einem Kreis: wer ihn dort angelegt hat, hat entschieden ([ADR-v9-286](04-Entscheidungslog.md#adr-v9-286)-Grenze zwischen kuratiertem Wissen und Textschluss).
+- **Ungetypt blockiert nicht.** Rang 6 (unbekannt/Seed-Rohzustand) liegt bewusst unterhalb der Schwelle; 67 der 416 Orte des Bestands tragen keinen Typ. Ein Guard, der Unwissen als Verbot liest, legte jeden Frischimport stumm.
+- **Die Absage ist eine Frage, kein Schweigen:** Review-Klasse D, wenn im Anker bereits Höfe stehen, sonst A (§6) — derselbe Ausgang wie beim Non-Hof-Typ mit `ADDR`.
+- **Der Seed zieht mit, aber nur wo er SCHLIESST.** `adminChain` gibt das Leitsegment dem Hof frei, indem es nicht geseedet wird; lehnt der Resolver danach ab, entstünde dort weder Hof noch Ort. Der Guard gilt deshalb in den beiden Zweigen, die auf einem Schluss ruhen (Pfad C ohne `ADDR`; ein Konvention-1-Anspruch aus einem FREMDEN Ereignis) — **nicht** dort, wo das Ereignis selbst eine `ADDR`-Behauptung trägt oder ein kuratierter Hof die Adresse führt: dort wird die Absage an genau diesem Ereignis sichtbar, während ein Seed daraus einen ORT machte, in dem derselbe Name gleich noch einmal als Hof landete.
 
 **Konsistenz-Guard & Orts-Disambiguierung (3c/3c′, ADR-v9-29).** Ein eindeutiger Leitname genügt für 3c **nicht** — die Folgesegmente des PLAC müssen mit der `enclosureChainAsOf` des Kandidaten **verträglich** sein (Kette stimmt überein *oder* PLAC nennt keine Eltern). Ein widersprechender Elter ist ein **Veto**, kein Match (z. B. `Oldenburg, USA` bindet NICHT an ein PO „Oldenburg" mit Kette Niedersachsen/Deutschland — sonst stille Falschattribution). Trifft ein Leitname **mehrere** gleichnamige POs, disambiguiert **3c′** über die Elternkette; genau ein verträglicher Kandidat gewinnt. Bleibt es mehrdeutig (atomarer PLAC ohne Elter, oder kein/mehrere passende Kandidaten) → **Review-Klasse P** (§6), kein stilles Raten. **Dieselbe Verträglichkeits-Regel steuert den Seed-Dedup** (Schritt 0): gleicher Leitname + verträgliche Eltern → **ein** PO (hunderte `Ochtrup`, auch atomar+reich gemischt, bleiben ein Ort), widersprüchliche Eltern → **distinkte** POs (Oldenburg/Niedersachsen ≠ Oldenburg/USA). Der Dedup-Schlüssel ist damit **weder** name-only (verschmölze die Oldenburgs) **noch** Voll-Hierarchie-String (spaltete Ochtrup nach Schreibtiefe).
 
@@ -199,6 +210,8 @@ Deterministische Auflösung verschiedener Quell-Konventionen (Ancestris, MyHerit
 | **3a** atomar, global eindeutig | `PLAC Wall 33` (kein ADDR) | Pfad A' | — |
 | **3b** atomar, ohne Match | `PLAC Wall 33` | — | **Review** / Quelle schärfen |
 
+**Quer zu allen Konventionen — der Anker-Guard (§4.2, [ADR-v9-293](04-Entscheidungslog.md#adr-v9-293)):** die Spalte „Hof existiert nicht" (Pfad C bzw. B′) gilt nur, wenn der Anker eine **Siedlung** ist. Über einem Kreis/Département/Staat gibt es keinen Bootstrap, sondern **Review** (Klasse A, bzw. D bei bereits vorhandenen Höfen). Die Spalte „Hof existiert" ist davon unberührt.
+
 **Wire-Treue-Anforderung:**
 - Konvention 1: bit-identisch (`net_delta=0`, `out1===out2`).
 - Konvention 2: sichtbarer, ehrlicher Übergang beim ersten Speichern (Hof-Präfix wird in PLAC ergänzt → Toast + „geändert"), danach idempotent.
@@ -218,6 +231,12 @@ Die Hof-Identität (`hof.addrs[].value`) endet beim **ersten Komma ODER Zeilenum
 - **Read-Tolerance:** beim Lesen zuerst Voll-Normalisierung, dann Extract-Fallback (Robustness Principle — „schreibe streng, lies tolerant", LP-6). Historische Komma-Höfe (vor Konvention α) bleiben über Voll-Norm auffindbar.
 - Explizite UI-Varianten-Anlage durchläuft den Extract **nicht** (Nutzer-Intent „diese Schreibweise speichern" bleibt erhalten).
 - **ADDR=Village-Redundanz:** manche Programme schreiben bei RESI den Ortsnamen selbst in `ADDR`; konservativ erkannt (Match gegen Village-Titel + `pnames`) → kein Pseudo-Hof.
+
+**Ein Komma INNERHALB einer Klammer trennt nicht ([ADR-v9-294](04-Entscheidungslog.md#adr-v9-294)).** Eine Klammer klammert einen Namen, sie wechselt keine Ebene: `Oster 64 (110, Einhorst Leibzucht)` ist EINE Bezeichnung, nicht zwei. Ohne diese Regel schnitt der Extract das Fragment `Oster 64 (110` heraus — und weil es damit nicht mehr zum `PLAC`-Leitsegment passte, kippte die Konvention-1-Erkennung gleich mit: der **Hofname wurde als Ortsebene geseedet** und darin ein abgeschnittener Hof angelegt (8 Ereignisse in `Testdateien/Unsere Familie 2026-4.ged`). Drei Folgen, die zusammengehören:
+
+- **Dieselbe Regel gilt für die PLAC-Segmentierung.** Seed und Resolver teilen sich `splitPlacSegments` — zwei Segmentsichten wären genau die Drift, die den Seed die Hof-Erkennung schatten ließe (§4.2 Schritt 0).
+- **Gehen die Klammern nicht auf, gilt die nackte Komma-Regel.** Ein verirrtes `(` darf nicht den Rest der Adresse verschlucken. Der Realfall ist genau dieser: `PLAC Oster 64 (110, Ochtrup (Westf.)` ist unbalanciert, die zugehörige `ADDR` geht auf.
+- **Die Konvention-1-Prüfung liest deshalb BEIDE Lesarten** (`istKonvention1`, LP-6): klammerbewusst ODER nackt. Beide Seiten tragen dann verschiedene Formen derselben Hofstelle, und ohne die Toleranz läse der Seed hier Konvention 2. **Pfad C bootstrappt aus der reicheren Form** — trägt das Ereignis eine `ADDR`, die dieselbe Stelle behauptet, ist SIE der Name des neuen Hofs; eine `PLAC`-Kette kann ihn abgeschnitten haben.
 
 ---
 
@@ -259,9 +278,9 @@ Ungewissheit wird sichtbar gemacht (LP-6). Ein „Zuordnungen prüfen"-Modal zei
 
 | Klasse | Beschreibung | Aktionen |
 |---|---|---|
-| **A** | Non-Hof-Event-Typ mit ADDR ohne Hof-Match | „+ Hof anlegen" \| „Quelle schärfen" |
+| **A** | ADDR ohne Hof-Match, und kein Bootstrap zulässig: Non-Hof-Event-Typ — **oder** Hof-Typ über einem Verwaltungs-Anker (Anker-Guard §4.2, [ADR-v9-293](04-Entscheidungslog.md#adr-v9-293)) | „+ Hof anlegen" \| „Quelle schärfen" |
 | **C** | ≥2 Höfe gleicher Adresse im Dorf (mehrdeutig) | „Hof wählen" \| „Quelle schärfen" |
-| **D** | Norm-Drift: Adresse matcht keinen Hof, aber Höfe existieren im Dorf | „Variante zum Hof" \| „Hof wählen" \| „+ Hof anlegen" \| „Quelle schärfen" |
+| **D** | Norm-Drift: Adresse matcht keinen Hof, aber Höfe existieren im Anker (dieselben zwei Auslöser wie A) | „Variante zum Hof" \| „Hof wählen" \| „+ Hof anlegen" \| „Quelle schärfen" |
 | **P** | Verwaltungs-Ort mehrdeutig: atomarer PLAC oder rich-PLAC ohne disambiguierenden Elter trifft ≥2 gleichnamige PlaceObjects (oder einziger Kandidat per Konsistenz-Guard verworfen, §4.2) | „Ort wählen" \| „Quelle schärfen" (ADR-v9-84) · „+ Ort anlegen" **gibt es hier bewusst nicht**, s. u. |
 
 Aktionstypen, jeweils am *korrekten* Ort persistent:
