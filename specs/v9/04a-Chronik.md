@@ -1596,3 +1596,35 @@ damals gegen einen älteren ADR, hier gegen die eigene Oberfläche. **Ein Fertig
 ein UI ist erst belegt, wenn der beschriebene Zustand einmal auf dem Bildschirm stand oder
 in einem Test rot war.** Beide Male hat es eine Nutzerrückfrage gefunden, nicht meine
 Vorabprüfung — und beide Male war die Prüfung Minuten entfernt.
+
+<a id="adr-v9-297"></a>
+
+## ADR-v9-297
+
+**Ich habe den Widerspruch selbst erzeugt und im selben Atemzug vertagt.** Der
+Startbildschirm bringt „Leer beginnen"; die Personenliste sagte danach weiterhin „Keine
+Personen geladen — unter ‚Mehr' eine Datei öffnen, um zu starten." Ich habe das in der
+Abschlussmeldung als BL-399 notiert, mit der Begründung „kein Defekt, aber ein Satz aus
+der Zeit, als ‚geladen' und ‚aus einer Datei' dasselbe war" — und damit eine Folge-Zeile
+aus dem eigenen Bau geschrieben. Der Nutzer hat es in einem Satz zurückgewiesen: „das ist
+doch jetzt inkonsistent." Er hat recht: eine Inkonsistenz, die eine Änderung selbst
+einführt, gehört zu dieser Änderung, nicht in die Warteschlange.
+
+**Die Zeile war zudem in ihrer Diagnose zu schwach.** „Passt nicht mehr zum leer begonnenen
+Baum" beschreibt einen Sonderfall; nachgesehen ist der Satz in seinem EIGENEN Fall
+unerreichbar geworden. Alle fünf Aufrufer von `noDataHint` liegen in genau den Segmenten,
+die der Startbildschirm abdeckt (Personen · Familien · Quellen/Archive · Medien) — wird
+eine dieser Listen überhaupt gerendert, ist etwas geladen. „Keine Daten geladen"
+beschrieb damit einen Zustand, in dem der Satz nie zu sehen war. Das ist kein Wortlaut-
+Problem, sondern ein toter Zweig, und er zog einen Parameter mit: `isDesktop` existierte
+nur, um den Weg zum Datei-Öffnen je Formfaktor zu benennen (BL-06). Ohne diesen Satzteil
+gab es nichts mehr zu verzweigen — fünf Aufrufer haben einen Import verloren.
+
+**Die Lehre ist nicht neu, und das ist der Punkt.** In der Memory steht sie seit Wochen als
+„keine Folge-Zeile aus dem eigenen Bau — Lücke im selben Werkzeug fertigbauen statt
+vertagen". Hier ist sie das zweite Mal aufgetreten, in derselben Form: zwei Wünsche
+gebaut, einen dritten geschrieben. Der Unterschied zu einer legitimen Backlog-Zeile
+(BL-396 etwa, die eine VORBESTEHENDE Divergenz benennt) ist scharf und leicht zu prüfen:
+**Gab es den Zustand vor meiner Änderung schon?** War er vorher richtig und ist durch mich
+falsch geworden, ist er Teil der Änderung. Diese Frage kostet einen Satz und hätte die
+Zeile verhindert.
