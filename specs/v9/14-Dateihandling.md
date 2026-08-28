@@ -59,9 +59,21 @@ Modell → serialize(format) → Bytes → save()
 
 Zwei Nutzer-seitige Selbsthilfe-Aktionen in den Einstellungen, für den Fall eines inkonsistenten lokalen Zustands:
 - **„Ortsdaten zurücksetzen"** — löscht nur den `orte.json`-IDB-Spiegel ([§6](#6-ortejson-cross-stammbaum-wissen)); die geladene Datei selbst bleibt unberührt, Orte werden beim nächsten Laden neu aufgelöst ([11 §4](11-Orte-Hoefe-Identitaet.md)).
-- **„Alle lokalen Daten löschen"** — setzt Arbeitskopie ([§3.1](#31-arbeitskopie-plattformübergreifende-konstante)) und `orte.json`-Spiegel vollständig zurück, App startet leer.
+- **„Alles zurücksetzen"** — leert **jeden** Object-Store der App-Datenbank, danach startet die App leer.
 
 Beide Aktionen betreffen ausschließlich lokal abgeleiteten/zwischengespeicherten Zustand — keine Datei-Löschung auf Betriebssystem-Ebene, kein Datenverlust an der eigentlichen GEDCOM-/GRAMPS-Datei.
+
+**Der Umfang steht an EINER Stelle, nicht in dieser Beschreibung** ([ADR-v9-297](04-Entscheidungslog.md#adr-v9-297)). Bis dahin nannte dieser Abschnitt zwei Speicher (Arbeitskopie + Orts-Spiegel); die Datenbank führt inzwischen **zehn**. Eine Prosa-Aufzählung veraltet mit dem nächsten Store und wirkt trotzdem vollständig — deshalb läuft das Zurücksetzen über `ALL_STORES` (`services/idb-schema.ts`), dieselbe Liste, aus der der `onupgradeneeded`-Handler die Stores anlegt. Wer einen Store einträgt, hat ihn angelegt UND zurücksetzbar gemacht.
+
+**Der harte Reset warnt namentlich, statt zu zählen.** Nicht alle zehn Speicher sind gleich schwer zu ersetzen, und genau das muss der Hinweis sagen — sonst liest sich eine Arbeitskopie (die in der eigenen Datei steht) wie die kuratierten Orte (die in **keiner** GEDCOM-Datei stehen, [11 §2](11-Orte-Hoefe-Identitaet.md)). Drei Klassen, in dieser Reihenfolge aufgezählt:
+
+| | Speicher | Rückweg |
+|---|---|---|
+| **es gibt keine zweite Kopie** | Forschungsprojekte · „Kein Duplikat"-Entscheidungen · Regel-Konfiguration · App-Einstellungen | — |
+| **nur mit Export** | kuratierte Orte/Höfe · importierte Medien-Bytes | eine zuvor exportierte `orte.json` bzw. der Original-Ordner |
+| **wiederbeschaffbar** | Arbeitskopie · Orte-Editor-Entwurf · die beiden FS-Handles | die eigene Datei bzw. eine Neu-Auswahl |
+
+Die Aufzählung wird aus derselben Liste komponiert, aus der gelöscht wird (`LOKALE_DATEN`, `services/reset-local-state.ts`); ein Test hält fest, dass **jeder** Store aus `ALL_STORES` darin eine Zeile hat. Ein erzwungener Export-Zwischenschritt wurde geprüft und verworfen (Nutzer-Entscheidung 2026-08-28): der Warnhinweis mit Aufzählung genügt, ein Pflicht-Umweg vor einer Selbsthilfe-Aktion steht ihr im Weg.
 
 ---
 
