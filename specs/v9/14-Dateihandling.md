@@ -29,8 +29,11 @@ v8 hat drei Dinge vermischt, die getrennt gehören:
 | Export-Tier 1b: `showSaveFilePicker()` | „Speichern unter"-Dialog; **liefert das Handle für 1a** | Desktop Chrome/Edge |
 | Export-Tier 2a: `navigator.share({files})` | „In Dateien sichern" | **nur Touch-Plattformen**: iOS/iPadOS, Android |
 | Export-Tier 2b: `<a download>` | Download-Ordner | Safari/Firefox (Desktop) |
+| **Backup-Ordner-Handle** (Verzeichnis) | datierte Sicherung **vor** jedem In-place-Save ([§4.1](#41-die-sicherung-vor-dem-überschreiben)) | Desktop Chrome/Edge |
 
-**Nicht notwendig** (aus v8 entfernt): OneDrive-OAuth/Token, `od_base_path`, ETag/If-Match, Ordner-Picker, `filemap`, automatische Timestamp-Backups bei jedem Save, mehrfache Storage-Caches. Siehe [03 §9](03-Altlasten.md).
+**Nicht notwendig** (aus v8 entfernt): OneDrive-OAuth/Token, `od_base_path`, ETag/If-Match, `filemap`, mehrfache Storage-Caches. Siehe [03 §9](03-Altlasten.md).
+
+Zwei Posten dieser Liste sind seit [ADR-v9-302](04-Entscheidungslog.md#adr-v9-302) **zurück**, und zwar bewusst: der **Ordner-Picker** und das **datierte Backup**. Was v8 daran falsch machte, war nicht das Sichern, sondern der Zweck — dort war das Backup Teil einer app-eigenen Cloud-Verwaltung (`od_base_path`, `filemap`) und sicherte gegen deren eigene Fehler. Hier sichert es gegen **die eine Eigenschaft, die v9 gegenüber v8 neu hat**: Tier 1a überschreibt still, ohne Dialog, ohne Zwischenschritt. Genau das ist der Komfort — und genau deshalb ist der vorige Stand nach einem Fehlgriff weg. Das Backup ist der Preis dieses Komforts, nicht ein Rest der alten Sync-Maschinerie.
 
 ---
 
@@ -86,9 +89,10 @@ FileService {
   pickAndImport():        Promise<{ text, name, handle? }>   // <input>/Picker, universal
   loadWorkingCopy():      Promise<{ text, name } | null>     // Auto-Load, universal
   saveWorkingCopy(text):  Promise<void>                       // still, jederzeit (IDB)
-  exportToFile(bytes, name): Promise<SaveResult>   // SaveResult trägt das ggf. NEU erworbene Handle
-     ├ Tier 1a: handle.createWritable()     (in-place, still — Handle liegt vor)
-     ├ Tier 1b: showSaveFilePicker()        („Speichern unter"-Dialog — Plattform kann es, Handle fehlt)
+  exportToFile(bytes, name, opts): Promise<SaveResult>   // SaveResult trägt das ggf. NEU erworbene Handle
+     ├ Tier 1a: handle.createWritable()     (in-place, still — Handle liegt vor; SICHERT VORHER, §4.1)
+     ├ Tier 1b: showSaveFilePicker()        („Speichern unter"-Dialog — Plattform kann es, Handle fehlt
+     │                                       oder `forcePicker` erzwingt ihn)
      ├ Tier 2a: navigator.share({files})    (nur Touch-Plattformen — iOS/iPadOS, Android)
      └ Tier 2b: <a download>                (Rest — Safari/Firefox Desktop)
 }
@@ -101,6 +105,30 @@ FileService {
 - **Nutzerabbruch ist kein Fehlschlag und löst keinen Ausweich-Tier aus** (`ok:false`) — weder bei Tier 1b noch bei Tier 2a. Ein Download nach abgebrochenem Dialog wäre eine zweite Verzweigung entgegen INV-FILE-3 und obendrein gegen die Absicht des Nutzers.
 - FS-Handle wird in IDB behalten; bei Reload Permission neu anfragen (`queryPermission`/`requestPermission`).
 - Anonymisierter/Strict/GED7-Export: nie in-place (Suffix am Dateinamen, z. B. `_strict`/`_anon`), Original unberührt. Diese Exporte gehen **direkt auf Tier 2b** — sie erwerben kein Handle, weil sie keine fortzuschreibende Datei sind, sondern eine Ausgabe.
+
+### 4.1 Die Sicherung vor dem Überschreiben
+
+Tier 1a ist der einzige Weg, auf dem die App **fremde Bytes vernichtet**: sie schreibt still in eine Datei, die schon einen Stand trägt. Jeder andere Tier legt etwas Neues an oder fragt vorher. Deshalb hängt genau an Tier 1a — und nur dort — ein Vorlauf ([ADR-v9-302](04-Entscheidungslog.md#adr-v9-302)):
+
+```
+Tier 1a := [ alten Dateiinhalt lesen → als datierte Kopie in den Backup-Ordner schreiben ] → überschreiben
+```
+
+- **INV-FILE-4:** Ein In-place-Save (Tier 1a) überschreibt **nie**, ohne dass der vorherige Dateiinhalt gesichert **oder** der Verzicht darauf ausdrücklich benannt ist — als Nutzerwahl („Ohne Sicherung speichern") oder als gemeldeter Zustand („kein Backup-Ordner verbunden"). Ein stiller Save ohne Sicherung, den der Nutzer für gesichert hält, ist der eine verbotene Ausgang.
+- **Gesichert wird der ALTE Stand, gelesen von der Platte** — nicht der neue aus dem Speicher, und nicht die Arbeitskopie. Nur so trägt die Sicherung genau das, was das Überschreiben zerstört; ein aus dem Modell serialisierter „alter" Stand wäre bereits die Projektion des aktuellen Zustands.
+- **Scheitert die Sicherung, unterbleibt das Überschreiben** (`ok:false`). Die umgekehrte Reihenfolge — erst schreiben, dann Sicherung versuchen — macht den Fehlschlag folgenlos meldbar und den Verlust trotzdem endgültig. Ein „kein Backup-Ordner verbunden" ist dabei **kein** Fehlschlag, sondern ein gemeldeter Zustand: der Save läuft, die Meldung nennt die fehlende Sicherung.
+- **Der Backup-Ordner ist ein eigenes Verzeichnis-Handle**, einmalig gewählt (`showDirectoryPicker`, `mode: 'readwrite'`), in einem eigenen IDB-Store neben den anderen FS-Handles (Kategorie A, [30 §2.2](30-NFR-und-Persistenz.md)), Permission-Reprompt wie bei der Arbeitskopie. **Nicht** der Medien-Ordner ([§7](#7-medien)): der ist mit `mode: 'read'` verbunden, und ein Lese-Recht für Fotos ist keine Erlaubnis, in denselben Ordner zu schreiben. Zwei Zwecke, zwei Handles — dieselbe Trennung wie zwischen Genealogie-Datei und `orte.json` ([§6](#6-ortejson-cross-stammbaum-wissen)).
+- **Aus einem Datei-Handle kommt man nicht an seinen Ordner.** Die File System Access API kennt keinen Elternzugriff — das ist der technische Grund, warum ein Verzeichnis-Handle nötig ist und die Sicherung nicht einfach „neben der Datei" entstehen kann. Der gewählte Ordner **darf** derselbe sein wie der der Datei; das ist eine Nutzerentscheidung, keine Zusicherung der App.
+- **Alle Stände bleiben** (Nutzer-Entscheidung 2026-08-28). Die App löscht in einem Ordner des Nutzers nichts — Aufräumen ist seine Sache. Der Name trägt deshalb Sekunden, damit zwei Saves derselben Minute nicht kollidieren: `Meine Familie (Backup 2026-08-28 14-32-05).ged`.
+- **Der Zeitstempel wird injiziert, nicht gelesen** (TST-3): die Namensregel ist eine reine Funktion `backupFileName(name, date)` — eine Quelle für Rohr und Oberfläche, wie `exportFileName` ([§3.2](#32-ein-export-rohr-n-serializer)).
+
+Drei Speicher-Varianten laufen durch **dasselbe** Rohr (INV-FILE-2), sie unterscheiden sich nur in zwei Schaltern:
+
+| Variante | Schalter | Wirkung |
+|---|---|---|
+| **Speichern** | — | Tier 1a mit Sicherung; sonst wie bisher |
+| **Ohne Sicherung speichern** | `skipBackup` | Tier 1a ohne Vorlauf — für den schnellen Zwischenstand |
+| **Speichern unter …** | `forcePicker` | überspringt Tier 1a, geht auf 1b; das erworbene Handle **und der dort gewählte Name** werden übernommen — ab dann ist *diese* Datei die geladene |
 
 ---
 
@@ -162,7 +190,7 @@ Kein OneDrive-`downloadUrl`-Fetch mehr. Medien sind **[S]**, nicht **[K]** — d
 2. **FileService** (`/services`): 2 Save-Tiers + Arbeitskopie (IDB).
 3. **Ein Export-Dialog** mit Format-Auswahl → das eine Rohr.
 4. **Auto-Load** aus Arbeitskopie beim Start; FS-Handle-Persistenz + Permission-Reprompt.
-5. Timestamp-Backup nur **optional/explizit**, nicht automatisch.
+5. Datierte Sicherung **vor** jedem In-place-Save, sobald ein Backup-Ordner verbunden ist ([§4.1](#41-die-sicherung-vor-dem-überschreiben), INV-FILE-4) — der Verzicht bleibt wählbar, aber nie stillschweigend.
 6. *(Optional, später)* Cloud-Adapter hinter `FileService`.
 
 **Reduktion:** ~5 v8-Module (`storage.js`, `storage-file.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`) → **ein** `FileService` + die Kern-Serializer.
