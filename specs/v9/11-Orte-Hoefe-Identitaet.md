@@ -397,14 +397,12 @@ Anders als das allgemeine Massen-Dedup (Kriterium 1 bei Orten ist eine Heuristik
 mergePlaceObjects(places, hofObjects, survivorId, mergedIds):
   … Schritte 1–5 (Namen/enclosedBy vereinigen, HofObject.villageId umhängen)
   6. Höfe unter survivorId nach normalisierter Adresse gruppieren
-     → jede Gruppe ≥2 automatisch zusammenführen (`pickHofWinner`, core-intern:
-       Verwendungszahl → Koordinaten → Notiz → kleinste ID) — ruft dieselbe
-       verlustfreie Merge-Logik von oben auf, kein neuer Mechanismus.
-       ACHTUNG, bewusst NICHT die Heuristik des Dedup-Vorschlags: dieser Pfad
-       läuft AUTOMATISCH und hat weder `kuratiert` (ADR-v9-225) noch die
-       Sprossen aus ADR-v9-296 mitbekommen. Am Bestand ist die Vorbedingung
-       heute leer (0 Dörfer mit ≥2 gleichadressigen Höfen), die Divergenz
-       also folgenlos — offen als BL-396.
+     → jede Gruppe ≥2 automatisch zusammenführen (`pickHofWinner`, core-intern)
+       — ruft dieselbe verlustfreie Merge-Logik von oben auf, kein neuer
+       Mechanismus, und seit [ADR-v9-298] DIESELBE Gewinner-Kette wie der
+       Dedup-Vorschlag. Sie lebt dafür im Kern (`curation.ts::pickWinnerId`),
+       nicht in der Schale: dieser Pfad ist der riskantere von beiden — er
+       schlägt nicht vor, er führt zusammen, ohne Klick.
   7. Toast, falls konsolidiert wurde: „N Hof-Dubletten unter ⟨Dorf⟩
      automatisch zusammengeführt" (Transparenz, LP-6 — analog dem
      Konvention-2-Übergangs-Toast, §4.3).
