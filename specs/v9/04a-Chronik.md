@@ -1042,6 +1042,28 @@ Am 2026-08-09 aus [32-Testframework.md](32-Testframework.md) ausgelagert. Jeder 
 **Was die Messung an der Kind-Zeile geändert hat.** Bei 375px gemessen (nicht geschätzt, INV-UI-11): mit der Kindschafts-Pille brach zuerst der NAME über zwei Zeilen und das ✕ rutschte allein in eine dritte. Pille und Zeilen-Aktionen liegen jetzt in einer gemeinsamen Umbruch-Einheit, der Namens-Link hat `flex-basis: 60 %` — damit wandert der Anhang als Ganzes in die zweite Zeile und die Zeile ohne Beleg (der Regelfall) bleibt einzeilig.
 
 <a id="adr-v9-264"></a>
+## ADR-v9-253
+
+**Die Geschwister-Prüfung wurde für die eine Hälfte gemacht und für die andere nicht — in
+DIESEM ADR.** Befund 2 oben zog das SCHREIB-Gate ausdrücklich über alle sechs Sonder-Slots
+nach („Dasselbe für Heirat/Verlobung am Familien-Steckbrief"). Die PROJEKTIONS-Hälfte
+derselben Frage blieb bei der Person stehen — und kam achtzehn Tage später als Nutzer-Befund
+zurück: „kann kein Heiratsereignis eingeben … auch bei einer bestehenden Familie ohne
+Heiratsereignis".
+
+**Ein ADR, der eine Person→Familie-Symmetrie an einer Stelle explizit zieht, ist kein Beleg,
+dass sie überall gezogen wurde.** Er markiert im Gegenteil genau die Stelle, an der
+nachzusehen ist: wer einmal gemerkt hat, dass eine Regel zwei Träger hat, hat den Beweis in
+der Hand, dass jede weitere Hälfte derselben Regel dieselbe Frage verdient. Ich habe den Satz
+gelesen und daraus geschlossen, die Familie sei mitgezogen.
+
+**Konsequenz statt Merksatz.** Die beiden Zusicherungen liegen jetzt in EINER Datei
+(`tests/ui/geburt-immer-offen.test.ts` → `tests/ui/immer-offen.test.ts`), Geburt und Heirat
+nebeneinander, mit der Gegenprobe je Träger (Taufe/Tod/Bestattung bzw. Verlobung bleiben
+unsichtbar). Wer eine anfasst, sieht die andere. Das ist dieselbe Fehlerklasse wie im Nachtrag
+zu ADR-v9-304 vom Vortag — dort Personen-Regel geprüft, Familien-Regel nicht — und damit die
+zweite Wiederholung binnen zwei Tagen; deshalb eine Datei statt einer weiteren Ermahnung.
+
 ## ADR-v9-264
 
 **Bau BL-232 (Kern) — 2026-08-12.** Modell, `entryTemplates`-Abschnitt und `applyEntryTemplate` gebaut; Gates lint/test (4394)/arch/csp/a11y/round grün, CI grün. Zwei Dinge sind schärfer geworden, als der ADR sie verlangte: das Feld-Vokabular ist per `satisfies readonly (keyof Person)[]` bzw. `keyof Event` an das Modell gebunden — eine Umbenennung dort bricht den Build, statt eine tote Vorlage zu hinterlassen —, und die Slot-Adresse ist `role.event.field` statt v8s positionsabhängiger `c0…cN`, die beim Umsortieren die Schlüssel aller Folgefelder verschoben. Der `if (key === 'projects')`-Sammlungs-Sonderweg im app-data-Merge ist zur Abschnitts-Eigenschaft `COLLECTION_SECTIONS` verallgemeinert; ein Singleton dort ist jetzt ein Compiler-Fehler (negativ geprüft mit `tour: true`).
@@ -1628,3 +1650,23 @@ gebaut, einen dritten geschrieben. Der Unterschied zu einer legitimen Backlog-Ze
 **Gab es den Zustand vor meiner Änderung schon?** War er vorher richtig und ist durch mich
 falsch geworden, ist er Teil der Änderung. Diese Frage kostet einen Satz und hätte die
 Zeile verhindert.
+
+## ADR-v9-304
+
+**Nachtrag am selben Tag — die Regel feuerte und blieb trotzdem unsichtbar.** Zwei
+Nutzer-Rückfragen deckten hintereinander zwei Stufen auf, die meine Tests nicht abdeckten:
+„bist du sicher dass die regel angezeigt wird" (nein — belegt war nur, dass sie feuert) und,
+nachdem sie in der Liste stand, „zeigt aber keinen einzigen event an".
+
+**Ursache: `run.ts` ergänzt die Ankerperson NUR bei Personen-Regeln** (`h.personId ?? p.id`);
+bei Familien-Regeln bleibt `h.personId ?? null` stehen, und `buildQualityDashboard` nimmt
+Befunde ohne Trägerperson bewusst aus der personbezogenen Auswertung. Ein Familien-Hit ohne
+Anker existiert damit in `findings`, ohne dass ihn je jemand sieht — und der gemeldete Fall
+war eine **Heirat**, also genau ein Familien-Ereignis. Am Bestand: 30 Befunde, davon **4 ohne
+Anker**; sichtbare Brennpunkt-Zeilen 26 → **28** nach dem Fix (`familyAnchor(f)`, dieselbe
+Konvention wie `SOURCE_REF_MISSING`).
+
+**Die Lücke lag in meinen Tests, nicht nur im Code:** der erste Wurf prüfte den Personen-Fall
+und schloss auf die Familie — die klassische Geschwister-Stelle. Beide Wege haben jetzt eine
+Zusicherung bis zur `filterFocus`-Zeile, und beide sind rot-geprobt (Anker entfernt → genau
+ein Test fällt; `severity: 'info'` → genau ein anderer).
