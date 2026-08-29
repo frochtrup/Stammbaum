@@ -9,9 +9,18 @@ MeineDaten_ancestris.ged
 *.pdf
 !GEDCOM551.pdf
 Decker_story.html
+# Der ganze Ordner, nicht einzelne Muster: hier liegen echte Personendaten (GEDCOM,
+# kuratierter Orts-/Hof-Bestand, App-Daten) in einem PUBLIC Repo. `Testdateien/*.json`
+# deckte nur die oberste Ebene ab — `Testdateien/alt/orte.v9.json` war dadurch nicht
+# ignoriert und tauchte bei jedem `git status` als unversioniert auf. Ein `git add -A`
+# hätte ihn mitgenommen. Es ist keine Datei daraus getrackt; eine Ausnahme wäre also
+# bewusst zu formulieren, statt sie versehentlich zu haben.
+Testdateien/
 
-# Lokale Entwicklungsumgebung
-.claude/
+# Lokale Entwicklungsumgebung (nur Projekt-Skills + Bau-Agenten versioniert)
+.claude/*
+!.claude/skills/
+!.claude/agents/
 
 # Archiv / Planung
 GEDCOM_V2_PLAN.md

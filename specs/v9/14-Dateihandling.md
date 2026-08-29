@@ -1,0 +1,197 @@
+# 14 — Dateihandling
+
+> Schicht: Kern (Serializer) + Betrieb (FileService) · Abhängig von: [13 Interop/Roundtrip](13-Interop-Roundtrip.md), [30 NFR & Persistenz](30-NFR-und-Persistenz.md) · Ersetzt die v8-Dateimodule (`storage.js`, `storage-file.js`, `onedrive*.js`)
+
+Radikale Vereinfachung gegenüber v8. **Das interne Modell ist die eine Quelle; GEDCOM 5.5.1/7.0/Strict und GRAMPS sind Serialisierungen *desselben* Modells** — Import in einem Format und Export in einem anderen (**Cross-Family**, GEDCOM↔GRAMPS) ist eine Kernfähigkeit (v8-Stärke, [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126)). „5.5.1 = Master" meint: das **verbreitetste** Format, hier ist die Qualität kompromisslos — **nicht** die einzige Quelle. Zwei Treue-Ebenen: der **native** Roundtrip (gleiches Format rein/raus) ist byte-treu über den Passthrough-Baum (LP-1, `net_delta=0`); die **Cross-Family**-Serialisierung emittiert aus dem Modell (formatnativ, best-effort — Modell-Äquivalenz statt Byte-Gleichheit). Realisierungsstand je Ebene: [ADR-v9-126](04-Entscheidungslog.md#adr-v9-126) + [Backlog](05-Backlog.md).
+
+---
+
+## 1. Prinzip: drei getrennte Belange
+
+v8 hat drei Dinge vermischt, die getrennt gehören:
+
+1. **Roundtrip-Treue** = Eigenschaft des **Kerns** (`parse`/`serialize`, [13](13-Interop-Roundtrip.md)). Unabhängig davon, wo die Datei liegt.
+2. **Dateihandling** = zwei Verben: **Bytes rein** (Import), **Bytes raus** (Export/Save).
+3. **Geräte-Sync** = separates Thema → in v9 Sache des **Betriebssystems**, nicht der App (§5).
+
+> **Unvermeidbare Wahrheit:** Keine Browser-API schreibt auf *allen* Plattformen still in dieselbe Datei zurück. Desktop Chrome/Edge: ja (File System Access API). Safari + iOS + Android: nein — dort ist jeder „echte" Datei-Save eine Nutzer-Geste. **Welche** Geste, ist plattformabhängig und nicht austauschbar: auf iOS/Android das Share-Sheet („In Dateien sichern"), auf dem Desktop ein Datei-Dialog bzw. ein Download. Das wird an **genau einer** Stelle gekapselt ([§4](#4-fileservice-die-einzige-plattform-verzweigung)), nicht durch den Code gestreut.
+
+---
+
+## 2. Das notwendige Minimum
+
+| Baustein | Zweck | Plattform |
+|---|---|---|
+| `<input type="file">` / Drag-Drop | Import (Bytes rein) | **überall identisch** |
+| `parse` / `serialize` | Roundtrip | Kern ([13](13-Interop-Roundtrip.md)) |
+| **Arbeitskopie** (Dateitext in IndexedDB) | Auto-Load, Absturz-Recovery, Offline | **überall identisch** |
+| Export-Tier 1a: FS-Access-Handle | still in-place speichern | Desktop Chrome/Edge |
+| Export-Tier 1b: `showSaveFilePicker()` | „Speichern unter"-Dialog; **liefert das Handle für 1a** | Desktop Chrome/Edge |
+| Export-Tier 2a: `navigator.share({files})` | „In Dateien sichern" | **nur Touch-Plattformen**: iOS/iPadOS, Android |
+| Export-Tier 2b: `<a download>` | Download-Ordner | Safari/Firefox (Desktop) |
+| **Backup-Ordner-Handle** (Verzeichnis) | datierte Sicherung **vor** jedem In-place-Save ([§4.1](#41-die-sicherung-vor-dem-überschreiben)) | Desktop Chrome/Edge |
+
+**Nicht notwendig** (aus v8 entfernt): OneDrive-OAuth/Token, `od_base_path`, ETag/If-Match, `filemap`, mehrfache Storage-Caches. Siehe [03 §9](03-Altlasten.md).
+
+Zwei Posten dieser Liste sind seit [ADR-v9-302](04-Entscheidungslog.md#adr-v9-302) **zurück**, und zwar bewusst: der **Ordner-Picker** und das **datierte Backup**. Was v8 daran falsch machte, war nicht das Sichern, sondern der Zweck — dort war das Backup Teil einer app-eigenen Cloud-Verwaltung (`od_base_path`, `filemap`) und sicherte gegen deren eigene Fehler. Hier sichert es gegen **die eine Eigenschaft, die v9 gegenüber v8 neu hat**: Tier 1a überschreibt still, ohne Dialog, ohne Zwischenschritt. Genau das ist der Komfort — und genau deshalb ist der vorige Stand nach einem Fehlgriff weg. Das Backup ist der Preis dieses Komforts, nicht ein Rest der alten Sync-Maschinerie.
+
+---
+
+## 3. Modell: „Arbeitskopie + ein Export-Rohr"
+
+### 3.1 Arbeitskopie (plattformübergreifende Konstante)
+
+Der kanonische Dateitext liegt zur Laufzeit als **eine** Arbeitskopie in IndexedDB. Sie liefert Auto-Load beim Start, Offline-Betrieb und Absturz-Wiederherstellung — **ohne** Plattform-Verzweigung. Das ist der „unabhängig von Desktop/Mobile"-Teil.
+
+- **INV-FILE-1:** Es gibt genau **eine** Arbeitskopie (aktueller Dateitext + Dateiname + optionaler FS-Handle). Kein zweiter paralleler Text-Cache.
+- IndexedDB genügt (Dateien ≤ ~6 MB); kein OPFS/Graph-Store nötig.
+
+### 3.2 Ein Export-Rohr, N Serializer
+
+```
+Modell → serialize(format) → Bytes → save()
+             └ 'gedcom-5.5.1' | 'gedcom-strict' | 'gedcom-7.0' | 'gramps'
+```
+
+- **Querexport** und **Strict** sind **kein Sonderpfad** — nur ein anderes Format im selben Export-Dialog.
+- **Anonymisierung ist kein fünftes Format, sondern ein orthogonaler Schalter** am selben Rohr ([13 §7](13-Interop-Roundtrip.md)): pro Export gewählt, mit jedem GEDCOM-Format kombinierbar, erzwingt Suffix `_anon` zusätzlich zum Format-Suffix und schaltet den In-place-Pfad ab.
+- GRAMPS (gzip) läuft durch dasselbe Rohr, weil es **Bytes** behandelt, nicht Text.
+- **INV-FILE-2:** Jeder Format-Export geht durch dasselbe Save-Rohr. Keine format-spezifische Save-Maschinerie.
+
+### 3.3 Diagnose & Wartung (lokaler Zustand)
+
+Zwei Nutzer-seitige Selbsthilfe-Aktionen in den Einstellungen, für den Fall eines inkonsistenten lokalen Zustands:
+- **„Ortsdaten zurücksetzen"** — löscht nur den `orte.json`-IDB-Spiegel ([§6](#6-ortejson-cross-stammbaum-wissen)); die geladene Datei selbst bleibt unberührt, Orte werden beim nächsten Laden neu aufgelöst ([11 §4](11-Orte-Hoefe-Identitaet.md)).
+- **„Alles zurücksetzen"** — leert **jeden** Object-Store der App-Datenbank, danach startet die App leer.
+
+Beide Aktionen betreffen ausschließlich lokal abgeleiteten/zwischengespeicherten Zustand — keine Datei-Löschung auf Betriebssystem-Ebene, kein Datenverlust an der eigentlichen GEDCOM-/GRAMPS-Datei.
+
+**Der Umfang steht an EINER Stelle, nicht in dieser Beschreibung** ([ADR-v9-297](04-Entscheidungslog.md#adr-v9-297)). Bis dahin nannte dieser Abschnitt zwei Speicher (Arbeitskopie + Orts-Spiegel); die Datenbank führt inzwischen **zehn**. Eine Prosa-Aufzählung veraltet mit dem nächsten Store und wirkt trotzdem vollständig — deshalb läuft das Zurücksetzen über `ALL_STORES` (`services/idb-schema.ts`), dieselbe Liste, aus der der `onupgradeneeded`-Handler die Stores anlegt. Wer einen Store einträgt, hat ihn angelegt UND zurücksetzbar gemacht.
+
+**Der harte Reset warnt namentlich, statt zu zählen.** Nicht alle zehn Speicher sind gleich schwer zu ersetzen, und genau das muss der Hinweis sagen — sonst liest sich eine Arbeitskopie (die in der eigenen Datei steht) wie die kuratierten Orte (die in **keiner** GEDCOM-Datei stehen, [11 §2](11-Orte-Hoefe-Identitaet.md)). Drei Klassen, in dieser Reihenfolge aufgezählt:
+
+| | Speicher | Rückweg |
+|---|---|---|
+| **es gibt keine zweite Kopie** | Forschungsprojekte · „Kein Duplikat"-Entscheidungen · Regel-Konfiguration · App-Einstellungen | — |
+| **nur mit Export** | kuratierte Orte/Höfe · importierte Medien-Bytes | eine zuvor exportierte `orte.json` bzw. der Original-Ordner |
+| **wiederbeschaffbar** | Arbeitskopie · Orte-Editor-Entwurf · die beiden FS-Handles | die eigene Datei bzw. eine Neu-Auswahl |
+
+Die Aufzählung wird aus derselben Liste komponiert, aus der gelöscht wird (`LOKALE_DATEN`, `services/reset-local-state.ts`); ein Test hält fest, dass **jeder** Store aus `ALL_STORES` darin eine Zeile hat. Ein erzwungener Export-Zwischenschritt wurde geprüft und verworfen (Nutzer-Entscheidung 2026-08-28): der Warnhinweis mit Aufzählung genügt, ein Pflicht-Umweg vor einer Selbsthilfe-Aktion steht ihr im Weg.
+
+---
+
+## 4. FileService: die einzige Plattform-Verzweigung
+
+Gekapselt in `/services` ([02 §7](02-Zielarchitektur-v9.md)); kennt **kein** Genealogie-Wissen.
+
+```
+FileService {
+  pickAndImport():        Promise<{ text, name, handle? }>   // <input>/Picker, universal
+  loadWorkingCopy():      Promise<{ text, name } | null>     // Auto-Load, universal
+  saveWorkingCopy(text):  Promise<void>                       // still, jederzeit (IDB)
+  exportToFile(bytes, name, opts): Promise<SaveResult>   // SaveResult trägt das ggf. NEU erworbene Handle
+     ├ Tier 1a: handle.createWritable()     (in-place, still — Handle liegt vor; SICHERT VORHER, §4.1)
+     ├ Tier 1b: showSaveFilePicker()        („Speichern unter"-Dialog — Plattform kann es, Handle fehlt
+     │                                       oder `forcePicker` erzwingt ihn)
+     ├ Tier 2a: navigator.share({files})    (nur Touch-Plattformen — iOS/iPadOS, Android)
+     └ Tier 2b: <a download>                (Rest — Safari/Firefox Desktop)
+}
+```
+
+- Der Kern kennt nur `parse(text)` / `serialize(model, format)` — **kein** DOM, kein Picker (INV-ARCH-1, [02](02-Zielarchitektur-v9.md)).
+- **INV-FILE-3:** Die Tier-Verzweigung ist die **einzige** `if (Plattform)`-Stelle des Dateihandlings.
+- **Ein Tier ist nur dann ein Speicherweg, wenn die Plattform ihn tatsächlich zu Ende führt.** `navigator.canShare({files})` meldet auf macOS `true`, aber das macOS-Share-Sheet bietet — anders als das auf iOS — **kein „In Dateien sichern"**: der Nutzer landet in einer Sackgasse. Tier 2a gilt deshalb nur auf **Touch-Plattformen**; die Fähigkeitsprüfung eines Adapters beantwortet „ist das hier ein tauglicher Speicherweg", nicht „existiert die API" ([ADR-v9-194](04-Entscheidungslog.md#adr-v9-194)).
+- **Tier 1b ist das Gegenstück zum Import-Picker** ([§2](#2-das-notwendige-minimum)): wo `showOpenFilePicker` den Öffnen-Dialog stellt, stellt `showSaveFilePicker` den Speichern-Dialog. Das dabei erworbene Handle wird in die Arbeitskopie übernommen — **jeder weitere Save derselben Datei läuft danach still über Tier 1a**.
+- **Nutzerabbruch ist kein Fehlschlag und löst keinen Ausweich-Tier aus** (`ok:false`) — weder bei Tier 1b noch bei Tier 2a. Ein Download nach abgebrochenem Dialog wäre eine zweite Verzweigung entgegen INV-FILE-3 und obendrein gegen die Absicht des Nutzers.
+- FS-Handle wird in IDB behalten; bei Reload Permission neu anfragen (`queryPermission`/`requestPermission`).
+- Anonymisierter/Strict/GED7-Export: nie in-place (Suffix am Dateinamen, z. B. `_strict`/`_anon`), Original unberührt. Diese Exporte gehen **direkt auf Tier 2b** — sie erwerben kein Handle, weil sie keine fortzuschreibende Datei sind, sondern eine Ausgabe.
+
+### 4.1 Die Sicherung vor dem Überschreiben
+
+Tier 1a ist der einzige Weg, auf dem die App **fremde Bytes vernichtet**: sie schreibt still in eine Datei, die schon einen Stand trägt. Jeder andere Tier legt etwas Neues an oder fragt vorher. Deshalb hängt genau an Tier 1a — und nur dort — ein Vorlauf ([ADR-v9-302](04-Entscheidungslog.md#adr-v9-302)):
+
+```
+Tier 1a := [ alten Dateiinhalt lesen → als datierte Kopie in den Backup-Ordner schreiben ] → überschreiben
+```
+
+- **INV-FILE-4:** Ein In-place-Save (Tier 1a) überschreibt **nie**, ohne dass der vorherige Dateiinhalt gesichert ist. Es gibt genau zwei Ausnahmen, und beide sind aktive Aussagen, keine Vorgabe: die **Nutzerwahl** „Ohne Sicherung speichern" — und die Plattform, die **überhaupt keinen Ordner freigeben kann** (iOS/Safari; dort gibt es keine Wahl zu treffen, und ein Abbruch machte die App speicher-unfähig statt sicherer).
+- **Ein nicht verbundener Ordner hält den Save an** (`ok:false`), er lässt ihn nicht durch. Die erste Fassung meldete den Verzicht bloß und schrieb trotzdem — womit ausgerechnet die Lage direkt nach dem Update ungeschützt blieb, in der noch niemand einen Ordner gewählt hatte ([ADR-v9-302](04-Entscheidungslog.md#adr-v9-302), Nutzer-Befund 2026-08-28). „Kein Ordner" ist eine **offene Entscheidung**, kein Grund, sie zu übergehen. Die Meldung nennt deshalb beide Wege weiter — den Ordner wählen oder bewusst ohne Sicherung speichern —, und die Fläche bietet den ersten als Knopf an: eine Meldung, die nur beschreibt, wohin man gehen müsste, ist eine Sackgasse mit Wegbeschreibung.
+- **Gesichert wird der ALTE Stand, gelesen von der Platte** — nicht der neue aus dem Speicher, und nicht die Arbeitskopie. Nur so trägt die Sicherung genau das, was das Überschreiben zerstört; ein aus dem Modell serialisierter „alter" Stand wäre bereits die Projektion des aktuellen Zustands.
+- **Scheitert die Sicherung, unterbleibt das Überschreiben** (`ok:false`). Die umgekehrte Reihenfolge — erst schreiben, dann Sicherung versuchen — macht den Fehlschlag folgenlos meldbar und den Verlust trotzdem endgültig.
+- **Der Backup-Ordner ist ein eigenes Verzeichnis-Handle**, einmalig gewählt (`showDirectoryPicker`, `mode: 'readwrite'`), in einem eigenen IDB-Store neben den anderen FS-Handles (Kategorie A, [30 §2.2](30-NFR-und-Persistenz.md)), Permission-Reprompt wie bei der Arbeitskopie. **Nicht** der Medien-Ordner ([§7](#7-medien)): der ist mit `mode: 'read'` verbunden, und ein Lese-Recht für Fotos ist keine Erlaubnis, in denselben Ordner zu schreiben. Zwei Zwecke, zwei Handles — dieselbe Trennung wie zwischen Genealogie-Datei und `orte.json` ([§6](#6-ortejson-cross-stammbaum-wissen)).
+- **Aus einem Datei-Handle kommt man nicht an seinen Ordner.** Die File System Access API kennt keinen Elternzugriff — das ist der technische Grund, warum ein Verzeichnis-Handle nötig ist und die Sicherung nicht einfach „neben der Datei" entstehen kann. Der gewählte Ordner **darf** derselbe sein wie der der Datei; das ist eine Nutzerentscheidung, keine Zusicherung der App.
+- **Alle Stände bleiben** (Nutzer-Entscheidung 2026-08-28). Die App löscht in einem Ordner des Nutzers nichts — Aufräumen ist seine Sache. Der Name trägt deshalb Sekunden, damit zwei Saves derselben Minute nicht kollidieren: `Meine Familie (Backup 2026-08-28 14-32-05).ged`.
+- **Der Zeitstempel wird injiziert, nicht gelesen** (TST-3): die Namensregel ist eine reine Funktion `backupFileName(name, date)` — eine Quelle für Rohr und Oberfläche, wie `exportFileName` ([§3.2](#32-ein-export-rohr-n-serializer)).
+
+Drei Speicher-Varianten laufen durch **dasselbe** Rohr (INV-FILE-2), sie unterscheiden sich nur in zwei Schaltern:
+
+| Variante | Schalter | Wirkung |
+|---|---|---|
+| **Speichern** | — | Tier 1a mit Sicherung; sonst wie bisher |
+| **Ohne Sicherung speichern** | `skipBackup` | Tier 1a ohne Vorlauf — für den schnellen Zwischenstand |
+| **Speichern unter …** | `forcePicker` | überspringt Tier 1a, geht auf 1b; das erworbene Handle **und der dort gewählte Name** werden übernommen — ab dann ist *diese* Datei die geladene |
+
+---
+
+## 5. Sync: das Betriebssystem, nicht die App
+
+v8 baute OneDrive per Graph API nach, um „dieselbe Datei auf mehreren Geräten" zu erreichen — der komplexeste Brocken, und **unnötig**:
+
+- **Desktop:** Datei liegt in einem iCloud-Drive- / OneDrive-**Ordner**; FS-Access schreibt in-place; das **OS** synct.
+- **Mobile:** „In Dateien sichern" → iCloud-Drive-Ordner; das **OS** synct.
+- **Gemeinsame Datei über Geräte** = gemeinsamer Sync-Ordner. Datei-Konflikte sind **OS-Konflikte** („Datei (Konflikt).ged"), nicht App-Sache.
+
+Robuster als app-verwaltete Graph-Calls und null Komplexität für die App. **LP-2 (Lokal-First) bleibt vollständig erhalten.**
+
+**Ehrlicher Tradeoff:** Ohne App-Cloud gibt es kein automatisches „beim Öffnen ist die neueste Version schon da". Milderung: Auto-Load zeigt die letzte Arbeitskopie; beim erneuten Öffnen einer Datei mit neuerem Disk-Timestamp Hinweis „Datei auf der Festplatte ist neuer — laden?".
+
+**Optionaler Cloud-Adapter (später, falls gewünscht):** als eigenständiges optionales Modul **hinter derselben `FileService`-Schnittstelle** — nie im Kern. Erst dann kämen OAuth/Token/Konfliktprotokoll zurück, isoliert auf dieses Modul.
+
+---
+
+## 6. `orte.json` (Cross-Stammbaum-Wissen)
+
+`orte.json` ([11 §2](11-Orte-Hoefe-Identitaet.md)) folgt demselben Prinzip: liegt **im Sync-Ordner**, das OS synct — der Nutzer platziert die Datei dort selbst (z. B. neben der Genealogie-Datei), die App entdeckt sie nicht automatisch über ein Verzeichnis-Handle. Die Revision/Device-Konflikterkennung (`_rev`/`_device`) bleibt — sie ist gegen *nebenläufige* Bearbeitung nötig, egal ob der Sync per OS oder Cloud läuft. Union-Merge bei Konflikt. Kein Graph-API-Pfad mehr.
+
+Persistenzschichten (Spec 11 §2): ein geräteweiter **IndexedDB-Spiegel** (immer vorhanden, `PlacesSyncService`) plus ein optionaler **Datei-Ein-/Ausgang** über dasselbe Adapter-Muster wie die Genealogie-Datei ([§4](#4-fileservice-die-einzige-plattform-verzweigung)) — ein eigenes, von der Genealogie-Arbeitskopie getrenntes FS-Handle:
+- **Export** („Orte exportieren"): serialisiert den IDB-Spiegel-Stand zu JSON und schreibt ihn über `exportToFile` (Tier 1 in-place, falls Handle gemerkt, sonst Tier 2 Share/Download) — dasselbe Rohr wie der Genealogie-Export (INV-FILE-2).
+- **Import** („Orte importieren"): liest eine gewählte `orte.json` über denselben `PickerAdapter`, gleicht sie über `reconcileAndSave` (Union-Merge, Schema-Gate) gegen den IDB-Spiegel ab — wie ein Stand von einem anderen Gerät.
+
+Kein stiller Schreib-Sync bei jeder einzelnen Orts-/Hof-Mutation (auf Tier-2-Plattformen wäre das Share-Sheet-Spam bei jedem Edit) — Export/Import bleiben explizite Nutzeraktionen.
+
+Dieselbe Datei ist zugleich das **Dokument des Standalone-Orte-Editors** ([22](22-Orte-Editor-Standalone.md)): dort gibt es keinen Spiegel, die Datei ist die einzige Wahrheit (INV-ORTE-3), und Speichern läuft durch dasselbe Export-Rohr (INV-FILE-2/-3) mit `rev`-Erhöhung und eigener Gerätekennung. Eine dort bearbeitete Datei erscheint dem Hauptprogramm beim Import als Stand eines anderen Geräts und läuft durch den regulären Union-Merge — kein zweiter Abgleichspfad.
+
+---
+
+## 7. Medien
+
+`media.file` ist **nicht immer ein Pfad.** Es trägt drei Dinge, die verschieden aufzulösen sind ([ADR-v9-187](04-Entscheidungslog.md#adr-v9-187)); welches davon vorliegt, entscheidet **eine** reine Kern-Klassifikation, nie die einzelne Anzeigestelle:
+
+| Art | Erkennung | Auflösung |
+|---|---|---|
+| **eingebettet** | `data:` | direkt anzeigbar, keine Auflösung nötig |
+| **Weblink** | `http(s):` | klickbares ↗ (Host als Kurztext) — **kein Fetch**, weder für Vorschau noch für Ausgaben (lokal-first LP-2, CSP; ein Galerie-Aufruf löste sonst tausende Anfragen an fremde Archive aus) |
+| **Datei** | alles Übrige | relativ zum **Medien-Ordner** (s. u.) |
+
+**Medien-Ordner.** Startpunkt für relative Pfade ist der Datei-Ordner (der Sync-Ordner), verbunden als **Verzeichnis-Handle** — bedient über die Einstellungen ([20 §1.14](20-Funktionen.md)), gespeichert in einem eigenen IDB-Store neben den anderen FS-Handles (Kategorie A, [30 §2.2](30-NFR-und-Persistenz.md)), Permission-Reprompt wie bei der Arbeitskopie ([§4](#4-fileservice-die-einzige-plattform-verzweigung)).
+
+- **Desktop/Android (FS-Access):** Ordner-Handle → Geschwister-Medien direkt lesbar. Ein **einmaliger rekursiver Index** (relPath → Handle) trägt die Auflösung; er matcht zusätzlich case-unabhängig, normalisiert `\` zu `/` und fällt zuletzt auf den **Basisnamen** zurück. Ein so gefundenes Medium wird als „nur über den Dateinamen zugeordnet" **markiert** — ein stiller Fuzzy-Treffer zeigt sonst irgendwann das falsche Foto.
+- **Ohne FS-Access (iOS/Safari):** Medien werden **explizit importiert** (Mehrfachauswahl) und in IDB abgelegt. Kein toter „Ordner wählen"-Knopf auf Plattformen ohne die API. Der Browser liefert dabei **keinen Ordner, nur den Dateinamen** (`webkitRelativePath` ist leer, solange nicht ein ganzes Verzeichnis gewählt wurde — was iOS/Safari nicht anbietet); die Zuordnung läuft deshalb über den Basisnamen und wird als unscharf markiert.
+- **Cache `img:<relPath>`** hält **verkleinerte Vorschauen**, nicht die Originale — ein Kachelraster voller unkomprimierter BMP in Originalgröße ist ein realer Speicherfehler. Ein Speicher, zwei Zugangswege (Ordner-Handle und Import).
+- **Die Auflösung schreibt nie zurück.** Ein gefundener Pfad korrigiert `media.file` nicht, kein Normalisieren beim Verbinden (LP-1) — die Datei gehört dem Nutzer, nicht dem Anzeigecode.
+- **Selbst-enthaltene Ausgaben** (Story, §4-Reports) bekommen die Bytes über einen **asynchronen Vorlauf** als `data:`-Map; die Builder bleiben synchron und goldfile-testbar.
+
+Kein OneDrive-`downloadUrl`-Fetch mehr. Medien sind **[S]**, nicht **[K]** — die Kern-Roundtrip-Fähigkeit hängt nicht daran; nichts an dieser Auflösung berührt Parser oder Writer.
+
+---
+
+## 8. Umsetzungsreihenfolge
+
+1. **Kern** (`/core/interop`): `parse` + `serialize(model, format)` als reine Funktionen ([13](13-Interop-Roundtrip.md)).
+2. **FileService** (`/services`): 2 Save-Tiers + Arbeitskopie (IDB).
+3. **Ein Export-Dialog** mit Format-Auswahl → das eine Rohr.
+4. **Auto-Load** aus Arbeitskopie beim Start; FS-Handle-Persistenz + Permission-Reprompt.
+5. Datierte Sicherung **vor** jedem In-place-Save, sobald ein Backup-Ordner verbunden ist ([§4.1](#41-die-sicherung-vor-dem-überschreiben), INV-FILE-4) — der Verzicht bleibt wählbar, aber nie stillschweigend.
+6. *(Optional, später)* Cloud-Adapter hinter `FileService`.
+
+**Reduktion:** ~5 v8-Module (`storage.js`, `storage-file.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`) → **ein** `FileService` + die Kern-Serializer.

@@ -1,0 +1,165 @@
+# 31 — Entwicklungsumgebung & Auslieferung
+
+> Schicht: Betrieb · Abhängig von: [02 Zielarchitektur](02-Zielarchitektur-v9.md), [30 NFR & Persistenz](30-NFR-und-Persistenz.md)
+
+Werkzeug- und Auslieferungskette für v9. Ziel: die Architektur-Invarianten ([02](02-Zielarchitektur-v9.md)) maschinell erzwingen und das wichtigste Sicherheitsnetz (Roundtrip, LP-1) automatisieren. Der Aufbau ist etabliert und in Betrieb — dieses Dokument beschreibt den Ist-Zustand, nicht einen Umstellungsplan.
+
+---
+
+## 1. Grundpfeiler
+
+| Aspekt | Umsetzung |
+|---|---|
+| Ablageort | **lokales Git-Repo** `~/dev/stammbaum-v9` (Code) + `~/Documents/GitHub/Stammbaum` (Spec-Set) |
+| Umgebung | **Claude-Desktop-App** als Ein-Fenster-Cockpit (ADR-v9-07, §7) |
+| Lokal-Server | `npm run dev` (Vite, Hot-Reload) |
+| Tests | `npm test` lokal + CI bei jedem Push |
+| Deploy | GitHub Actions baut `dist/` → GitHub Pages (nur bei grünen Tests) |
+
+> **INV-DEV-1 (kritisch):** Das Projekt liegt **NICHT** in iCloud Drive / OneDrive / Dropbox. Build-Step-Projekte erzeugen zehntausende kleine `node_modules`-Dateien; Datei-Sync-Dienste verursachen Locks, halb-synchronisierte Zustände und langsame Builds. Einzige „Wolke" ist GitHub. (ADR-v9-08.)
+
+---
+
+## 2. Repository-Layout
+
+```
+~/dev/stammbaum-v9/
+├── package.json            ← Vite + Svelte 5 + Vitest, Scripts (§3)
+├── tsconfig.json
+├── vite.config.ts          ← base-Pfad für GitHub Pages, PWA
+├── vitest.config.ts        ← browser-Conditions für Component-Tests (ADR-v9-16)
+├── eslint.config.js        ← Flat-Config; Svelte + TS-Parser (ADR-v9-16)
+├── .gitignore              ← node_modules/, dist/, .DS_Store, *.local
+├── /core                   ← Domänenkern (framework-frei, DOM-frei, build-frei testbar)
+│   ├── /model /places /research /interop
+├── /services               ← Anwendungsdienste (Plattform-APIs gekapselt)
+├── /ui                     ← reaktive Schale + /islands (imperative SVG) + /shell + /views
+├── /app                    ← Einstieg Hauptprogramm, /public (statische Assets, demo.ged)
+├── /app-orte               ← Einstieg Standalone-Orte-Editor (22), eigene vite.config.ts
+├── /tests                  ← headless: core, ui, services, islands, orte, /arch-boundary, /fixtures
+└── .github/workflows/ci.yml
+```
+
+Verzeichnisschichten entsprechen [02 §7](02-Zielarchitektur-v9.md). `node_modules/` und `dist/` sind **nie** eingecheckt. Roundtrip-Fixtures liegen in `/tests/fixtures` (Echtdaten gitignoriert, lokal); `app/public/demo.ged` ist der mitgelieferte Demo-Datensatz ([20 §1.2](20-Funktionen.md), zugleich Verifikations-Fixture [32 §4](32-Testframework.md)).
+
+---
+
+## 3. package.json — Scripts
+
+```jsonc
+{
+  "scripts": {
+    "dev":        "vite",                                      // Dev-Server mit HMR
+    "dev:orte":   "vite --config app-orte/vite.config.ts",     // Dev-Server des Orte-Editors (22)
+    "build":      "…",                                         // baut BEIDE Programme: dist/ + dist/orte/
+    "preview":    "vite preview",                              // dist/ lokal prüfen
+    "test":       "vitest run",                                // ALLE Tests
+    "test:core":  "vitest run tests/core",                     // nur Kern (build-frei, schnell)
+    "test:round": "vitest run tests/roundtrip",
+    "test:watch": "vitest",
+    "lint":       "eslint . && tsc --noEmit && npm run check:svelte",  // Stil + Typen (.ts UND Templates)
+    "check:svelte": "svelte-check --tsconfig ./tsconfig.check.json --threshold error",  // Template-Typen (ADR-v9-83)
+    "check:arch": "node tests/arch-boundary/check-arch-boundary.mjs",  // INV-ARCH-1 Gate
+    "check:csp":  "node tests/csp/check-csp.mjs",               // CSP-Gate (NFR-3, ADR-v9-39)
+    "check:a11y": "node tools/a11y/run-a11y.mjs"                // a11y-Gate (TST-15, ADR-v9-170)
+  }
+}
+```
+
+- **Test-Runner:** `vitest` (nutzt Vite-Transform, kann TypeScript direkt, läuft in Node — headless, ohne Browser). Erfüllt [30 NFR-6](30-NFR-und-Persistenz.md) und [02 INV-ARCH-2](02-Zielarchitektur-v9.md): Kern-Tests brauchen **keinen** Bundle-Schritt.
+- **`check:svelte`** (ADR-v9-83) schließt die Lücke, dass `tsc --noEmit` **nur `.ts`-Dateien** prüft — Svelte-**Templates** (Props, Bindings, Markup-Ausdrücke) prüft sonst kein Gate. Nutzt eine eigene `tsconfig.check.json`, die `tests` ausnimmt: `@testing-library/svelte`s `render()` verliert die Generic-Bindung generischer Komponenten (`<script generics="T">`) — 37 Fehler ohne Produktionsrisiko. Sollen Test-Dateien später mitgeprüft werden, ist der Weg eine Harness-Komponente je generischer Komponente (Projekt-Muster, `EventsByTypeHarness.svelte`), nicht das Aufweichen dieser Konfiguration.
+- **Zwei Programme, ein Bau.** `build` erzeugt `dist/` (Hauptprogramm) **und** `dist/orte/` (Orte-Editor, [22 §2](22-Orte-Editor-Standalone.md)); `check:csp` prüft beide Einstiegsseiten. Ein Bau, der nur das Hauptprogramm erfasst, ließe den Editor unbemerkt zurückfallen — dieselbe Klasse wie ein Gate, das null Tests findet und grün meldet.
+- **`check:arch`** ist ein eigenes, abhängigkeitsfreies Node-Skript (regex-basiert: verbotene Aufwärts-Imports + verbotene Plattform-Globals im Kern), **kein** ESLint-Plugin — bewusste Vereinfachung (ADR-v9-10). Bleibt austauschbar, falls Grenzfälle es sprengen.
+
+---
+
+## 4. GitHub Actions — `ci.yml`
+
+Ein Workflow deckt Test-Gate **und** Auslieferung ab. Deploy nur, wenn alle Gates grün.
+
+```yaml
+name: CI & Deploy
+on:
+  push:         { branches: [main, v9-dev] }
+  pull_request: { branches: [main] }
+
+permissions: { contents: read, pages: write, id-token: write }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run check:arch    # Import-Boundary + Kern-Reinheit (INV-ARCH-1)
+      - run: npm run check:csp     # CSP-Test-Gate (NFR-3, ADR-v9-39)
+      - run: npm run check:a11y    # Barrierefreiheit (axe-core, TST-15, ADR-v9-170)
+      - run: npm run lint          # ESLint + Typen (tsc --noEmit) + Svelte-Templates (check:svelte)
+      - run: npm test              # Roundtrip + Unit + Component + Snapshot (LP-1)
+      - run: npm run test:perf     # Skalen-Gate auf der 20k-Fixture (NFR, Spec 30 §1)
+
+  deploy:
+    needs: test                    # nur bei grünen Gates
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+      - uses: actions/deploy-pages@v4
+```
+
+**Wirkung:** Architektur-Grenze (INV-ARCH-1), Roundtrip-Treue (LP-1), Typen und die NFR-Budgets ([30 §1](30-NFR-und-Persistenz.md)) werden zur automatischen Vorbedingung jedes Releases — die Gates laufen als getrennte Schritte, damit ein Fehlschlag sofort dem richtigen Bereich zuzuordnen ist.
+
+**`check:a11y` braucht denselben eigenen Aufruf** ([ADR-v9-170](04-Entscheidungslog.md#adr-v9-170)): der Scanner hängt sich an die vorhandenen Komponententests, sieht deren DOM aber nur mit `sequence.hooks: 'list'` — mit der Standard-Reihenfolge räumt `@testing-library` vorher auf, und er prüfte 24 statt 827 Testzustände, ohne rot zu werden. Der Wrapper meldet die erreichte Reichweite ins Log und schlägt an, wenn sie einbricht.
+
+Das Skalen-Gate braucht dabei zwingend den **eigenen Aufruf** `npm run test:perf`: die Haupt-Vitest-Config schließt `tests/perf/` aus ([32 §2](32-Testframework.md)), ein Pfad-Argument gegen sie fände null Tests und meldete grün — die Sorte lautlos wirkungsloses Gate, die dieses Projekt schon einmal hatte.
+
+### 4a. Pre-Push-Hook — dieselben Schritte, lokal, vor dem Push
+
+`.githooks/pre-push` ruft `tools/run-ci-steps.mjs`; installiert wird er über `core.hooksPath`, gesetzt vom `prepare`-Script (läuft bei jedem `npm install`, kein Handgriff nach dem Klonen). Notausgang: `git push --no-verify`. Laufzeit gemessen: **47 s** für alle acht Schritte.
+
+**Die Schrittliste steht NICHT im Hook, sie wird aus `ci.yml` gelesen.** Eine zweite Liste daneben wäre genau die Drift, gegen die der Hook gebaut ist: wer einen CI-Schritt ergänzt, müsste daran denken, ihn auch im Hook einzutragen — und daran nicht zu denken ist der Ausgangsfehler. Findet das Skript keine `- run: npm …`-Zeile, bricht es mit Exit 2 ab, statt grün durchzulaufen ([ADR-v9-200](04-Entscheidungslog.md#adr-v9-200): ein Gate, das nichts prüft, ist schlimmer als keins). Beide Rot-Fälle sind verifiziert, nicht behauptet.
+
+**Warum ein Hook und nicht noch ein Merksatz** ([ADR-v9-239](04-Entscheidungslog.md#adr-v9-239)): „vor dem Push alle CI-Schritte laufen lassen" stand als Notiz in der Projekt-Memory und hat nicht gehalten — es liefen drei von acht, `check:csp` brach, CI wurde rot. In derselben Sitzung war die Bilanz eindeutig: vier mechanisch durchgesetzte Regeln hielten, vier Merksätze nicht. Verfahrensregeln gehören in ein Gate; Merksätze bleiben den Urteilsfragen vorbehalten, die kein Skript entscheiden kann.
+
+---
+
+## 5. Vite / GitHub-Pages-Konfiguration
+
+- **Zweites Programm unter `/orte/`.** Der Orte-Editor ([22](22-Orte-Editor-Standalone.md)) baut mit eigener Konfiguration nach `dist/orte/` (`emptyOutDir: false`, damit beide Programme dasselbe Auslieferungsverzeichnis füllen) und ist unter `…/stammbaum-v9/orte/` erreichbar. Seine `base` folgt derselben command-abhängigen Regel wie unten.
+- **`base`** in `vite.config.ts` auf den Repo-Pfad setzen (z. B. `/stammbaum-v9/`), sonst brechen Asset-Pfade auf Pages. Bei eigener Domain oder User-Pages entsprechend `/`. **Zwingend command-abhängig setzen** (`defineConfig(({ command }) => ({ base: command === 'build' ? '/stammbaum-v9/' : '/' }))`), NICHT als statischer Top-Level-Wert — ein statisches `base` gilt auch für den lokalen Dev-Server (`vite`/`command === 'serve'`) und verschiebt die App dort unter denselben Unterpfad; Vite selbst redirected `/` → `/stammbaum-v9/` korrekt, aber lokales Tooling, das die Wurzel `/` erwartet (Preview-/Healthcheck-Tools), sieht die App dann nie als erreichbar.
+- **PWA:** `vite-plugin-pwa` (oder handgeschriebener Service Worker in `/app`) für Precache + Offline-Fallback ([30 NFR-2](30-NFR-und-Persistenz.md)). Cache-Version automatisch aus dem Build-Hash — kein manuelles Bumpen, keine „alter SW liefert veraltete Shell"-Falle.
+- **Ergebnis bleibt statisch:** `dist/` ist reines HTML/JS/CSS. Lokal-First und Offline (LP-2) unverändert; kein Server im Betrieb.
+
+---
+
+## 6. Branch- & Arbeitsmodell
+
+- **`main`** = deploybar; jeder Merge löst Build+Deploy aus (nur bei grünen Gates).
+- **`v9-dev`** = Integrationsbranch während des Aufbaus (CI läuft, Deploy nicht).
+- Feature-Arbeit auf kurzlebigen Branches → PR nach `v9-dev`; PR-Checks = `test`-Job.
+- **Solo-Pragmatik:** Branch-Protection auf `main` optional, aber „required status checks = test" empfohlen — verhindert versehentliches Deployen mit rotem Gate.
+- Cache-Versionierung ist automatisiert (§5); Doku-Sync läuft über das Spec-Set + Skills (`decision-log`/`spec-lint`), nicht über manuelle Bump-Pflichten.
+
+---
+
+## 7. Claude Code in dieser Umgebung
+
+- Läuft in der **Claude-Desktop-App** (ADR-v9-07): Ein-Fenster-Cockpit mit Chat/Diff/Preview/Terminal/File/Tasks auf dem lokalen Code-Repo — voller Datei-/Git-/Test-Zugriff, keine iCloud-I/O-Falle. Liest `CLAUDE.md` + `.claude/skills/`/`.claude/agents/` automatisch.
+- `npm test` / `npm run lint` / `npm run check:arch` sind für den Agenten direkt ausführbar (Bash) → Verifikation ohne Nutzerinteraktion (headless-Testanforderung erfüllt).
+- Bau-Rollen sind auf spezialisierte Agenten aufgeteilt (`.claude/agents/`: kern-/places-/interop-/services-/ui-/islands-builder); die Skills (`build-from-spec`, `decision-log`, `spec-lint`, `spec-new`, `altlast-audit`, `roundtrip-verify`) tragen die wiederkehrenden Rituale.
+- **`.claude/launch.json` (Preview-Server-Config) lebt im Spec-Repo, nicht im Code-Repo** — die Preview-Tools binden an die primäre Arbeitsverzeichnis-Konfiguration der laufenden Session (hier: Spec-Repo), auch wenn der Server selbst im Code-Repo (`~/dev/stammbaum-v9`) läuft (`bash -c "cd ~/dev/stammbaum-v9 && npm run dev"`). Ein Fix in der falschen Datei (z. B. versehentlich `~/dev/stammbaum-v9/.claude/launch.json` statt dem Spec-Repo-Pendant) hat keine Wirkung. **Der Start-Befehl darf KEINEN hardcoded `--port`/`--strictPort`-Flag setzen** — sonst überschreibt er den vom Tool zugewiesenen `$PORT`, und `autoPort: true` allein hilft dann nicht. **Und `vite.config.ts` braucht `server: { port: process.env.PORT ? Number(process.env.PORT) : 5173 }`**, sonst bindet Vite trotzdem auf den Default. Bei Neuanlage/Änderung von `.claude/launch.json` beides als Standard setzen, nicht erst beim nächsten Konflikt neu herausfinden.
+
+---
+
+## 8. Bezug zum eingefrorenen v8
+
+Die v8-Codebasis liegt eingefroren unter `legacy-v8/` (im Spec-Repo) und dient als **Datenerhalt-Orakel** ([32 §9](32-Testframework.md)) und Algorithmus-Referenz — **nicht** als Struktur-Vorlage. Wiederverwendbare *Algorithmen* (Identitätsauflösung, Anonymisierungs-BFS, Layout-Berechnungen, Datums-Normierung) werden portiert, die Modulstruktur ausdrücklich nicht ([02 §8](02-Zielarchitektur-v9.md), [03 Altlasten](03-Altlasten.md)). Der einmalige Umzug (Repo-Aufsatz, Fixture-Übernahme, Skelett + erste grüne CI) ist abgeschlossen.

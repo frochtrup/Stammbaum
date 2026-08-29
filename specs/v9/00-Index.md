@@ -1,0 +1,88 @@
+# Stammbaum v9 — Spezifikations-Set
+
+Modulare, spezifikationsorientierte Neufassung. Ersetzt die monolithische `specs/SPEC-v9-Gesamtsystem.md` (dort bleibt nur ein Verweis). Jedes Dokument spezifiziert **ein Subsystem** und ist so geschnitten, dass es einer baubaren Einheit der Zielarchitektur (siehe `02`) entspricht.
+
+## Lesereihenfolge
+
+Neu im Projekt → in dieser Reihenfolge lesen:
+
+1. **01 — Vision & Prinzipien** — warum es das Produkt gibt, die 9 unverhandelbaren Leitprinzipien, Nicht-Ziele, Glossar.
+2. **02 — Zielarchitektur v9** — die Schichtung (Domänenkern / UI-Schale / imperative Inseln), an der sich alle anderen Specs ausrichten.
+3. **03 — Altlasten** — was aus v8 bewusst NICHT übernommen wird (der Grund für den Neuaufsatz).
+
+Dann je nach Arbeitsschwerpunkt.
+
+## Das Set
+
+| # | Dokument | Schicht | Inhalt |
+|---|---|---|---|
+| **00** | Index (dieses Dokument) | — | Übersicht, Status, Abhängigkeitsgraph |
+| **01** | [Vision & Prinzipien](01-Vision-und-Prinzipien.md) | Meta | Produktvision, Zielgruppe, Leitprinzipien LP-1…9, Systemkontext, Nicht-Ziele, Glossar |
+| **02** | [Zielarchitektur v9](02-Zielarchitektur-v9.md) | Meta | Schichtenmodell (Ansatz C), Kern-↔-Schale-Grenze, imperative Diagramm-Inseln, Framework-Wahl, Verzeichnis-Layout |
+| **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
+| **04** | [Entscheidungslog](04-Entscheidungslog.md) | Meta | v9-ADRs: tragende Architektur-/Produktentscheidungen — **nur die bindende Entscheidung** (Pflege via Skill `decision-log`) |
+| **04a** | [Bau-Chronik & Lehren](04a-Chronik.md) | Meta | Nachträge zu den ADRs aus 04: Bau-Status, Commits, Verifikationsbefunde, Lehren — dazu die Vorgeschichte der Basis-Specs (Befunde hinter den Invarianten, Lehren hinter den Test-Kontrakten). Wächst mit dem Bau, wird nur bei Bedarf gelesen |
+| **05** | [Backlog](05-Backlog.md) | Meta | **Die Status-Wahrheit des Hauptprogramms:** was ist gebaut, was ist offen. Je Zeile ein am Code prüfbarer Beleg (Lint L1–L14). Specs 10–32 treffen KEINE Status-Aussage mehr |
+| **05a** | [Backlog: Orte-Editor](05a-Backlog-Orte-Editor.md) | Meta | Status-Wahrheit des Standalone-Orte-Editors (ID-Raum `OE-n`). Zuständig für Belege unter `app-orte/`/`tests/orte/`; Regeln, Typen und Lint-Tabelle stehen in 05 |
+| **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
+| **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
+| **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
+| **13** | [Interoperabilität & Roundtrip](13-Interop-Roundtrip.md) | Kern | GEDCOM 5.5.1/7.0/Strict, GRAMPS, Anonymisierung, Passthrough-Prinzip, Roundtrip-Anforderung |
+| **14** | [Dateihandling](14-Dateihandling.md) | Kern/Betrieb | Arbeitskopie, ein Export-Rohr, FileService (2 Save-Tiers), OS-Sync statt App-Cloud, Medien |
+| **20** | [Funktionen](20-Funktionen.md) | App | Feature-Katalog, Formulare, Validierungsregeln, Ausgaben/Reports |
+| **21** | [UI/UX](21-UI-UX.md) | App | View-Hierarchie, View-State-/Lifecycle-Kontrakt, Responsive, Design-System, Symbolkonventionen |
+| **22** | [Orte-Editor (Standalone)](22-Orte-Editor-Standalone.md) | App | Zweites Programm für `orte.json`: `PlacesHost`-Vertrag und geteilte Views, Dokument-Modell, Kontextdatei, Auslieferung, Handbuch-Extrakt |
+| **30** | [NFR & Persistenz](30-NFR-und-Persistenz.md) | Betrieb | Performance/Skalierung, Offline/PWA, Sicherheit, Datenschutz, Barrierefreiheit, Speicher-/Sync-/Konfigurationsmodell |
+| **31** | [Dev-Umgebung & Auslieferung](31-Dev-Umgebung.md) | Betrieb | VS Code + Git/GitHub, Repo-Layout, `ci.yml`, Vite/Pages, Branch-Modell, Migration aus v8 |
+| **32** | [Testframework](32-Testframework.md) | Betrieb | Test-Ebenen (Pyramide), Werkzeuge (Vitest u. a.), Fixtures, Determinismus/Seams, Kontrakt-Matrix je Subsystem, Pre-Commit/CI |
+
+## Abhängigkeitsgraph
+
+```
+01 Vision/Prinzipien ─────────────┐ (gilt für alle)
+02 Zielarchitektur ───────────────┤
+04 Entscheidungslog ──────────────┤ (protokolliert Entscheidungen zu 02/14/21/31/32 …)
+05 Backlog ───────────────────────┤ (Status des Hauptprogramms; 10–32 sagen selbst nichts über den Bau)
+05a Backlog Orte-Editor ──────────┤ (Status des zweiten Programms, ID-Raum OE-n; Regeln/Lint aus 05)
+                                  │
+Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
+                          └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
+                                              │
+App:   20 Funktionen ◄── 10,11,12,13,14       │
+       21 UI/UX      ◄── 20, 02                │
+       22 Orte-Editor◄── 11, 14, 21, 02        │ (zweites Programm, geteilte Views)
+                                              │
+Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
+         14 Dateihandling  ◄── 30 (Arbeitskopie-/orte.json-Speicherschichten, Kern+Betrieb-Doppelrolle)
+         31 Dev-Umgebung   ◄── 02 (Schichten/Invarianten), 30 (PWA/Cache)
+         32 Testframework  ◄── prüft Invarianten ALLER Specs; 02/30/31
+```
+
+**Regel:** App-Schicht (20/21) darf Kern-Schicht (10–13) referenzieren, nie umgekehrt. Der Kern kennt keine UI. Diese Richtung ist die zentrale Architektur-Invariante (siehe 02).
+
+## Status
+
+| Dokument | Reifegrad | Bemerkung |
+|---|---|---|
+| 00–04 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt; 04 Entscheidungslog laufend gepflegt (nur bindende Entscheidungen) |
+| 04a | 🟢 laufend | Bau-Chronik: ADR-Nachträge (Status/Commits/Lehren), ausgelagert aus 04 am 2026-07-16 |
+| 05 | 🟡 in Arbeit | Backlog: [K]-Inventur vollständig (46 Zeilen, am Code verifiziert). Offen: [S]/[E]-Inventur, Status-Wörter aus 10–32 entfernen (L3), Lint-Regeln in `spec-lint` |
+| 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
+| 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
+| 05a | 🟢 angelegt | Statusdatei des Orte-Editors (`OE-n`); Zuordnung über den Beleg-Pfad, geprüft von L8 |
+| 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
+| 21 | 🟢 Entwurf vollständig | Navigation neu (Rollenmodell); Mobile Bottom-Nav + Desktop Sidebar/Multi-Pane/⌘K; Konsistenz-Befunde B1–B7 |
+| 22 | 🟢 Entwurf vollständig | Standalone-Orte-Editor: `PlacesHost`-Naht, Dokument-Modell, INV-ORTE-1…3 |
+| 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
+| 31 | 🟢 Entwurf vollständig | Claude-Desktop-App + GitHub + Actions (ADR-v9-07); Umgebung etabliert & in Betrieb |
+| 32 | 🟢 Entwurf vollständig | Vitest-basiert, Kontrakt-Matrix je Subsystem; UI-Test-Tooling: @testing-library/svelte ✅ |
+
+**Legende Reifegrad:** 🟢 spezifiziert · 🟡 in Arbeit · 🔴 offen/TODO.
+
+## Konventionen dieser Specs
+
+- **Prioritäts-Tags:** **[K]**ern (muss), **[S]**tandard (soll), **[E]**rweitert (kann).
+- **INV-…** = harte Invariante (Akzeptanzkriterium, nicht optional).
+- **LP-…** = Leitprinzip (siehe 01), gilt dokumentübergreifend.
+- **„Neuaufsatz-Hinweis"** = Abgrenzung zur v8-Implementierung (was anders/besser wird).
+- Zeitlose Wire-Referenz (GEDCOM/GRAMPS Tag-Semantik + Datei-Format): `GEDCOM.md` (am Root). Die historische v8-Detailtiefe (ADR-Begründungen, altes Datenmodell, Layout-/Symboltabellen, Sprint-Historie) liegt eingefroren in `legacy-v8/` (`ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `CHANGELOG.md`, `ROADMAP.md`) — Referenz/Orakel, **kein v9-Design**.
