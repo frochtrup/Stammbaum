@@ -4,8 +4,8 @@ Spezifikationsgetriebener Neuaufsatz. Der v8-Stand (Code in diesem Repo) ist **e
 
 ## Aktiver Branch
 
-`v9-dev`. Auf `v9-dev` committen; nach `main` nur per PR mit grüner CI.
-*(v8-Branches `main`/`v8-dev` behalten ihre eigenen, v8-spezifischen Regeln — dieser Datei-Stand gilt nur auf `v9-dev`.)*
+`v9-dev` — zugleich der Default-Branch des Repos. Auf `v9-dev` committen; nach `main` nur per PR mit grüner CI.
+*(`main` führt inzwischen ebenfalls den v9-Stand, diese Datei gilt dort also genauso. Nur die eingefrorenen Zweige `v4-dev`…`v8-dev` behalten ihre eigenen, älteren Regeln.)*
 
 ## Spezifikation = Quelle der Wahrheit
 
